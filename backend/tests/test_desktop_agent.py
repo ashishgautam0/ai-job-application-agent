@@ -10,11 +10,11 @@ import profile as profile_data
 
 # The `source` values the prompt tells the agent to send, spelled as the stats
 # pages group them. Keep in step with the portal sections in the prompt.
-# The prompt works LinkedIn and Indeed only while those two are tuned. The
-# other portals are paused, not dropped: the recording endpoint still accepts
-# them, so they can return to the prompt without a backend change.
-PORTAL_SOURCES = ("LinkedIn", "Indeed")
-PAUSED_SOURCES = ("Naukri", "Instahyre", "Cutshort", "Wellfound", "Shine",
+# The prompt works LinkedIn, Indeed and Wellfound while those three are tuned.
+# The other portals are paused, not dropped: the recording endpoint still
+# accepts them, so they can return to the prompt without a backend change.
+PORTAL_SOURCES = ("LinkedIn", "Indeed", "Wellfound")
+PAUSED_SOURCES = ("Naukri", "Instahyre", "Cutshort", "Shine",
                   "Glassdoor", "FirstNaukri", "Unstop", "Apna")
 
 
@@ -462,7 +462,7 @@ class DesktopPromptTests(unittest.TestCase):
         self.assertTrue(any("PDF" in issue for issue in result["issues"]))
         self.assertIn("Resume.pdf", result["content"])
 
-    PORTALS = ("LINKEDIN", "INDEED")
+    PORTALS = ("LINKEDIN", "INDEED", "WELLFOUND")
 
     def test_prompt_covers_every_portal_dedup_tracker_and_no_caps(self):
         for portal in self.PORTALS:
@@ -516,7 +516,7 @@ class DesktopPromptTests(unittest.TestCase):
                              .split("## PORTAL-BY-PORTAL", 1)[0]
         for required in (
             "Follow it and finish the application there",
-            "This applies on **both portals**",
+            "This applies on **every portal**",
             # what the off-site flow has to survive
             "If the site requires an account first:",
             "If a CAPTCHA appears, abandon this job immediately",
@@ -577,7 +577,7 @@ class DesktopPromptTests(unittest.TestCase):
         for portal in PORTAL_SOURCES:
             with self.subTest(portal=portal):
                 self.assertIn(portal, step2)
-        self.assertIn("both portals", step2)
+        self.assertIn("every portal", step2)
 
     def test_no_portal_section_overrides_the_shared_title_rules(self):
         """A per-portal note must not re-admit titles the global rules reject —
@@ -594,7 +594,7 @@ class DesktopPromptTests(unittest.TestCase):
                                       f"{name} relaxes a rule without deferring to TITLE RULES")
 
     def test_paused_portals_are_neither_searched_nor_recorded_as_skips(self):
-        """Only LinkedIn and Indeed are worked for now. A posting that hands
+        """Only LinkedIn, Indeed and Wellfound are worked for now. A posting that hands
         off to another job board is left unrecorded, not skipped, so it stays
         reachable once that portal returns to the prompt."""
         order = self.prompt.split("Work the portals in this order:", 1)[1].split("###", 1)[0]
@@ -606,8 +606,8 @@ class DesktopPromptTests(unittest.TestCase):
                                     re.compile(rf"^### \d+\. {portal.upper()}", re.M))
                 self.assertNotIn(portal, step2)
                 self.assertNotIn(portal, summary)
-        self.assertNotIn("Naukri", order.split("**Only these two portals", 1)[0])
-        self.assertIn("**Only these two portals for now.**", order)
+        self.assertNotIn("Naukri", order.split("**Only these three portals", 1)[0])
+        self.assertIn("**Only these three portals for now.**", order)
         self.assertIn("*another job board* to apply, leave it unrecorded", order)
         self.assertIn("An employer's own site or ATS is\nstill fine", order)
         self.assertNotIn("eleven", self.prompt)
@@ -894,11 +894,11 @@ class DesktopPromptTests(unittest.TestCase):
                 self.assertIn(required, floor)
 
     def test_the_run_stops_at_the_daily_target(self):
-        """10 applications a day across LinkedIn and Indeed, counted by the
+        """10 applications a day across the three portals, counted by the
         tracker so earlier runs that day count, then stop."""
         keep_going = self.prompt.split("## KEEP GOING UNTIL I SAY STOP", 1)[1] \
                                 .split("## SAFETY RULES", 1)[0]
-        for required in ("**My target is 10 applications a day, across LinkedIn and Indeed together.**",
+        for required in ("**My target is 10 applications a day, across LinkedIn, Indeed and Wellfound\ntogether.**",
                          "do not\nstart another application once it does",
                          "**Only a confirmed submission counts**",
                          "**Use the tracker's number, not your own tally.**",
