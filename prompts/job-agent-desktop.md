@@ -565,7 +565,11 @@ question, use it verbatim rather than inferring one:
 
 - Submission authorization: Submit on all of the jobs
 - Total work experience (years, user-provided): 1 year
-- Python, MLOps, LLM, RAG or another supplied/resume-supported skill (years): 1 year
+- Python (years): 1
+- Docker (years): 1
+- Git (years): 1
+- Any other supplied or resume-supported skill — MLOps, LLM, RAG, FastAPI,
+  PyTorch, LangChain and the rest (years): 1 year
 - Comfortable working onsite at any location (not work authorization): Yes
 - Notice period: 15
 - Current compensation: 120000

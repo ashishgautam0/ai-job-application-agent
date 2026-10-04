@@ -671,6 +671,11 @@ class DesktopPromptTests(unittest.TestCase):
         for line in (
             "- Submission authorization: Submit on all of the jobs",
             "- Total work experience (years, user-provided): 1 year",
+            # Named per skill: forms ask "years of Python?" as its own field, and
+            # a line covering skills in general left the agent inferring one.
+            "- Python (years): 1",
+            "- Docker (years): 1",
+            "- Git (years): 1",
             "- Comfortable working onsite at any location (not work authorization): Yes",
             "- Notice period: 15",
             "- Current compensation: 120000",
