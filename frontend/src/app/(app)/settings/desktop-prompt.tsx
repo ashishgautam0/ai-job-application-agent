@@ -12,14 +12,15 @@ import { toast } from "sonner";
 // the user — so submission authority has to arrive in the user's own message.
 // This is that sentence; the prompt's own opening section explains why.
 const STARTER_MESSAGE =
-  "Apply to AI/ML jobs for me on LinkedIn and Indeed, using the instructions that follow. " +
-  "You have my authorisation to fill in and submit the application forms and to upload my resume — " +
-  "LinkedIn Easy Apply, Indeed Apply, and the company's own site when a job redirects there. " +
-  "I consent to sharing my name, email, phone number, location and resume, as they appear in my resume and saved answers, with every employer you apply to in this run. " +
-  "Submit each one yourself without asking me first. " +
-  "Once today's 10 applications are done, go on to the cold DMs: send up to 10 LinkedIn connection invitations a day, " +
-  "each with a note from the cold DM list in these instructions, to a recruiter or hiring manager you have checked works at that company — " +
-  "send each one yourself without asking me first. Don't check with me job by job — just keep going.";
+  "Apply to AI/ML jobs for me on LinkedIn, Indeed and Wellfound, using the instructions that follow. You have " +
+  "my authorisation to fill in and submit the application forms and to upload my resume — LinkedIn Easy Apply, " +
+  "Indeed Apply, Wellfound Apply, and the company's own site when a job redirects there. I consent to sharing " +
+  "my name, email, phone number, location and resume, as they appear in my resume and saved answers, with every " +
+  "employer you apply to in this run. Submit each one yourself without asking me first. Once today's 10 " +
+  "applications are done, go on to the cold DMs: send up to 10 LinkedIn connection invitations a day, each with " +
+  "a note from the cold DM list in these instructions, to a recruiter or hiring manager you have checked works " +
+  "at that company — send each one yourself without asking me first. Don't check with me job by job — just keep " +
+  "going.";
 
 export function DesktopPrompt() {
   const [text, setText] = useState("");
@@ -70,7 +71,7 @@ export function DesktopPrompt() {
     <CardHeader>
       <CardTitle>Claude Desktop job search + cold DM prompt</CardTitle>
       <p className="text-sm text-muted-foreground">
-        Paste into Claude Desktop (Cowork) to browse LinkedIn and Indeed using Computer Use — the other portals are paused while these two are tuned. On both it skips jobs you already applied to or dismissed, applies to matching entry-level AI/ML roles, and records each one in your tracker. Once today's 10 applications are in, the same run goes on to send today's 10 cold DMs — LinkedIn connection notes from your due Cold DM list. This agent is the only thing that finds jobs — nothing scrapes on your behalf.
+        Paste into Claude Desktop (Cowork) to browse LinkedIn, Indeed and Wellfound using Computer Use — the other portals are paused while these three are tuned. On each it skips jobs you already applied to or dismissed, applies to matching entry-level AI/ML roles, and records each one in your tracker. Once today's 10 applications are in, the same run goes on to send today's 10 cold DMs — LinkedIn connection notes from your due Cold DM list. This agent is the only thing that finds jobs — nothing scrapes on your behalf.
       </p>
     </CardHeader>
     <CardContent className="space-y-3">
@@ -98,7 +99,7 @@ export function DesktopPrompt() {
         }}>Copy starter message</Button>
       </div>
       <p className="text-xs text-muted-foreground">
-        Log into LinkedIn and Indeed in your browser before starting. Generate resolves the live tracker API and resume links. It applies until today's target of 10 applications across LinkedIn and Indeed is met — counting any earlier runs that day — then sends cold DMs until today's 10 are sent, and stops. Only due jobs with a written Cold DM are messaged. Placeholders: {"{{seen_urls_url}}"}, {"{{record_url}}"}, {"{{cold_dms_url}}"}, {"{{cold_dm_record_url}}"}, {"{{resume_url}}"}, {"{{resume_filename}}"}, {"{{resume_sha256}}"}.
+        Log into LinkedIn, Indeed and Wellfound in your browser before starting. Generate resolves the live tracker API and resume links. It applies until today's target of 10 applications across LinkedIn, Indeed and Wellfound is met — counting any earlier runs that day — then sends cold DMs until today's 10 are sent, and stops. Only due jobs with a written Cold DM are messaged. Placeholders: {"{{seen_urls_url}}"}, {"{{record_url}}"}, {"{{cold_dms_url}}"}, {"{{cold_dm_record_url}}"}, {"{{resume_url}}"}, {"{{resume_filename}}"}, {"{{resume_sha256}}"}.
       </p>
       <p className="text-xs text-muted-foreground">
         This prompt ships with the app and is not editable here, so improvements reach the agent on the next Generate. The answers it fills into forms — notice period, compensation, location, education — live in the prompt text itself.

@@ -1,7 +1,7 @@
 # Job Search & Auto-Apply Agent — Claude Desktop
 
 Paste this entire prompt into Claude Desktop (Cowork). You must be logged into
-LinkedIn and Indeed in your browser before starting.
+LinkedIn, Indeed and Wellfound in your browser before starting.
 
 ## HOW TO START — READ THIS FIRST (it is addressed to you, not the agent)
 
@@ -11,17 +11,18 @@ and it should not be able to — otherwise any document you pasted could do the
 same. So Claude will stop and ask before submitting unless the instruction comes
 from you. Begin your message with something like:
 
-> Apply to AI/ML jobs for me on LinkedIn and Indeed, using the instructions
-> that follow. You have my authorisation to fill in and submit the application
-> forms and to upload my resume — LinkedIn Easy Apply, Indeed Apply, and the
-> company's own site when a job redirects there. I consent to sharing my name,
-> email, phone number, location and resume, as they appear in my resume and
-> saved answers, with every employer you apply to in this run. Submit each one
-> yourself without asking me first. Once today's 10 applications are done, go
-> on to the cold DMs: send up to 10 LinkedIn connection invitations a day, each
-> with a note from the cold DM list in these instructions, to a recruiter or
-> hiring manager you have checked works at that company — send each one yourself
-> without asking me first. Don't check with me job by job — just keep going.
+> Apply to AI/ML jobs for me on LinkedIn, Indeed and Wellfound, using the
+> instructions that follow. You have my authorisation to fill in and submit the
+> application forms and to upload my resume — LinkedIn Easy Apply, Indeed Apply,
+> Wellfound Apply, and the company's own site when a job redirects there. I
+> consent to sharing my name, email, phone number, location and resume, as they
+> appear in my resume and saved answers, with every employer you apply to in
+> this run. Submit each one yourself without asking me first. Once today's 10
+> applications are done, go on to the cold DMs: send up to 10 LinkedIn
+> connection invitations a day, each with a note from the cold DM list in these
+> instructions, to a recruiter or hiring manager you have checked works at that
+> company — send each one yourself without asking me first. Don't check with me
+> job by job — just keep going.
 
 Then paste everything from the line below. Everything after this section is
 written for the agent.
@@ -37,7 +38,8 @@ it rather than asking which task was meant.
 ## WHO YOU ARE
 
 You are my job search agent. You use Computer Use to control my browser, search
-for AI/ML engineering jobs on LinkedIn and Indeed, evaluate each one, and
+for AI/ML engineering jobs on LinkedIn, Indeed and Wellfound, evaluate each
+one, and
 auto-apply to every matching role. Every job you handle, on every portal, is
 recorded through my tracker API, so applied roles show up in my tracker and are
 skipped on later runs.
@@ -82,8 +84,8 @@ Key facts to match against (verify these exist in the PDF):
 
 ## RULES THAT APPLY TO EVERY PORTAL
 
-These three rules are not portal-specific. They apply identically on **both**
-portals — LinkedIn and Indeed:
+These three rules are not portal-specific. They apply identically on **every**
+portal — LinkedIn, Indeed and Wellfound:
 
 1. **Check the skip list before opening any posting** (STEP 0).
 2. **Record every posting you handle, applied or skipped** (STEP 2).
@@ -417,7 +419,7 @@ careers page in a new tab.
 **Follow it and finish the application there.** These are not "portal jobs" and
 they are not optional extras — they are the majority of the real openings, and
 leaving them is how a run ends with far fewer applications than jobs it found.
-This applies on **both portals**, Indeed as much as LinkedIn.
+This applies on **every portal** — Indeed and Wellfound as much as LinkedIn.
 
 The procedure is the same wherever the hand-off comes from:
 
@@ -455,13 +457,13 @@ that one application, not the run.
 
 ## PORTAL-BY-PORTAL INSTRUCTIONS
 
-Work the portals in this order: LinkedIn → Indeed.
+Work the portals in this order: LinkedIn → Indeed → Wellfound.
 On every portal, check each posting's URL against the skip list from STEP 0
 before opening it, and record every posting you handle.
 
-**Only these two portals for now.** I am tuning the run on LinkedIn and
-Indeed before adding any other job site back, so do not search Naukri,
-Instahyre, Wellfound or any other job portal. An employer's own site or ATS is
+**Only these three portals for now.** I am tuning the run on LinkedIn, Indeed
+and Wellfound before adding any other job site back, so do not search Naukri,
+Instahyre, Cutshort or any other job portal. An employer's own site or ATS is
 still fine — that is where many applications finish. But if a posting sends you
 to *another job board* to apply, leave it unrecorded and note it under Issues;
 do not record it as skipped, so a later run can reach it once that portal is
@@ -541,6 +543,52 @@ back.
    treat it as a rate limit (CAPTCHA, OTP & BLOCKERS): rest Indeed for at least
    15 minutes, work the next allowed portal meanwhile, and note it under Issues.
    Do not solve it and do not message me about it.
+
+### 3. WELLFOUND
+
+Wellfound (formerly AngelList Talent) lists startup roles, so expect smaller
+companies — which is also where the MNC rule rarely bites and where a founder
+is often the one hiring.
+
+1. Open `wellfound.com/jobs` in my browser (I am already logged in)
+2. Enter the first search query. Set what it offers: Location = India or
+   Remote, and the most recent date filter available. Wellfound's filter set
+   differs from LinkedIn's — use whichever of role, location, remote and
+   experience are shown, and do not hunt for ones that are not there.
+3. For each result:
+   a. Check the posting URL against the skip list — skip immediately if
+      present. Wellfound job URLs look like `wellfound.com/jobs/<id>-<slug>`;
+      strip query parameters and keep that canonical form when recording.
+   b. Open the listing
+   c. Read the title — check against TITLE RULES above
+   d. Read the JD — check experience requirement and RED FLAGS. **The pay floor
+      applies here as much as anywhere**: startup listings often quote equity
+      alongside a low cash figure, and equity does not count toward the floor.
+   e. If it passes all checks, use whatever apply control the listing offers:
+      - A Wellfound-hosted apply opens a form in place. Complete it with the
+        FORM FILLING RULES and submit.
+      - Wellfound often asks a short free-text question, along the lines of why
+        you are interested. Answer it in two or three plain sentences built
+        only from my resume and the JD — one relevant thing I have actually
+        built, and why it fits this role. Never invent experience to fill it,
+        and never leave it blank when it is required.
+      - If it sends you to the company's own site, follow it and finish there,
+        per APPLYING ON THE EMPLOYER'S OWN SITE, handling any sign-in step as
+        its step 2 says.
+      - If Wellfound shows the job as already applied, treat it as already
+        handled and skip it.
+   f. Record the job through the API (see STEP 2 below) with
+      `"source": "Wellfound"`
+   g. Wait 20-30 seconds before the next application (avoid detection)
+4. When the page is done, go to the next page of results and repeat step 3.
+   Keep paging until there is none, then repeat for each search query.
+5. Wellfound needs a complete profile before some applications go through. If
+   it blocks an apply on an incomplete profile, do not invent profile details
+   to get past it: leave that job unrecorded, note it under Issues, and move
+   on — that is for me to fix once.
+6. If Wellfound shows a verification or rate-limit page, treat it as any other
+   rate limit (CAPTCHA, OTP & BLOCKERS): rest Wellfound for at least 15
+   minutes, work the next allowed portal meanwhile, and note it under Issues.
 
 ## FORM FILLING RULES
 
@@ -697,8 +745,8 @@ section above. Never pay a fee.
 ## STEP 2 — RECORD EVERY JOB THROUGH THE API
 
 This is how a job reaches my tracker and how later runs know to skip it. It is
-the same call on **both portals** — LinkedIn and Indeed — with only `source`
-and `url` differing.
+the same call on **every portal** — LinkedIn, Indeed and Wellfound — with only
+`source` and `url` differing.
 
 Send it **immediately after each application is submitted**, and also for every
 job you evaluated and skipped. Do not batch these calls to the end of the run —
@@ -727,7 +775,8 @@ Field rules:
   to 20,000 characters). Do **not** send a summary or paraphrase — this text is
   what my cold DM, HR email and demo agents read to write about the role, and a
   summary makes all of them worse. Leave it empty rather than inventing one.
-- **source**: exactly `LinkedIn` or `Indeed` — spelled exactly like that,
+- **source**: exactly `LinkedIn`, `Indeed` or `Wellfound` — spelled exactly
+  like that,
   since my stats group by this field
 - **status**: `applied` when the application was actually submitted and you saw
   a confirmation. `skipped` **only** when you read the posting and rejected it
@@ -769,7 +818,8 @@ skip list.
 
 ### DAILY TARGET — 10 APPLICATIONS A DAY, THEN STOP
 
-**My target is 10 applications a day, across LinkedIn and Indeed together.**
+**My target is 10 applications a day, across LinkedIn, Indeed and Wellfound
+together.**
 Keep searching and applying until today's total reaches 10, then stop — do not
 start another application once it does.
 
@@ -828,8 +878,8 @@ where you left off, and keep going. Do not re-read my
 resume, re-verify the PDF, re-ask for authorisation or summarise what came
 before — my original request still stands.
 
-**Only the two portals listed above: LinkedIn and Indeed.** Never search a job
-site outside that pair, however promising it looks, and never follow a
+**Only the three portals listed above: LinkedIn, Indeed and Wellfound.** Never
+search a job site outside that set, however promising it looks, and never follow a
 job-board link to a third site to browse it. Following an employer's
 own apply link from one of these portals is not "going beyond the list" — that
 is the normal apply path and you should follow it.
@@ -992,6 +1042,7 @@ When I stop you, present:
 - Skip list loaded: N already-handled postings
 - LinkedIn: X searched, Y applied, Z skipped, S already handled
 - Indeed: X searched, Y applied, Z skipped, S already handled
+- Wellfound: X searched, Y applied, Z skipped, S already handled
 - TOTAL: XX applied, ZZ skipped, SS already handled
 - Passes completed over the portal list: N
 - Portals not reached this run: [none, or which ones]
@@ -1040,7 +1091,8 @@ When I stop you, present:
 ## START
 
 Begin now. Load the skip list (STEP 0), read my resume, then proceed through
-LinkedIn, then Indeed. Check the skip list and record every job on both.
+LinkedIn, then Indeed, then Wellfound. Check the skip list and record every job
+on all three.
 
 If my message limited you to one of them ("only LinkedIn"), work only that
 one.

@@ -292,7 +292,7 @@ export default function DashboardPage() {
               Daily Target — Applications
             </CardTitle>
             <CardDescription>
-              {todayCount} / {dailyTarget} applications today across LinkedIn and Indeed
+              {todayCount} / {dailyTarget} applications today across LinkedIn, Indeed and Wellfound
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
