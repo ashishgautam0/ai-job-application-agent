@@ -612,6 +612,31 @@ class DesktopPromptTests(unittest.TestCase):
         self.assertIn("An employer's own site or ATS is\nstill fine", order)
         self.assertNotIn("eleven", self.prompt)
 
+    def test_one_year_is_the_mandatory_experience_ceiling_everywhere(self):
+        """The ceiling was 2 years, which let roles demanding more than the
+        owner has through. It is 1 year now, and the same on every portal."""
+        rules = self.prompt.split("## EXPERIENCE RULES", 1)[1].split("## RED FLAGS", 1)[0]
+        for required in ("**I have 1 year of experience, so 1 year is the ceiling.**",
+                         'Any mandatory requirement above 1 year (12 months): "2+ years"',
+                         'JD says 0-1 years, "1+ year"',
+                         "This ceiling is the same on every portal."):
+            with self.subTest(required=required):
+                self.assertIn(required, rules)
+        # The old 2-year allowance must not survive anywhere in the rules.
+        for gone in ('JD says "2+ years" or "2 years" (borderline — apply)',
+                     "requirement above 2 years (24 months)"):
+            with self.subTest(gone=gone):
+                self.assertNotIn(gone, self.prompt)
+
+    def test_wellfound_searches_the_country_not_the_home_city(self):
+        """Noida is where the owner lives, not the search area; a city filter
+        collapses Wellfound's results."""
+        section = self.prompt.split("### 3. WELLFOUND", 1)[1].split("## FORM FILLING", 1)[0]
+        self.assertIn("Set **Location = India** — the country, not a\n   city.", section)
+        self.assertIn("Do not type Noida or any other city here", section)
+        self.assertIn("**Every rule that governs LinkedIn and Indeed governs Wellfound too**",
+                      section)
+
     def test_summary_and_run_order_cover_every_portal(self):
         summary = self.prompt.split("## SUMMARY — WHEN I STOP YOU", 1)[1]
         order = self.prompt.split("Work the portals in this order:", 1)[1].split("###", 1)[0]

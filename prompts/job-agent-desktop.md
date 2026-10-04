@@ -79,7 +79,8 @@ Key facts to match against (verify these exist in the PDF):
   Cloud AI/ML Engineer, MLOps Engineer, Applied AI Engineer
 - **Core skills**: Python, FastAPI, PyTorch, TensorFlow, LangChain, RAG,
   LLM, NLP, AWS, Docker, Supabase, PostgreSQL
-- **Experience level**: Entry-level / Junior / 0-2 years
+- **Experience level**: Entry-level / Junior — 1 year is my ceiling for any
+  mandatory requirement (see EXPERIENCE RULES)
 - **Location**: India or Remote
 
 ## RULES THAT APPLY TO EVERY PORTAL
@@ -301,18 +302,22 @@ infrastructure, devops, platform engineer, data engineer.
 
 ## EXPERIENCE RULES
 
-Before applying, read the full job description. **SKIP if**:
-- JD says "3+ years required" or "minimum 3 years" or any mandatory
-  requirement above 2 years (24 months)
-- JD says "5-7 years", "senior level required", "more than 2 years", etc.
-- JD says "5+ years", "6+ years", "7+ years", "8+ years", "10+ years"
+**I have 1 year of experience, so 1 year is the ceiling.** Before applying,
+read the full job description. **SKIP if**:
+- Any mandatory requirement above 1 year (12 months): "2+ years",
+  "minimum 2 years", "2-4 years", "3+ years", "5-7 years", "5+ years" and
+  anything higher
+- JD says "senior level required", "more than 1 year required", or similar
 
 **KEEP if**:
-- JD says 0-2 years, 1+ years, "fresher welcome", or no years mentioned
-- JD says "2+ years" or "2 years" (borderline — apply)
+- JD says 0-1 years, "1+ year", "fresher welcome", or no years mentioned
 - Experience requirement is listed as "preferred" or "nice to have",
-  not "required" — even if the number exceeds 2 years
-- Upper-bound phrases: "up to 3 years", "at most 3 years" (keep)
+  not "required" — even where the number exceeds 1 year
+- Upper-bound phrases, which cap rather than demand: "up to 2 years",
+  "at most 2 years", "0-2 years" (keep — 1 year sits inside the range)
+
+This ceiling is the same on every portal. A role asking for 2 mandatory years
+is a skip on Wellfound exactly as it is on LinkedIn and Indeed.
 
 ## RED FLAGS — CHECK EVERY JD
 
@@ -550,11 +555,20 @@ Wellfound (formerly AngelList Talent) lists startup roles, so expect smaller
 companies — which is also where the MNC rule rarely bites and where a founder
 is often the one hiring.
 
+**Every rule that governs LinkedIn and Indeed governs Wellfound too**, with no
+loosening because the listings look informal: TITLE RULES, EXPERIENCE RULES
+(1 year is the ceiling), RED FLAGS, the pay floor, the MNC rule and the
+excluded-company list all apply unchanged. A job that would be a skip on
+LinkedIn is a skip here.
+
 1. Open `wellfound.com/jobs` in my browser (I am already logged in)
-2. Enter the first search query. Set what it offers: Location = India or
-   Remote, and the most recent date filter available. Wellfound's filter set
-   differs from LinkedIn's — use whichever of role, location, remote and
-   experience are shown, and do not hunt for ones that are not there.
+2. Enter the first search query. Set **Location = India** — the country, not a
+   city. Do not type Noida or any other city here: that is where I live, not
+   the search area, and a city narrows the results to almost nothing. Add
+   Remote alongside India where the filter allows both. Then set the most
+   recent date filter available. Wellfound's filter set differs from
+   LinkedIn's — use whichever of role, location, remote and experience are
+   shown, and do not hunt for ones that are not there.
 3. For each result:
    a. Check the posting URL against the skip list — skip immediately if
       present. Wellfound job URLs look like `wellfound.com/jobs/<id>-<slug>`;
