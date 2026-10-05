@@ -864,6 +864,34 @@ class DesktopPromptTests(unittest.TestCase):
         gate = self.prompt.split("### DOMAIN KEYWORD GATE", 1)[1].split("## EXPERIENCE", 1)[0]
         self.assertIn("gen ai, genai", gate)
 
+    def test_data_science_is_never_searched_and_never_rescued_by_a_qualifier(self):
+        """The ten queries never named Data Scientist, but nothing forbade the
+        agent typing it or following a portal's suggested data-science search,
+        the skip only covered titles with "no AI/ML qualifier" so "AI Data
+        Scientist" fell through to KEEP, and "data science" still counted as a
+        qualifying domain signal."""
+        search = self.prompt.split("## WHAT TO SEARCH", 1)[1].split("## TITLE RULES", 1)[0]
+        queries = search.split("**Never run a data-science search", 1)[0]
+        for banned in ("Data Scientist", "Data Science", "Data Analyst"):
+            with self.subTest(query=banned):
+                self.assertNotIn(banned, queries)
+        self.assertIn("**Never run a data-science search on any portal.**", search)
+        for portal in ("LinkedIn", "Indeed", "Wellfound"):
+            with self.subTest(portal=portal):
+                self.assertIn(portal, search)
+
+        skip = self.prompt.split("### ALWAYS SKIP", 1)[1].split("### KEEP", 1)[0]
+        self.assertIn("**Reject every data-science title outright", skip)
+        self.assertIn("Data Scientist, Data Science, Data Analyst", skip)
+        self.assertIn("unconditional and it beats the KEEP list", skip)
+        self.assertIn('"AI Data\n  Scientist"', skip)
+        generic = skip.split("**Reject these generic titles", 1)[1].split("\n\n", 1)[0]
+        self.assertNotIn("Data Scientist", generic)
+
+        gate = self.prompt.split("### DOMAIN KEYWORD GATE", 1)[1].split("## EXPERIENCE", 1)[0]
+        self.assertNotIn("data science", gate)
+        self.assertIn("machine learning", gate)
+
     def test_searches_use_24_hours_and_page_past_the_first_page(self):
         """The general filter line said "last 7 days" and overrode the
         per-portal 24-hour filter; nothing told the agent to page past the
