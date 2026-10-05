@@ -224,6 +224,13 @@ search UI). **Start with "Gen AI Engineer" — it is the role I most want.**
 9. "Data Engineer" (only if AI/ML is in the description)
 10. "Applied Scientist" or "Research Engineer"
 
+**Never run a data-science search on any portal.** Do not type "Data
+Scientist", "Data Science" or "Data Analyst" into LinkedIn, Indeed or
+Wellfound, and do not follow a portal's suggested, related or "people also
+searched" query when it offers one of those. The ten queries above are the
+whole list. If a data-science listing still surfaces under one of them, skip it
+under TITLE RULES.
+
 **Filters, on every search:**
 - **LinkedIn**: Location = India, **Date posted = Past 24 hours**, Experience
   level = **Entry level** and **Associate** (both ticked, nothing else).
@@ -255,9 +262,15 @@ Apply these rules in order.
 
 **Reject these generic titles (no AI/ML qualifier):**
 - Software Engineer, Backend Engineer
-- Data Scientist, Data Science, Data Analyst
 - Python Developer, Python Automation Engineer
 - Computer Vision (standalone, without AI/ML qualifier)
+
+**Reject every data-science title outright — no qualifier rescues it:**
+- Data Scientist, Data Science, Data Analyst
+- This reject is unconditional and it beats the KEEP list below. "AI Data
+  Scientist", "Machine Learning Data Scientist" and "GenAI Data Scientist" are
+  all skips, even though each carries an AI/ML word. I do not want
+  data-science roles, on LinkedIn, Indeed or Wellfound.
 
 **Reject internships:**
 - Intern, Internship, Trainee, Apprentice
@@ -292,7 +305,7 @@ Apply these rules in order.
 
 A title must reference at least one AI/ML domain to qualify. These are
 valid domain signals in the title or JD: ai, ml, artificial intelligence,
-machine learning, deep learning, data science, nlp, natural language,
+machine learning, deep learning, nlp, natural language,
 computer vision, llm, gen ai, genai, generative ai, agentic, rag, langchain,
 python, fastapi, mlops, prompt engineer, chatbot, conversational ai,
 iot, robotics, uav, digital twin, edge computing, simulation, ocr,
