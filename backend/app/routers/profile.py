@@ -35,6 +35,7 @@ from profile import (
     upsert_profile,
 )
 from resume_profile import extract_profile_facts, reviewed_experience_months, profile_text
+from json_safe import json_records
 from pdf_storage import (
     _encode_url_path,
     _ensure_pdf_bucket,
@@ -239,7 +240,7 @@ def read_rendered_application_prompt(request: Request, page_url: str):
 
     settings = get_application_prompt_settings(_DEFAULT_USERNAME)
     frame = get_scraped_jobs()
-    visible_jobs = frame.to_dict("records") if hasattr(frame, "to_dict") else list(frame or [])
+    visible_jobs = json_records(frame)
     # The browser batch omits screening results, so the server must enforce the
     # pass gate before rendering instead of asking an agent to infer eligibility.
     jobs = [job for job in visible_jobs if job.get("screening_status") == "pass"

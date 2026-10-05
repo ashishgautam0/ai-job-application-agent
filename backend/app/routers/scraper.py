@@ -1,4 +1,3 @@
-import pandas as pd
 from fastapi import APIRouter, HTTPException, Query
 
 from ..models.schemas import MarkScrapedJobRequest
@@ -11,21 +10,14 @@ from tracker import (
     get_scraped_jobs,
     mark_scraped_job,
 )
+from json_safe import json_records
 
 router = APIRouter()
 
 
 def _records(df):
-    """Return JSON-safe records while preserving database NULL values.
-
-    Pandas promotes nullable numeric columns to floats and represents SQL NULL
-    as NaN.  Starlette intentionally rejects NaN because it is not valid JSON,
-    so a single unscored job would otherwise turn the whole endpoint into a
-    500 response.
-    """
-    if df.empty:
-        return []
-    return df.astype(object).where(pd.notna(df), None).to_dict("records")
+    """Return JSON-safe records while preserving database NULL values."""
+    return json_records(df)
 
 
 def _active_profile():

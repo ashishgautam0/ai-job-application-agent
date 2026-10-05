@@ -10,6 +10,7 @@ from tracker import (
     get_status_funnel,
     get_weekly_trend,
 )
+from json_safe import json_records
 
 router = APIRouter()
 
@@ -32,7 +33,7 @@ def follow_ups():
     df = get_post_connection_follow_ups_due()
     if df.empty:
         return []
-    rows = df.astype(object).where(df.notna(), None).to_dict("records")
+    rows = json_records(df)
 
     recipients = {}
     for row in rows:
@@ -65,19 +66,19 @@ def cold_dm_todos():
 @router.get("/hr-email-todos")
 def hr_email_todos():
     df = get_hr_email_todos()
-    return df.astype(object).where(df.notna(), None).to_dict("records") if not df.empty else []
+    return json_records(df)
 
 
 @router.get("/weekly-trend")
 def weekly_trend():
     df = get_weekly_trend()
-    return df.to_dict("records") if not df.empty else []
+    return json_records(df)
 
 
 @router.get("/platform-effectiveness")
 def platform_effectiveness():
     df = get_platform_effectiveness()
-    return df.to_dict("records") if not df.empty else []
+    return json_records(df)
 
 
 @router.get("/status-funnel")
@@ -88,4 +89,4 @@ def status_funnel():
 @router.get("/role-analysis")
 def role_analysis():
     df = get_role_analysis()
-    return df.to_dict("records") if not df.empty else []
+    return json_records(df)
