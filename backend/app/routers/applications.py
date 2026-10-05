@@ -12,6 +12,7 @@ from tracker import (
     snooze_follow_up,
     set_hr_email_todo_completed,
 )
+from json_safe import json_records
 
 router = APIRouter()
 
@@ -37,7 +38,7 @@ def list_applications(
         df = df[df["type"] == type_filter]
     if platform:
         df = df[df["platform"] == platform]
-    return df.to_dict("records")
+    return json_records(df)
 
 
 @router.post("")

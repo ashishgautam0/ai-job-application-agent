@@ -1141,6 +1141,89 @@ class DesktopPromptTests(unittest.TestCase):
         self.assertLess(len(self.prompt), limit("desktop_prompt_template"))
 
 
+class JsonSafeRecordsTests(unittest.TestCase):
+    """The tracker rendered empty because /api/applications returned a 500.
+
+    `follow_up_date` and `hr_email_sent_at` are NULL on most applications.
+    Pandas 2 kept those as None; pandas 3 — which an unpinned `pandas>=2.0.0`
+    resolves to in the deployed function — turns them into NaN, which is not
+    valid JSON, so Starlette refused the whole response.
+    """
+
+    class Frame:
+        """Stand-in for the pandas chain `json_records` relies on."""
+
+        def __init__(self, rows, empty=False):
+            self.rows = rows
+            self.empty = empty
+            self.sanitised = False
+
+        def astype(self, kind):
+            assert kind is object, kind
+            return self
+
+        def notna(self):
+            return "notna-mask"
+
+        def where(self, mask, value):
+            assert mask == "notna-mask", mask
+            assert value is None, value
+            out = type(self)([{k: (None if v == "NaN" else v) for k, v in row.items()}
+                              for row in self.rows])
+            out.sanitised = True
+            return out
+
+        def to_dict(self, orient):
+            assert orient == "records", orient
+            assert self.sanitised, "to_dict ran before NaN was replaced with None"
+            return self.rows
+
+    def setUp(self):
+        self.json_records = function(ROOT / "modules/json_safe.py", "json_records", {})
+
+    def test_a_missing_value_becomes_json_null_not_nan(self):
+        rows = self.json_records(self.Frame([
+            {"id": 1, "follow_up_date": "2026-10-12", "hr_email_sent_at": "NaN"},
+            {"id": 2, "follow_up_date": "NaN", "hr_email_sent_at": "NaN"},
+        ]))
+        self.assertEqual(rows, [
+            {"id": 1, "follow_up_date": "2026-10-12", "hr_email_sent_at": None},
+            {"id": 2, "follow_up_date": None, "hr_email_sent_at": None},
+        ])
+        for row in rows:
+            for key, value in row.items():
+                with self.subTest(key=key):
+                    self.assertFalse(isinstance(value, float) and value != value)
+
+    def test_absent_and_empty_frames_return_an_empty_list(self):
+        self.assertEqual(self.json_records(None), [])
+        self.assertEqual(self.json_records(self.Frame([{"id": 1}], empty=True)), [])
+        self.assertEqual(self.json_records([]), [])
+
+    def test_a_plain_list_passes_through_untouched(self):
+        self.assertEqual(self.json_records([{"id": 7}]), [{"id": 7}])
+
+    def test_no_endpoint_serialises_a_frame_without_sanitising_it(self):
+        """A raw to_dict("records") is the defect; every router must route
+        through json_records so one NULL cannot 500 a whole page again."""
+        routers = sorted((ROOT / "app/routers").glob("*.py"))
+        self.assertTrue(routers)
+        for path in routers:
+            source = path.read_text()
+            with self.subTest(router=path.name):
+                self.assertNotIn('to_dict("records")', source)
+                self.assertNotIn("to_dict('records')", source)
+                if "json_records(" in source:
+                    self.assertIn("from json_safe import json_records", source)
+
+    def test_pandas_is_pinned_below_the_major_that_changed_null_handling(self):
+        for path in (ROOT / "requirements.txt", ROOT.parent / "requirements.txt"):
+            with self.subTest(requirements=str(path)):
+                line = next(l for l in path.read_text().splitlines()
+                            if l.strip().startswith("pandas"))
+                self.assertIn("<3.0.0", line)
+
+
 if __name__ == "__main__":
     unittest.main()
 

@@ -12,6 +12,7 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "modules"))
 from resume_profile import profile_text
 import profile as profile_data
+from json_safe import json_records
 
 # The settings-profile CI lane intentionally runs without the API dependencies.
 # Endpoints are extracted with the response constructor supplied by the test.
@@ -233,6 +234,7 @@ class SettingsProfileTests(unittest.TestCase):
             "get_application_prompt_settings": lambda _: settings,
             "_application_pdf_metadata": lambda: {"filename": "active.pdf", "sha256": "abc"},
             "_render_application_prompt": renderer,
+            "json_records": json_records,
         })
         jobs = [{"id": i, "title": f"Job {i}", "company": "Fixture", "url": f"https://jobs.test/{i}",
                  "screening_status": status, "screening_reason": f"Private {status} reason"}

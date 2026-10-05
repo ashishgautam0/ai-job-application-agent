@@ -2,6 +2,7 @@ from fastapi import APIRouter, Query
 
 from ..models.schemas import AddDemoRequest, UpdateDemoRequest
 from tracker import add_mini_demo, get_active_demos, get_demo_results, update_mini_demo
+from json_safe import json_records
 
 router = APIRouter()
 
@@ -11,7 +12,7 @@ def list_demos(
     active_only: bool = Query(True),
 ):
     df = get_active_demos() if active_only else get_demo_results()
-    return df.to_dict("records") if not df.empty else []
+    return json_records(df)
 
 
 @router.post("")
