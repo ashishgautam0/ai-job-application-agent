@@ -950,22 +950,32 @@ a company yourself, and never write a note for a job that is not on the list.
    you land on must **currently** work at that exact company, with their own
    headline or current Experience entry saying so. Open at most five profiles
    per job.
-   1. **Open the job's own `url` first and use the person who posted it.**
-      On a LinkedIn posting that is the **"Meet the hiring team"** block near
-      the bottom, which names one person and tags them **"Job poster"** —
-      usually a recruiter or talent-acquisition executive. **That person is
-      the recipient. They posted this job, so they are the one reading
-      replies about it** — use them and do not search for anyone else. The
-      block stays on the posting even after it says "No longer accepting
-      applications", so look for it whatever the posting's state. Indeed and
-      Wellfound listings sometimes name a poster or hiring contact the same
-      way; use that where it is shown.
+   1. **If the job's `url` is a LinkedIn posting, open it first and use the
+      person who posted it.** The posting carries a **"Meet the hiring
+      team"** block near the bottom naming one person and tagging them
+      **"Job poster"** — usually a recruiter or talent-acquisition
+      executive. **That person is the recipient. They posted this job, so
+      they are the one reading replies about it** — use them and do not
+      search for anyone else. The block stays on the posting even after it
+      says "No longer accepting applications", so look for it whatever the
+      posting's state.
 
       **Never take a name from "People you can reach out to" or "Recent
       <role> hires at <company>".** Those are LinkedIn's guesses at employees
       and alumni you might know — not the person hiring for this job. Only
       the "Job poster" named under "Meet the hiring team" counts here.
-   2. **No poster named on the posting?** Only then open
+
+      **This step is LinkedIn only — Indeed and Wellfound have no
+      equivalent.** Their listings name the company, not a person: a
+      Wellfound job shows the company avatar and at most a "Recruiter
+      recently active" status with no name behind it. So for an Indeed or
+      Wellfound job, do not go hunting on the posting — go straight to
+      step 2. If one ever does name somebody, that name is a lead and not a
+      recipient: find them on LinkedIn and hold them to the same bar as
+      anyone else before sending, because the cold DM is a LinkedIn
+      connection note and a name with no LinkedIn profile behind it cannot
+      receive one.
+   2. **A non-LinkedIn job, or no poster named on the posting?** Then open
       `recruiters_search_url` and look for a recruiter, talent-acquisition or
       HR person.
    3. No recruiter? Open `hiring_managers_search_url` and look for someone

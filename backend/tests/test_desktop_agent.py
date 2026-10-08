@@ -1367,13 +1367,14 @@ class ColdDmPromptTests(unittest.TestCase):
         """Three jobs were skipped for want of a recruiter. At a startup the
         founder does the hiring, so the search widens — without loosening the
         bar that the profile must show they work there now."""
+        flat = " ".join(self.phase2.split())
         for required in ("use the person who posted it",
-                         "founder,\n      co-founder, CTO or head of engineering",
+                         "founder, co-founder, CTO or head of engineering",
                          "Only skip the job when every step above comes up empty",
-                         "A verified founder\n   beats no message at all",
-                         'their profile shows they work there now'):
+                         "A verified founder beats no message at all",
+                         "their profile shows they work there now"):
             with self.subTest(required=required):
-                self.assertIn(required, self.phase2)
+                self.assertIn(required, flat)
         # Widening who counts must not widen whether they are checked.
         self.assertIn("must **currently** work at that exact company", self.phase2)
         self.assertIn("a guessed person is still never acceptable", self.phase2)
@@ -1395,18 +1396,19 @@ class ColdDmPromptTests(unittest.TestCase):
         own job, so the posting is opened first and the searches are fallbacks
         — and the name comes from "Meet the hiring team", not from LinkedIn's
         suggested-employee blocks, which are not the hiring contact."""
-        step = self.phase2.split("1. **Find one person", 1)[1].split("\n2. **Check", 1)[0]
-        for required in ('**Open the job\'s own `url` first and use the person who posted it.**',
-                         '**"Meet the hiring team"**',
-                         '**"Job poster"**',
-                         'No poster named on the posting?**',
+        step = " ".join(self.phase2.split("1. **Find one person", 1)[1]
+                        .split("\n2. **Check", 1)[0].split())
+        for required in ("If the job's `url` is a LinkedIn posting, open it first",
+                         '"Meet the hiring team"',
+                         '"Job poster"',
+                         "no poster named on the posting?",
                          'Never take a name from "People you can reach out to"'):
             with self.subTest(required=required):
                 self.assertIn(required, step)
         # Order is the whole point: the poster must come before either search.
         poster = step.index("Meet the hiring team")
         for later in ("`recruiters_search_url`", "`hiring_managers_search_url`",
-                      "founder,\n      co-founder"):
+                      "founder, co-founder"):
             with self.subTest(after=later):
                 self.assertLess(poster, step.index(later))
 
@@ -1415,12 +1417,40 @@ class ColdDmPromptTests(unittest.TestCase):
         rules = (ROOT / "modules" / "outreach_prompts.py").read_text()
         block = rules.split("LINKEDIN_CONNECTION_RULES", 1)[1].split('"""', 2)[1]
         for required in ("open the job's own posting URL first",
-                         "'Meet the hiring team' block tags them 'Job poster'",
-                         "only if the posting names nobody"):
+                         "the 'Meet the hiring team' block names them",
+                         "when the posting names nobody"):
             with self.subTest(required=required):
                 self.assertIn(required, block)
         poster = block.index("Meet the hiring team")
         self.assertLess(poster, block.index("a recruiter, talent-acquisition or HR person"))
+
+    def test_only_linkedin_has_a_job_poster_block(self):
+        """The reorder claimed Indeed and Wellfound "sometimes name a poster
+        the same way". They do not: both name the company, and a Wellfound
+        listing shows at most an unnamed "Recruiter recently active". Left in,
+        it sent the agent hunting a person who is not on the page, and implied
+        a bare name off a non-LinkedIn listing could receive a LinkedIn
+        connection note."""
+        step = " ".join(self.phase2.split("1. **Find one person", 1)[1]
+                        .split("\n2. **Check", 1)[0].split())
+        for required in ("This step is LinkedIn only — Indeed and Wellfound have no equivalent.",
+                         '"Recruiter recently active"',
+                         "go straight to step 2",
+                         "that name is a lead and not a recipient"):
+            with self.subTest(required=required):
+                self.assertIn(required, step)
+        # The old claim must be gone, not merely qualified.
+        self.assertNotIn("listings sometimes name a poster", step)
+        # The searches must be reachable for a non-LinkedIn job.
+        self.assertIn("**A non-LinkedIn job, or no poster named on the posting?**", step)
+
+        rules = (ROOT / "modules" / "outreach_prompts.py").read_text()
+        block = rules.split("LINKEDIN_CONNECTION_RULES", 1)[1].split('"""', 2)[1]
+        for required in ("This step is LinkedIn only",
+                         "Indeed and Wellfound listings name the company rather than a person",
+                         "never as a recipient in itself"):
+            with self.subTest(settings_rule=required):
+                self.assertIn(required, block)
 
     def test_the_name_placeholder_must_be_replaced_before_sending(self):
         """A note went to a founder reading "Hi, I recently applied..." — the
