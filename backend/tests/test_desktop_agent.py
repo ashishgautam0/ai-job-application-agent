@@ -1367,7 +1367,7 @@ class ColdDmPromptTests(unittest.TestCase):
         """Three jobs were skipped for want of a recruiter. At a startup the
         founder does the hiring, so the search widens — without loosening the
         bar that the profile must show they work there now."""
-        for required in ("**the person who\n      posted it**",
+        for required in ("use the person who posted it",
                          "founder,\n      co-founder, CTO or head of engineering",
                          "Only skip the job when every step above comes up empty",
                          "A verified founder\n   beats no message at all",
@@ -1388,6 +1388,39 @@ class ColdDmPromptTests(unittest.TestCase):
                          "never guess a person"):
             with self.subTest(required=required):
                 self.assertIn(required, block)
+
+    def test_the_job_poster_is_tried_before_any_people_search(self):
+        """A DM went to a searched-up recruiter while the posting itself named
+        the person who posted the role. The poster reads the replies to their
+        own job, so the posting is opened first and the searches are fallbacks
+        — and the name comes from "Meet the hiring team", not from LinkedIn's
+        suggested-employee blocks, which are not the hiring contact."""
+        step = self.phase2.split("1. **Find one person", 1)[1].split("\n2. **Check", 1)[0]
+        for required in ('**Open the job\'s own `url` first and use the person who posted it.**',
+                         '**"Meet the hiring team"**',
+                         '**"Job poster"**',
+                         'No poster named on the posting?**',
+                         'Never take a name from "People you can reach out to"'):
+            with self.subTest(required=required):
+                self.assertIn(required, step)
+        # Order is the whole point: the poster must come before either search.
+        poster = step.index("Meet the hiring team")
+        for later in ("`recruiters_search_url`", "`hiring_managers_search_url`",
+                      "founder,\n      co-founder"):
+            with self.subTest(after=later):
+                self.assertLess(poster, step.index(later))
+
+    def test_the_settings_cold_dm_prompt_tries_the_poster_first_too(self):
+        """Both prompts pick recipients; if only one reorders they disagree."""
+        rules = (ROOT / "modules" / "outreach_prompts.py").read_text()
+        block = rules.split("LINKEDIN_CONNECTION_RULES", 1)[1].split('"""', 2)[1]
+        for required in ("open the job's own posting URL first",
+                         "'Meet the hiring team' block tags them 'Job poster'",
+                         "only if the posting names nobody"):
+            with self.subTest(required=required):
+                self.assertIn(required, block)
+        poster = block.index("Meet the hiring team")
+        self.assertLess(poster, block.index("a recruiter, talent-acquisition or HR person"))
 
     def test_the_name_placeholder_must_be_replaced_before_sending(self):
         """A note went to a founder reading "Hi, I recently applied..." — the

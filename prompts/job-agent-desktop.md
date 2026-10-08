@@ -950,14 +950,26 @@ a company yourself, and never write a note for a job that is not on the list.
    you land on must **currently** work at that exact company, with their own
    headline or current Experience entry saying so. Open at most five profiles
    per job.
-   1. Open `recruiters_search_url` and look for a recruiter,
-      talent-acquisition or HR person.
-   2. No recruiter? Open `hiring_managers_search_url` and look for someone
+   1. **Open the job's own `url` first and use the person who posted it.**
+      On a LinkedIn posting that is the **"Meet the hiring team"** block near
+      the bottom, which names one person and tags them **"Job poster"** —
+      usually a recruiter or talent-acquisition executive. **That person is
+      the recipient. They posted this job, so they are the one reading
+      replies about it** — use them and do not search for anyone else. The
+      block stays on the posting even after it says "No longer accepting
+      applications", so look for it whatever the posting's state. Indeed and
+      Wellfound listings sometimes name a poster or hiring contact the same
+      way; use that where it is shown.
+
+      **Never take a name from "People you can reach out to" or "Recent
+      <role> hires at <company>".** Those are LinkedIn's guesses at employees
+      and alumni you might know — not the person hiring for this job. Only
+      the "Job poster" named under "Meet the hiring team" counts here.
+   2. **No poster named on the posting?** Only then open
+      `recruiters_search_url` and look for a recruiter, talent-acquisition or
+      HR person.
+   3. No recruiter? Open `hiring_managers_search_url` and look for someone
       who currently leads the team the role sits in.
-   3. Still nobody? Go back to the job posting and look for **the person who
-      posted it** — many listings name the poster or show "Posted by". If
-      their profile confirms they work there, they are a good recipient:
-      they are the one hiring.
    4. Still nobody, and it is a small company or startup? A **founder,
       co-founder, CTO or head of engineering** is the right person — at that
       size they do the hiring themselves.
