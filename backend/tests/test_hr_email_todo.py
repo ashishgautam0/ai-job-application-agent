@@ -108,6 +108,143 @@ class HrEmailTodoTests(unittest.TestCase):
             with self.subTest(field=field):
                 self.assertIn(field, types)
 
+class ResearchSelectionTests(unittest.TestCase):
+    """Which companies get researched again.
+
+    48 HR emails were due and 26 were blocked only on a missing address. None
+    of the 26 could ever be re-researched: candidates came from jobs scraped in
+    the last two days, and the email is not due until day 8, so a company left
+    the pool days before anyone needed its address — and eligibility asked
+    whether the *website* was missing, so a row with a site and no email
+    counted as finished.
+    """
+
+    MODULE = ROOT / "modules/pending_messages.py"
+
+    class Frame:
+        def __init__(self, rows):
+            self.rows = rows
+            self.empty = not rows
+
+        def to_dict(self, orient):
+            return list(self.rows)
+
+    def select(self, scraped, cache, due, now=None, limit=50):
+        """Call cmd_companies with the data layer stubbed, and parse its JSON."""
+        import contextlib
+        import io
+        import json as json_mod
+
+        now = now or datetime.fromisoformat("2026-10-09T12:00:00+05:30")
+
+        def table(name):
+            node = MagicMock()
+            if name == "scraped_jobs":
+                node.select.return_value.gte.return_value.eq.return_value.execute.return_value = \
+                    SimpleNamespace(data=[{"company": c} for c in scraped])
+            else:
+                node.select.return_value.execute.return_value = SimpleNamespace(data=cache)
+            return node
+
+        db = SimpleNamespace(table=table)
+        tracker = SimpleNamespace(_get_client=lambda: db, _user_now=lambda: now,
+                                  get_hr_email_todos=lambda: self.Frame(due))
+        env = {"json": json_mod, "sys": sys, "EMAIL_RETRY_DAYS": 7,
+               "_research_age_days": function(self.MODULE, "_research_age_days", {})}
+        with patch.dict(sys.modules, {"tracker": tracker}):
+            cmd = function(self.MODULE, "cmd_companies", env)
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                cmd(SimpleNamespace(limit=limit))
+        return json_mod.loads(buf.getvalue())["companies_needing_intel"]
+
+    def row(self, name, email="", days_ago=10, site="https://x.test"):
+        when = datetime.fromisoformat("2026-10-09T12:00:00+05:30") - timedelta(days=days_ago)
+        return {"company_name": name, "product_url": site,
+                "hiring_email": email, "researched_at": when.isoformat()}
+
+    def test_a_company_whose_email_is_due_is_offered_though_it_left_the_scrape_window(self):
+        """The whole defect: due at day 8, out of the 2-day pool since day 2."""
+        got = self.select(scraped=["Fresh Scrape"],
+                       cache=[self.row("Aged Out")],
+                       due=[{"company": "Aged Out"}])
+        self.assertIn("Aged Out", got)
+
+    def test_a_website_without_an_email_is_not_finished(self):
+        got = self.select(scraped=[], cache=[self.row("No Address")],
+                       due=[{"company": "No Address"}])
+        self.assertEqual(got, ["No Address"])
+
+    def test_a_company_with_an_email_is_left_alone(self):
+        got = self.select(scraped=[], cache=[self.row("Done", email="hr@done.test")],
+                       due=[{"company": "Done"}])
+        self.assertEqual(got, [])
+
+    def test_never_researched_companies_are_offered_before_retries(self):
+        """A company that publishes nothing must not crowd out a new one."""
+        got = self.select(scraped=["Brand New"],
+                       cache=[self.row("Old Retry", days_ago=40)],
+                       due=[{"company": "Old Retry"}])
+        self.assertEqual(got, ["Brand New", "Old Retry"])
+
+    def test_a_missing_address_is_not_rechecked_every_run(self):
+        """Retried after EMAIL_RETRY_DAYS, not before."""
+        self.assertEqual(self.select(scraped=[], cache=[self.row("Just Tried", days_ago=2)],
+                                  due=[{"company": "Just Tried"}]), [])
+        self.assertEqual(self.select(scraped=[], cache=[self.row("Long Ago", days_ago=8)],
+                                  due=[{"company": "Long Ago"}]), ["Long Ago"])
+
+    def test_a_row_with_no_website_still_counts_as_never_researched(self):
+        got = self.select(scraped=[], cache=[self.row("No Site", site="")],
+                       due=[{"company": "No Site"}])
+        self.assertEqual(got, ["No Site"])
+
+    def test_a_tracker_failure_does_not_lose_the_scraped_pool(self):
+        """The scraped companies are the other half; one read must not sink it."""
+        import contextlib, io, json as json_mod
+        def boom():
+            raise RuntimeError("database unavailable")
+        def table(name):
+            node = MagicMock()
+            if name == "scraped_jobs":
+                node.select.return_value.gte.return_value.eq.return_value.execute.return_value = \
+                    SimpleNamespace(data=[{"company": "Brand New"}])
+            else:
+                node.select.return_value.execute.return_value = SimpleNamespace(data=[])
+            return node
+        tracker = SimpleNamespace(
+            _get_client=lambda: SimpleNamespace(table=table),
+            _user_now=lambda: datetime.fromisoformat("2026-10-09T12:00:00+05:30"),
+            get_hr_email_todos=boom)
+        env = {"json": json_mod, "sys": sys, "EMAIL_RETRY_DAYS": 7,
+               "_research_age_days": function(self.MODULE, "_research_age_days", {})}
+        with patch.dict(sys.modules, {"tracker": tracker}):
+            cmd = function(self.MODULE, "cmd_companies", env)
+            buf, err = io.StringIO(), io.StringIO()
+            with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(err):
+                cmd(SimpleNamespace(limit=50))
+        self.assertEqual(json_mod.loads(buf.getvalue())["companies_needing_intel"], ["Brand New"])
+        self.assertIn("could not read HR email todos", err.getvalue())
+
+    def test_the_limit_still_caps_the_batch(self):
+        got = self.select(scraped=[f"Company {i}" for i in range(20)], cache=[], due=[], limit=3)
+        self.assertEqual(len(got), 3)
+
+    def test_saving_research_stamps_when_it_was_researched(self):
+        """The column default only fires on insert, so an upsert kept the old
+        date: a row went stale at 14 days and stayed stale however often it was
+        researched again."""
+        db = MagicMock()
+        moment = datetime.fromisoformat("2026-10-09T12:00:00+05:30")
+        save = function(ROOT / "modules/tracker.py", "save_research_cache",
+                        {"_get_client": lambda: db, "_user_now": lambda: moment})
+        save("Acme", {"product_url": "https://acme.test", "hiring_email": "HR@Acme.test"})
+        written = db.table.return_value.upsert.call_args.args[0]
+        self.assertEqual(written["researched_at"], moment.isoformat())
+        self.assertEqual(written["hiring_email"], "hr@acme.test")
+
+
+class HrEmailTodoExtraTests(unittest.TestCase):
     def test_pending_query_excludes_terminal_records_and_maps_true_job_id(self):
         app_rows = [
             {"id": 1, "url": "https://jobs.test/one", "status": "Applied"},

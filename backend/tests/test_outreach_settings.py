@@ -10,6 +10,12 @@ from test_settings_profile import ROOT, function, profile_data
 from app.models.schemas import ApplicationPromptSettings, CompanyExclusionsSettings, RenderedApplicationPrompt
 
 
+def _fixed_now():
+    """save_research_cache stamps researched_at; the value is not under test."""
+    from datetime import datetime
+    return datetime.fromisoformat("2026-10-09T12:00:00+05:30")
+
+
 class OutreachSettingsTests(unittest.TestCase):
     def test_partial_save_keeps_the_other_prompt_settings(self):
         stored = {"scoring_weights": {"skill": 12, "application_prompt": {
@@ -252,7 +258,8 @@ class OutreachSettingsTests(unittest.TestCase):
         db = MagicMock()
         db.table.return_value.upsert.side_effect = lambda payload, **_: captured.update(payload) or MagicMock()
         save = function(ROOT / "modules/tracker.py", "save_research_cache",
-                        {"_get_client": lambda: db})
+                        {"_get_client": lambda: db,
+                         "_user_now": _fixed_now})
         save("Acme", {
             "product_url": "https://acme.example",
             "hiring_email": "  Careers@Acme.Example  ",
