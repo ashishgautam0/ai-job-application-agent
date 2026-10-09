@@ -566,33 +566,92 @@ def cmd_demos(args):
     return 0
 
 
+# A company with a website but no published hiring email is worth another look,
+# but not on every run: some employers publish no address at all, and the agent
+# is right not to invent one.
+EMAIL_RETRY_DAYS = 7
+
+
+def _research_age_days(researched_at, now):
+    """Days since this company was last researched, or None if unknown."""
+    from datetime import datetime
+
+    if not researched_at:
+        return None
+    try:
+        moment = datetime.fromisoformat(str(researched_at).replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return None
+    if moment.tzinfo is None:
+        return None
+    return (now - moment).days
+
+
 def cmd_companies(args):
-    """List companies from recent jobs with no fresh website/contact cache.
+    """List companies still needing research — above all, a hiring email.
 
-    The routine finds the website and a real hiring contact, when available.
+    Two pools, because they fail differently:
+
+    * Newly scraped jobs, which usually have no cache row at all.
+    * Companies whose HR email is due, which is when a missing address actually
+      costs a send. These were unreachable: candidates came only from jobs
+      scraped in the last two days, and the email is not due until day 8, so a
+      company aged out of the pool roughly six days before anyone needed its
+      address.
+
+    A row holding a website but no hiring_email used to count as finished,
+    because eligibility asked whether product_url was missing. The address is
+    the point of the pass, so it now counts as unfinished. A company that
+    publishes nothing would otherwise be retried every run, so a re-check waits
+    EMAIL_RETRY_DAYS, and companies never researched at all are offered first.
     """
-    from datetime import datetime, timedelta
+    from datetime import timedelta
 
-    from tracker import _get_client, get_cached_research
+    from tracker import _get_client, _user_now, get_hr_email_todos
 
-    since = (datetime.now() - timedelta(days=2)).strftime("%Y-%m-%d")
     db = _get_client()
+    now = _user_now()
+    since = (now - timedelta(days=2)).strftime("%Y-%m-%d")
     resp = (db.table("scraped_jobs").select("company")
             .gte("scraped_at", since)
             .eq("dismissed", 0)
             .execute())
-    companies = sorted({(r.get("company") or "").strip()
-                        for r in (resp.data or []) if (r.get("company") or "").strip()})
+    companies = {(r.get("company") or "").strip()
+                 for r in (resp.data or []) if (r.get("company") or "").strip()}
 
-    missing = []
-    for c in companies:
-        if len(missing) >= args.limit:
-            break
-        cached = get_cached_research(c)
-        if cached is None or not (cached.get("product_url") or "").strip():
-            missing.append(c)
+    # The companies whose email is actually due. A research failure only shows
+    # up here, so this is the pool that has to be covered.
+    try:
+        due = get_hr_email_todos()
+        if not getattr(due, "empty", True):
+            companies.update(
+                name for name in (str(row.get("company") or "").strip()
+                                  for row in due.to_dict("records")) if name)
+    except Exception as exc:  # a tracker read must not lose the scraped pool
+        print(f"[pending-messages] could not read HR email todos: {exc}", file=sys.stderr)
 
-    json.dump({"companies_needing_intel": missing}, sys.stdout, indent=2)
+    # One read for every company, rather than a query each.
+    cache = {}
+    for row in (db.table("company_research_cache")
+                .select("company_name,product_url,hiring_email,researched_at")
+                .execute()).data or []:
+        cache[(row.get("company_name") or "").strip().casefold()] = row
+
+    never, retry = [], []
+    for name in sorted(companies):
+        row = cache.get(name.casefold())
+        if row is None or not (row.get("product_url") or "").strip():
+            never.append(name)
+            continue
+        if (row.get("hiring_email") or "").strip():
+            continue
+        age = _research_age_days(row.get("researched_at"), now)
+        if age is None or age >= EMAIL_RETRY_DAYS:
+            retry.append((age if age is not None else 10 ** 6, name))
+
+    # Never-researched first; then the longest-untouched missing address.
+    ordered = never + [name for _, name in sorted(retry, reverse=True)]
+    json.dump({"companies_needing_intel": ordered[:args.limit]}, sys.stdout, indent=2)
     sys.stdout.write("\n")
     return 0
 

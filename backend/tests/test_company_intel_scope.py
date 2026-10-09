@@ -22,13 +22,19 @@ def function(path, name, env):
     return env[name]
 
 
+def _fixed_now():
+    """save_research_cache stamps researched_at; the value is not under test."""
+    from datetime import datetime
+    return datetime.fromisoformat("2026-10-09T12:00:00+05:30")
+
+
 class CompanyIntelScopeTests(unittest.TestCase):
     def test_cache_persists_website_and_hiring_contact_only(self):
         db = MagicMock()
         save = function(
             ROOT / "modules/tracker.py",
             "save_research_cache",
-            {"_get_client": lambda: db},
+            {"_get_client": lambda: db, "_user_now": _fixed_now},
         )
 
         save("O'Brien Labs", {
@@ -56,6 +62,9 @@ class CompanyIntelScopeTests(unittest.TestCase):
             "hiring_email": "careers@obrien.example",
             "hiring_email_source": "https://obrien.example/careers",
             "product_url": "https://obrien.example",
+            # When it was researched, so a stale row can be told from a fresh
+            # one. Still no description, news or tech signals.
+            "researched_at": "2026-10-09T12:00:00+05:30",
         })
         db.table.return_value.upsert.assert_called_once_with(
             payload, on_conflict="company_name"

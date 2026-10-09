@@ -1204,6 +1204,11 @@ def save_research_cache(company_name, research_data):
         "hiring_email": (research_data.get("hiring_email") or "").strip().lower(),
         "hiring_email_source": (research_data.get("hiring_email_source") or "").strip(),
         "product_url": research_data.get("product_url", ""),
+        # Stamp every save, not just the first. The column default only fires on
+        # insert, so without this an upsert left the old date: a row went stale
+        # at 14 days and stayed stale however often it was researched again,
+        # and "how long since we last looked" could not be asked at all.
+        "researched_at": _user_now().isoformat(),
     }, on_conflict="company_name").execute()
 
 
