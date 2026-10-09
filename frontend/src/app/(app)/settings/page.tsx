@@ -134,7 +134,6 @@ export default function SettingsPage() {
     <DesktopPrompt />
     {!loadError && <>
       <OutreachPrompt kind="hr_email" title="Initial HR email prompt" description="Send through your Gmail. Use Dashboard’s HR todos; verify recipients and research official hiring contacts if Claude’s address is invalid or unverified." initialValue={applicationSettings.hr_email_template} />
-      <OutreachPrompt kind="cold_dm" title="Cold DM prompt" description="Generate a fixed batch of eligible due jobs with their saved Cold DM text. Verify each job is still due before sending a LinkedIn connection note; record a confirmed send to advance its existing follow-up schedule." initialValue={applicationSettings.cold_dm_template} />
       <OutreachPrompt kind="followup" title="HR follow-up email prompt" description="Use your Gmail and Dashboard’s Follow-ups Due queue. Check recipient evidence, dates, Sent history and bounces before sending." initialValue={applicationSettings.followup_template} />
     </>}
     <Card>

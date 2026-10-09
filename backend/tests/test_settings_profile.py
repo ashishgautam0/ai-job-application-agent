@@ -364,7 +364,6 @@ class SettingsProfileTests(unittest.TestCase):
         order = [
             "<DesktopPrompt />",
             'kind="hr_email"',
-            'kind="cold_dm"',
             'kind="followup"',
             "Exclude companies from scraped jobs",
             '<h1 className="text-2xl font-bold">Resume profile</h1>',
@@ -373,6 +372,11 @@ class SettingsProfileTests(unittest.TestCase):
         found = [page.index(marker) for marker in order]
         self.assertEqual(found, sorted(found),
                          "Settings sections are out of order: " + ", ".join(order))
+        # The Cold DM prompt card is retired: the desktop prompt sends cold DMs
+        # end to end, so a second place to generate them is only a way to send
+        # the same note twice.
+        self.assertNotIn('kind="cold_dm"', page)
+        self.assertNotIn("Cold DM prompt", page)
 
     def test_resume_upload_sits_in_the_page_header(self):
         page = (ROOT.parent / "frontend/src/app/(app)/settings/page.tsx").read_text()
