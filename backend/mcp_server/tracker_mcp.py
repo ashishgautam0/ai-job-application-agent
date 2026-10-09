@@ -308,11 +308,6 @@ TOOLS = [
             "required": ["company"],
         },
     },
-                "names": {"type": "string"},
-            },
-            "required": ["domain", "names"],
-        },
-    },
 ]
 
 _BY_NAME = {t["name"]: t for t in TOOLS}
