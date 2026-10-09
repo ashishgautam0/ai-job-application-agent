@@ -42,6 +42,8 @@ export interface DashboardStats {
   daily_target: number;
   dms_today: number;
   dm_target: number;
+  hr_emails_today: number;
+  hr_email_target: number;
   [key: string]: number;
 }
 

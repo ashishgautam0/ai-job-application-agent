@@ -82,6 +82,20 @@ def count_dms_today():
     return resp.count if resp.count is not None else len(resp.data or [])
 
 
+# The one-time HR email per application, the cadence's other day-8 action.
+# Counted from the application row rather than follow_up_history: sending it
+# stamps hr_email_sent_at, and that stamp is what retires the todo.
+DAILY_HR_EMAIL_TARGET = 10
+
+
+def count_hr_emails_today():
+    """HR emails marked sent since midnight, user's timezone."""
+    midnight = _user_now().replace(hour=0, minute=0, second=0, microsecond=0)
+    resp = (_get_client().table("applications").select("id", count="exact")
+            .gte("hr_email_sent_at", midnight.isoformat()).execute())
+    return resp.count if resp.count is not None else len(resp.data or [])
+
+
 def add_application(company, role, job_type, platform, url="",
                     noc_compatible="Unknown", conversion="N/A",
                     salary="", notes=""):
@@ -387,13 +401,19 @@ def set_hr_email_todo_completed(app_id, completed=True):
 
 
 def _add_dm_progress(stats):
-    """Today's Cold DMs for the Dashboard; a failed count must not hide the rest."""
+    """Today's outreach for the Dashboard; a failed count must not hide the rest."""
     try:
         stats['dms_today'] = count_dms_today()
     except Exception as exc:
         print(f"[tracker] could not count today's Cold DMs: {exc}")
         stats['dms_today'] = 0
     stats['dm_target'] = DAILY_DM_TARGET
+    try:
+        stats['hr_emails_today'] = count_hr_emails_today()
+    except Exception as exc:
+        print(f"[tracker] could not count today's HR emails: {exc}")
+        stats['hr_emails_today'] = 0
+    stats['hr_email_target'] = DAILY_HR_EMAIL_TARGET
 
 
 def get_stats():

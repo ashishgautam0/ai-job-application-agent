@@ -47,6 +47,67 @@ class HrEmailTodoTests(unittest.TestCase):
         self.assertIsNone(update(42, False))
         db.table.return_value.update.assert_called_with({"hr_email_sent_at": None})
 
+    def test_todays_hr_emails_are_counted_against_a_daily_target(self):
+        """The Dashboard showed a daily target for applications and Cold DMs but
+        not for the third day-8 action, so there was no way to see how much of
+        the HR email queue had gone out today."""
+        db = MagicMock()
+        moment = datetime.fromisoformat("2026-09-20T12:00:00+05:30")
+        count = function(
+            ROOT / "modules/tracker.py", "count_hr_emails_today",
+            {"_get_client": lambda: db, "_user_now": lambda: moment})
+
+        db.table.return_value.select.return_value.gte.return_value.execute.return_value = \
+            SimpleNamespace(count=4, data=None)
+        self.assertEqual(count(), 4)
+        db.table.assert_called_with("applications")
+        # Counted from midnight in the user's timezone, not the last 24 hours.
+        db.table.return_value.select.return_value.gte.assert_called_with(
+            "hr_email_sent_at", moment.replace(hour=0, minute=0, second=0,
+                                               microsecond=0).isoformat())
+
+        # A driver that returns rows instead of a count must still total them.
+        db.table.return_value.select.return_value.gte.return_value.execute.return_value = \
+            SimpleNamespace(count=None, data=[{"id": 1}, {"id": 2}])
+        self.assertEqual(count(), 2)
+
+    def test_the_dashboard_reports_the_hr_email_target_beside_the_dm_one(self):
+        """A failed count must not take the whole Dashboard down with it, which
+        is why the Cold DM count is already wrapped."""
+        source = (ROOT / "modules/tracker.py").read_text()
+        self.assertIn("DAILY_HR_EMAIL_TARGET = 10", source)
+        progress = function(
+            ROOT / "modules/tracker.py", "_add_dm_progress",
+            {"count_dms_today": lambda: 6, "DAILY_DM_TARGET": 10,
+             "count_hr_emails_today": lambda: 3, "DAILY_HR_EMAIL_TARGET": 10})
+        stats = {}
+        progress(stats)
+        self.assertEqual(stats, {"dms_today": 6, "dm_target": 10,
+                                 "hr_emails_today": 3, "hr_email_target": 10})
+
+        def boom():
+            raise RuntimeError("database unavailable")
+        failing = function(
+            ROOT / "modules/tracker.py", "_add_dm_progress",
+            {"count_dms_today": lambda: 6, "DAILY_DM_TARGET": 10,
+             "count_hr_emails_today": boom, "DAILY_HR_EMAIL_TARGET": 10})
+        stats = {}
+        failing(stats)
+        self.assertEqual(stats["hr_emails_today"], 0)
+        self.assertEqual(stats["dms_today"], 6)
+
+    def test_the_dashboard_shows_the_hr_email_target_card(self):
+        page = (ROOT.parent / "frontend/src/app/(app)/dashboard/page.tsx").read_text()
+        self.assertIn("Daily Target — HR Emails", page)
+        self.assertIn("{hrCount} / {hrTarget} company HR emails sent today", page)
+        self.assertIn("stats?.hr_emails_today ?? 0", page)
+        # Three cards now, so the row has to widen past two columns.
+        self.assertIn("md:grid-cols-2 xl:grid-cols-3", page)
+        types = (ROOT.parent / "frontend/src/lib/types.ts").read_text()
+        for field in ("hr_emails_today: number;", "hr_email_target: number;"):
+            with self.subTest(field=field):
+                self.assertIn(field, types)
+
     def test_pending_query_excludes_terminal_records_and_maps_true_job_id(self):
         app_rows = [
             {"id": 1, "url": "https://jobs.test/one", "status": "Applied"},
