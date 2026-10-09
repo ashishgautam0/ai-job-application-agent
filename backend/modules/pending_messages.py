@@ -12,8 +12,6 @@ script is the interface it drives.
     python pending_messages.py save --job-id 4821 < message.txt
 
     # one-time Company HR email drafts for newly tracked jobs
-    python pending_messages.py list --type hr_email --limit 10
-    python pending_messages.py save --type hr_email --job-id 4821 < email.txt
 
     # freeform requests queued from the UI, each with its ready-made prompt
     python pending_messages.py requests
@@ -101,35 +99,41 @@ def _tracked_jobs_missing(message_type, limit):
             break
         if get_job_message(r["id"], message_type=message_type):
             continue
-        if message_type in {"cold_dm", "hr_email"}:
-            # Both outreach assets carry the job's own live mini demo, so
-            # neither is written before that demo exists. A note drafted early
-            # keeps its missing link for good: this list only offers jobs with
-            # no draft at all, so nothing ever comes back to add the link.
+        if message_type == "cold_dm":
+            # The note carries the job's own live mini demo, so it is not
+            # written before that demo exists. A note drafted early keeps its
+            # missing link for good: this list only offers jobs with no draft
+            # at all, so nothing ever comes back to add the link.
             if not get_job_message(r["id"], message_type="demo_html"):
                 continue
-        if message_type == "hr_email":
-            api_base = os.environ.get(
-                "PUBLIC_API_URL", "https://uav-6qe7.vercel.app"
-            ).rstrip("/")
-            r["demo_url"] = f"{api_base}/api/demo/{r['id']}"
-            r["resume_attachment"] = (
-                "Attach the latest PDF from Settings; do not put a resume URL "
-                "inside the email body."
-            )
         r["description"] = (r.get("description") or "").strip()
         need.append(r)
     return need, len(tracked)
 
 
-def _cached_hiring_email(company_name):
-    """The hiring address company research cached for this employer, if any."""
+def _connection_recipient(application_id):
+    """First name of whoever the Cold DM went to for this application.
+
+    The follow-up is a LinkedIn message to that same person, so it needs their
+    name. The Cold DM record stores it as "Sent to <name>: <profile url>" on
+    the connection history row; an empty string leaves the draft's placeholder
+    in place rather than inventing someone.
+    """
     try:
-        from tracker import get_cached_research
-        row = get_cached_research(company_name) or {}
-        return (row.get("hiring_email") or "").strip().lower()
-    except Exception:
+        from tracker import DM_CHANNEL, _get_client
+        rows = (_get_client().table("follow_up_history")
+                .select("message_content")
+                .eq("entity_type", "application").eq("entity_id", int(application_id))
+                .eq("channel", DM_CHANNEL).order("id").execute()).data or []
+    except Exception as exc:
+        print(f"[pending-messages] could not read the connection recipient: {exc}",
+              file=sys.stderr)
         return ""
+    for row in reversed(rows):
+        _, marker, rest = (row.get("message_content") or "").partition("Sent to ")
+        if marker and rest.strip():
+            return rest.split(":")[0].strip()
+    return ""
 
 
 def _company_intel_text(company_name):
@@ -146,9 +150,6 @@ def _company_intel_text(company_name):
             title = row.get("hiring_contact_title") or ""
             parts.append(f"Hiring contact: {row['hiring_contact_name']}"
                          + (f" ({title})" if title else ""))
-        if row.get("hiring_email"):
-            source = row.get("hiring_email_source") or "source not recorded"
-            parts.append(f"Published hiring email: {row['hiring_email']} (from {source})")
         return "; ".join(parts)
     except Exception:
         return ""
@@ -190,9 +191,9 @@ def _demo_url_for_scraped_job_by_app_url(app_url):
 def cmd_list(args):
     jobs, tracked_total = _tracked_jobs_missing(args.type, args.limit)
     profile = _profile_text()
-    from message_generator import build_cold_dm_prompt, build_hr_email_prompt
+    from message_generator import build_cold_dm_prompt
     for job in jobs:
-        if args.type in {"cold_dm", "hr_email"} and not profile.strip():
+        if args.type == "cold_dm" and not profile.strip():
             job["draft_spec"] = {"error": "Active verified PDF profile unavailable; do not draft."}
             continue
         if args.type == "cold_dm":
@@ -201,18 +202,6 @@ def cmd_list(args):
                 profile_text=profile,
                 demo_url=_demo_url_for_job(job["id"]),
                 company_intel=_company_intel_text(job["company"]))
-        elif args.type == "hr_email":
-            from email_finder import extract_published_emails
-            # Company research already looked for a published hiring address and
-            # cached it, so that comes first; the posting's own text backs it up.
-            cached = _cached_hiring_email(job["company"])
-            published = ([cached] if cached else []) + [
-                e for e in extract_published_emails(job["description"]) if e != cached
-            ]
-            job["published_emails"] = published
-            job["draft_spec"] = build_hr_email_prompt(
-                job["company"], job["title"], job["description"], job["demo_url"], profile,
-                published_emails=published)
     json.dump(
         {
             "message_type": args.type,
@@ -229,7 +218,7 @@ def cmd_list(args):
 
 def cmd_save(args):
     content = (args.content if args.content is not None else sys.stdin.read()).strip()
-    if args.type in {"cold_dm", "hr_email"}:
+    if args.type == "cold_dm":
         from outreach_quality import validate_outreach_draft
         problem = validate_outreach_draft(args.type, content, args.job_id)
         if problem:
@@ -249,30 +238,6 @@ def cmd_save(args):
         demo_url = _demo_url_for_job(args.job_id)
         if demo_url and demo_url not in content:
             print(f"Cold DM must include this job's demo link: {demo_url}", file=sys.stderr)
-            return 1
-
-    if args.type == "hr_email":
-        from tracker import is_scraped_job_tracked
-
-        if not is_scraped_job_tracked(args.job_id):
-            print("HR email drafts are allowed only for active tracker jobs.", file=sys.stderr)
-            return 1
-        if not get_job_message(args.job_id, message_type="demo_html"):
-            print("Build the mini demo before saving the HR email draft.", file=sys.stderr)
-            return 1
-        api_base = os.environ.get(
-            "PUBLIC_API_URL", "https://uav-6qe7.vercel.app"
-        ).rstrip("/")
-        expected_demo_url = f"{api_base}/api/demo/{args.job_id}"
-        if expected_demo_url not in content:
-            print("HR email draft must include this job's mini demo link.", file=sys.stderr)
-            return 1
-        lower = content.lower()
-        if "resume" not in lower or "attach" not in lower:
-            print("HR email draft must state that the resume is attached.", file=sys.stderr)
-            return 1
-        if len(content.split()) > 150:
-            print("HR email draft is too long (maximum 150 words including headers).", file=sys.stderr)
             return 1
 
     ok = save_job_message(args.job_id, content, message_type=args.type)
@@ -509,9 +474,9 @@ def cmd_followups(args):
         company = app.get("company", "")
         demo = _demo_url_for_scraped_job_by_app_url(app.get("url", ""))
         intel = _company_intel_text(company)
-        # The follow-up goes out by Gmail, so it needs an address the research
-        # cache already evidenced; without one the draft keeps the unknown marker.
-        recipient = _cached_hiring_email(company)
+        # The follow-up is a LinkedIn message to whoever accepted the
+        # connection request, so it needs their name, not an address.
+        recipient = _connection_recipient(app["id"])
 
         row = create_message_request("follow-up", {
             "company_name": company,
@@ -522,7 +487,7 @@ def cmd_followups(args):
             "previous_messages": [m for m in previous if m],
             "demo_url": demo,
             "company_intel": intel,
-            "recipient_email": recipient,
+            "recipient_name": recipient,
             "_application_id": app["id"],
         })
         if row:
@@ -566,92 +531,36 @@ def cmd_demos(args):
     return 0
 
 
-# A company with a website but no published hiring email is worth another look,
-# but not on every run: some employers publish no address at all, and the agent
-# is right not to invent one.
-EMAIL_RETRY_DAYS = 7
-
-
-def _research_age_days(researched_at, now):
-    """Days since this company was last researched, or None if unknown."""
-    from datetime import datetime
-
-    if not researched_at:
-        return None
-    try:
-        moment = datetime.fromisoformat(str(researched_at).replace("Z", "+00:00"))
-    except (TypeError, ValueError):
-        return None
-    if moment.tzinfo is None:
-        return None
-    return (now - moment).days
-
-
 def cmd_companies(args):
-    """List companies still needing research — above all, a hiring email.
+    """List companies from recent jobs with no website cached yet.
 
-    Two pools, because they fail differently:
-
-    * Newly scraped jobs, which usually have no cache row at all.
-    * Companies whose HR email is due, which is when a missing address actually
-      costs a send. These were unreachable: candidates came only from jobs
-      scraped in the last two days, and the email is not due until day 8, so a
-      company aged out of the pool roughly six days before anyone needed its
-      address.
-
-    A row holding a website but no hiring_email used to count as finished,
-    because eligibility asked whether product_url was missing. The address is
-    the point of the pass, so it now counts as unfinished. A company that
-    publishes nothing would otherwise be retried every run, so a re-check waits
-    EMAIL_RETRY_DAYS, and companies never researched at all are offered first.
+    The routine finds the website and a real hiring contact, when available.
+    Hiring addresses are no longer collected, so a company is researched once
+    and not offered again while its cache entry is fresh.
     """
     from datetime import timedelta
 
-    from tracker import _get_client, _user_now, get_hr_email_todos
+    from tracker import _get_client, _user_now
 
     db = _get_client()
-    now = _user_now()
-    since = (now - timedelta(days=2)).strftime("%Y-%m-%d")
+    since = (_user_now() - timedelta(days=2)).strftime("%Y-%m-%d")
     resp = (db.table("scraped_jobs").select("company")
             .gte("scraped_at", since)
             .eq("dismissed", 0)
             .execute())
-    companies = {(r.get("company") or "").strip()
-                 for r in (resp.data or []) if (r.get("company") or "").strip()}
-
-    # The companies whose email is actually due. A research failure only shows
-    # up here, so this is the pool that has to be covered.
-    try:
-        due = get_hr_email_todos()
-        if not getattr(due, "empty", True):
-            companies.update(
-                name for name in (str(row.get("company") or "").strip()
-                                  for row in due.to_dict("records")) if name)
-    except Exception as exc:  # a tracker read must not lose the scraped pool
-        print(f"[pending-messages] could not read HR email todos: {exc}", file=sys.stderr)
+    companies = sorted({(r.get("company") or "").strip()
+                        for r in (resp.data or []) if (r.get("company") or "").strip()})
 
     # One read for every company, rather than a query each.
-    cache = {}
+    cached = {}
     for row in (db.table("company_research_cache")
-                .select("company_name,product_url,hiring_email,researched_at")
-                .execute()).data or []:
-        cache[(row.get("company_name") or "").strip().casefold()] = row
+                .select("company_name,product_url").execute()).data or []:
+        cached[(row.get("company_name") or "").strip().casefold()] = row
 
-    never, retry = [], []
-    for name in sorted(companies):
-        row = cache.get(name.casefold())
-        if row is None or not (row.get("product_url") or "").strip():
-            never.append(name)
-            continue
-        if (row.get("hiring_email") or "").strip():
-            continue
-        age = _research_age_days(row.get("researched_at"), now)
-        if age is None or age >= EMAIL_RETRY_DAYS:
-            retry.append((age if age is not None else 10 ** 6, name))
+    missing = [name for name in companies
+               if not ((cached.get(name.casefold()) or {}).get("product_url") or "").strip()]
 
-    # Never-researched first; then the longest-untouched missing address.
-    ordered = never + [name for _, name in sorted(retry, reverse=True)]
-    json.dump({"companies_needing_intel": ordered[:args.limit]}, sys.stdout, indent=2)
+    json.dump({"companies_needing_intel": missing[:args.limit]}, sys.stdout, indent=2)
     sys.stdout.write("\n")
     return 0
 

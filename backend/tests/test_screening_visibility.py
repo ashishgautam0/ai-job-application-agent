@@ -58,7 +58,7 @@ class ScreeningTests(unittest.TestCase):
         import argparse
         env = {"argparse": argparse, "__doc__": "", "sys": sys,
                "DEFAULT_MESSAGE_TYPE": "cold_dm",
-               "JOB_MESSAGE_TYPES": ("screen", "cold_dm", "hr_email", "resume_points", "demo_html")}
+               "JOB_MESSAGE_TYPES": ("screen", "cold_dm", "resume_points", "demo_html")}
         tree = ast.parse(SOURCE.read_text())
         for node in tree.body:
             if isinstance(node, ast.FunctionDef) and node.name.startswith("cmd_"):
@@ -75,7 +75,7 @@ class ScreeningTests(unittest.TestCase):
         import argparse
         env = {"argparse": argparse, "__doc__": "", "sys": sys,
                "DEFAULT_MESSAGE_TYPE": "cold_dm",
-               "JOB_MESSAGE_TYPES": ("screen", "cold_dm", "hr_email", "resume_points", "demo_html")}
+               "JOB_MESSAGE_TYPES": ("screen", "cold_dm", "resume_points", "demo_html")}
         tree = ast.parse(SOURCE.read_text())
         for node in tree.body:
             if isinstance(node, ast.FunctionDef) and node.name.startswith("cmd_"):
@@ -93,7 +93,7 @@ class ScreeningTests(unittest.TestCase):
         database = MagicMock()
         env = {
             "DEFAULT_MESSAGE_TYPE": "cold_dm",
-            "JOB_MESSAGE_TYPES": ("screen", "cold_dm", "hr_email", "resume_points", "demo_html"),
+            "JOB_MESSAGE_TYPES": ("screen", "cold_dm", "resume_points", "demo_html"),
             "_get_client": database,
         }
         exec(compile(ast.Module(body=[node], type_ignores=[]), "<tracker>", "exec"), env)

@@ -182,7 +182,6 @@ ENDPOINTS = (
     "/api/stats/platform-effectiveness",
     "/api/stats/role-analysis",
     "/api/stats/status-funnel",
-    "/api/stats/hr-email-todos",
     "/api/stats/cold-dm-todos",
     "/api/stats/follow-ups",
     "/api/demos",

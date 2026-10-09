@@ -5,8 +5,6 @@ import {
   getDashboard,
   getFollowUps,
   getColdDmTodos,
-  getHrEmailTodos,
-  setHrEmailTodoCompleted,
   getFollowUpDraft,
   getWeeklyTrend,
   getPlatformEffectiveness,
@@ -18,7 +16,6 @@ import type {
   DashboardStats,
   FollowUp,
   ColdDmTodo,
-  HrEmailTodo,
   FollowUpDraft,
   FollowUpEffectiveness,
   WeeklyTrend,
@@ -80,9 +77,6 @@ export default function DashboardPage() {
   const [followUps, setFollowUps] = useState<FollowUp[]>([]);
   const [coldDmTodos, setColdDmTodos] = useState<ColdDmTodo[]>([]);
   const [coldDmLoadError, setColdDmLoadError] = useState(false);
-  const [hrEmailTodos, setHrEmailTodos] = useState<HrEmailTodo[]>([]);
-  const [hrEmailSaving, setHrEmailSaving] = useState<number | null>(null);
-  const [hrEmailLoadError, setHrEmailLoadError] = useState(false);
   const [fuDrafts, setFuDrafts] = useState<Record<number, FollowUpDraft>>({});
   const [fuOpen, setFuOpen] = useState<Set<number>>(new Set());
   const [fuLoading, setFuLoading] = useState<number | null>(null);
@@ -134,7 +128,6 @@ export default function DashboardPage() {
           dashboardRes,
           followUpsRes,
           coldDmTodosRes,
-          hrEmailTodosRes,
           weeklyTrendRes,
           platformRes,
           statusFunnelRes,
@@ -144,7 +137,6 @@ export default function DashboardPage() {
           getDashboard(),
           getFollowUps(),
           getColdDmTodos(),
-          getHrEmailTodos(),
           getWeeklyTrend(),
           getPlatformEffectiveness(),
           getStatusFunnel(),
@@ -156,8 +148,6 @@ export default function DashboardPage() {
         if (followUpsRes.status === "fulfilled") setFollowUps(Array.isArray(followUpsRes.value) ? followUpsRes.value : []);
         if (coldDmTodosRes.status === "fulfilled") setColdDmTodos(Array.isArray(coldDmTodosRes.value) ? coldDmTodosRes.value : []);
         setColdDmLoadError(coldDmTodosRes.status === "rejected");
-        if (hrEmailTodosRes.status === "fulfilled") setHrEmailTodos(Array.isArray(hrEmailTodosRes.value) ? hrEmailTodosRes.value : []);
-        setHrEmailLoadError(hrEmailTodosRes.status === "rejected");
         if (weeklyTrendRes.status === "fulfilled") setWeeklyTrend(Array.isArray(weeklyTrendRes.value) ? weeklyTrendRes.value : []);
         if (platformRes.status === "fulfilled") setPlatformData(Array.isArray(platformRes.value) ? platformRes.value : []);
         if (statusFunnelRes.status === "fulfilled" && statusFunnelRes.value && typeof statusFunnelRes.value === "object") setStatusFunnel(statusFunnelRes.value);
@@ -234,10 +224,6 @@ export default function DashboardPage() {
   const dmTarget = stats?.dm_target || DEFAULT_DAILY_TARGET;
   const dmPct = Math.min(Math.round((dmCount / dmTarget) * 100), 100);
   const dmMet = dmCount >= dmTarget;
-  const hrCount = stats?.hr_emails_today ?? 0;
-  const hrTarget = stats?.hr_email_target || DEFAULT_DAILY_TARGET;
-  const hrPct = Math.min(Math.round((hrCount / hrTarget) * 100), 100);
-  const hrMet = hrCount >= hrTarget;
 
   return (
     <div className="space-y-8">
@@ -287,8 +273,8 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* ---- Daily Targets: applications, cold DMs, then HR emails ---- */}
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      {/* ---- Daily Targets: applications, then cold DMs ---- */}
+      <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -329,112 +315,7 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Mail className="h-5 w-5 text-amber-400" />
-              Daily Target — HR Emails
-            </CardTitle>
-            <CardDescription>
-              {hrCount} / {hrTarget} company HR emails sent today
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <Progress value={hrPct} className="h-3" />
-            <p className="text-muted-foreground text-right text-sm">
-              {hrMet
-                ? "Target reached — the rest wait for tomorrow"
-                : `${hrTarget - hrCount} to go · ${hrPct}%`}
-            </p>
-          </CardContent>
-        </Card>
       </div>
-
-      {/* ---- Immediate Company HR email todos ---- */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Mail className="h-5 w-5 text-sky-400" />
-            Email Company HR
-          </CardTitle>
-          <CardDescription>
-            Due 7 days after you apply — the same first-outreach day as the cold DM.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {hrEmailLoadError ? (
-            <p className="text-sm text-red-400">Company HR email todos could not be loaded.</p>
-          ) : hrEmailTodos.length === 0 ? (
-            <p className="text-muted-foreground text-sm">
-              No Company HR emails waiting.
-            </p>
-          ) : (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {hrEmailTodos.map((todo) => (
-                <div
-                  key={todo.id}
-                  role="link"
-                  tabIndex={0}
-                  onClick={() => todo.scraped_job_id ? router.push(`/jobs/${todo.scraped_job_id}`) : toast.info("This tracker record has no matching scraped-job detail page.")}
-                  onKeyDown={(event) => {
-                    if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) {
-                      event.preventDefault();
-                      if (todo.scraped_job_id) router.push(`/jobs/${todo.scraped_job_id}`);
-                      else toast.info("This tracker record has no matching scraped-job detail page.");
-                    }
-                  }}
-                  className="cursor-pointer space-y-3 rounded-lg border border-sky-500/40 bg-sky-500/5 p-4 hover:border-primary/60"
-                >
-                  <div>
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="font-semibold">{todo.company}</p>
-                      <Badge variant="outline" className="border-sky-500/30 bg-sky-500/10 text-sky-400">
-                        Todo now
-                      </Badge>
-                    </div>
-                    <p className="text-muted-foreground text-sm">{todo.role}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        if (todo.scraped_job_id) router.push(`/jobs/${todo.scraped_job_id}`);
-                        else toast.info("This tracker record has no matching scraped-job detail page.");
-                      }}
-                    >
-                      <Mail className="mr-1.5 h-3.5 w-3.5" />
-                      Open email
-                    </Button>
-                    <Button
-                      size="sm"
-                      disabled={hrEmailSaving === todo.id}
-                      onClick={async (event) => {
-                        event.stopPropagation();
-                        setHrEmailSaving(todo.id);
-                        try {
-                          await setHrEmailTodoCompleted(todo.id);
-                          setHrEmailTodos((current) => current.filter((item) => item.id !== todo.id));
-                          toast.success("Company HR email marked sent");
-                        } catch {
-                          toast.error("Failed to update the Company HR email todo");
-                        } finally {
-                          setHrEmailSaving(null);
-                        }
-                      }}
-                    >
-                      {hrEmailSaving === todo.id ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" />}
-                      Mark emailed
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
       {/* ---- Cold DMs Due: same existing follow-up schedule ---- */}
       <Card>

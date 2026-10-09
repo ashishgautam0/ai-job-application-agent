@@ -161,14 +161,6 @@ def _t_save_company_intel(args):
     return {"ok": True, "company": args["company"]}
 
 
-def _t_find_recruiter_emails(args):
-    import email_finder
-    names = [n.strip() for n in (args.get("names") or "").split(";") if n.strip()]
-    if not args.get("domain") or not names:
-        raise ValueError("domain and at least one name are required")
-    return email_finder.find_emails(args["domain"], names)
-
-
 # ------------------------------------------------------------------- schemas
 TOOLS = [
     {
@@ -256,7 +248,7 @@ TOOLS = [
     },
     {
         "name": "get_job_message",
-        "description": "Get a stored generated message for a scraped job (cold_dm, hr_email, resume_points, demo_html).",
+        "description": "Get a stored generated message for a scraped job (cold_dm, resume_points, demo_html).",
         "handler": _t_get_job_message,
         "inputSchema": {
             "type": "object",
@@ -316,14 +308,6 @@ TOOLS = [
             "required": ["company"],
         },
     },
-    {
-        "name": "find_recruiter_emails",
-        "description": "Guess + (where port 25 is open) verify recruiter email addresses for a domain. names is ';'-separated.",
-        "handler": _t_find_recruiter_emails,
-        "inputSchema": {
-            "type": "object",
-            "properties": {
-                "domain": {"type": "string"},
                 "names": {"type": "string"},
             },
             "required": ["domain", "names"],

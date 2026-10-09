@@ -14,7 +14,6 @@ export interface Application {
   date_applied?: string;
   follow_up_date?: string;
   follow_up_count?: number;
-  hr_email_sent_at?: string | null;
   scraped_job_id?: number | null;
 }
 
@@ -42,8 +41,6 @@ export interface DashboardStats {
   daily_target: number;
   dms_today: number;
   dm_target: number;
-  hr_emails_today: number;
-  hr_email_target: number;
   [key: string]: number;
 }
 
@@ -70,16 +67,6 @@ export interface ColdDmTodo {
   scraped_job_id: number | null;
   cold_dm_ready: boolean;
   readiness_issue?: string | null;
-}
-
-export interface HrEmailTodo {
-  id: number;
-  company: string;
-  role: string;
-  status: string;
-  created_at?: string;
-  hr_email_sent_at: null;
-  scraped_job_id?: number | null;
 }
 
 export interface FollowUpDraft {
@@ -336,7 +323,6 @@ export interface ApplicationResumeStatus {
 }
 
 export interface ApplicationPromptSettings {
-  hr_email_template: string;
   followup_template: string;
   cold_dm_template: string;
   prompt_template: string;

@@ -20,7 +20,6 @@ class OutreachSettingsTests(unittest.TestCase):
     def test_partial_save_keeps_the_other_prompt_settings(self):
         stored = {"scoring_weights": {"skill": 12, "application_prompt": {
             "prompt_template": "Applications {{batch_jobs}}", "followup_template": "My follow-ups",
-            "hr_email_template": "My initial email",
             "automation_rules": "AUTOMATION RULES (authoritative):\n- My saved rule.",
         }}}
         with patch.object(profile_data, "get_profile", return_value=stored), patch.object(
@@ -60,7 +59,11 @@ class OutreachSettingsTests(unittest.TestCase):
                 prompt, unknown = self.renderer()(template, {"filename": "résumé.pdf", "sha256": "abc"},
                                                   "https://app/dashboard", "https://api/pdf", kind.removesuffix("_template"))
                 self.assertFalse(unknown)
-                self.assertIn("résumé.pdf", prompt)
+                # The LinkedIn follow-up cannot attach anything, so its
+                # template deliberately carries no PDF link; the Cold DM's
+                # still does.
+                if kind != "followup_template":
+                    self.assertIn("résumé.pdf", prompt)
                 self.assertIn("https://app/dashboard", prompt)
                 self.assertIn("explicit confirmation immediately before sending", prompt)
                 self.assertNotIn("{{", prompt)
@@ -95,9 +98,10 @@ class OutreachSettingsTests(unittest.TestCase):
             "Day 8 is the first outreach",
             "Day 16 is the single follow-up round",
             "saved follow_up_date is actually due",
-            # The DM is conditional; the email is not.
-            "LINKEDIN FOLLOW-UP DM IS CONDITIONAL",
-            "whatever happened on LinkedIn",
+            # The follow-up is a LinkedIn DM and it is conditional, with no
+            # email left to fall back on.
+            "THE FOLLOW-UP IS A LINKEDIN MESSAGE AND IT IS CONDITIONAL",
+            "email was removed from this pipeline",
             # And the superseded wording is named so it cannot win.
             "does not override this timing",
         ):
@@ -123,20 +127,6 @@ class OutreachSettingsTests(unittest.TestCase):
         self.assertIn("My brief", prompt)
         self.assertIn("Check conversation/Sent history", prompt)
 
-    def test_gmail_recipient_rules_apply_to_saved_email_templates_only(self):
-        for kind in ("hr_email", "followup", "cold_dm"):
-            prompt, _ = self.renderer()("Previously saved custom instructions", {}, "https://app", "https://pdf", kind)
-            self.assertIn("Previously saved custom instructions", prompt)
-            if kind == "cold_dm":
-                self.assertNotIn("GMAIL AND HR RECIPIENT CHECKS", prompt)
-            else:
-                for requirement in ("Use my Gmail account", "actual PDF attachment", "visible From",
-                                    "five relevant pages", "official job listing", "hiring entity",
-                                    "Never construct firstname.lastname@", "Unverified is not the same",
-                                    "Do not send test emails", "exact source URL", "explicit confirmation",
-                                    "do not blindly Reply", "old and replacement recipients",
-                                    "not delivery", "leave the todo pending"):
-                    self.assertIn(requirement, prompt)
 
     def test_endpoint_passes_selected_workflow_to_renderer(self):
         seen = []
@@ -152,9 +142,9 @@ class OutreachSettingsTests(unittest.TestCase):
         fake_tracker = SimpleNamespace(get_cold_dm_prompt_jobs=lambda _: [],
                                        _user_now=lambda: SimpleNamespace(isoformat=lambda: "2026-09-27T12:00:00+05:30"))
         with patch.dict(sys.modules, {"tracker": fake_tracker}):
-            for kind in ("hr_email", "followup", "cold_dm"):
+            for kind in ("followup", "cold_dm"):
                 endpoint(SimpleNamespace(url_for=lambda _: "https://api/pdf"), "https://app/dashboard", kind)
-        self.assertEqual(seen, ["hr_email", "followup", "cold_dm"])
+        self.assertEqual(seen, ["followup", "cold_dm"])
 
     def test_connection_note_rules_apply_to_old_custom_cold_dm_templates(self):
         prompt, unresolved = self.renderer()("My saved generic DM prompt", {}, "https://app", "https://pdf", "cold_dm")
@@ -172,9 +162,8 @@ class OutreachSettingsTests(unittest.TestCase):
                          "count a confirmed send immediately", "Treat an uncertain send as consuming one slot",
                          "defer every remaining job", "not a guarantee against platform limits"):
             self.assertIn(required, prompt)
-        for kind in ("hr_email", "followup"):
-            other, _ = self.renderer()("Email template", {}, "https://app", "https://pdf", kind)
-            self.assertNotIn("LINKEDIN COLD DM = CONNECTION REQUEST", other)
+        other, _ = self.renderer()("Follow-up template", {}, "https://app", "https://pdf", "followup")
+        self.assertNotIn("LINKEDIN COLD DM = CONNECTION REQUEST", other)
 
     def test_outreach_readiness_depends_only_on_the_active_resume(self):
         due = [{"blocked_reason": "", "job_id": 42, "tracker_id": 9,
@@ -188,7 +177,7 @@ class OutreachSettingsTests(unittest.TestCase):
                    "_application_pdf_metadata": lambda: resume, "_render_outreach_prompt": self.renderer()}
             endpoint = function(ROOT / "app/routers/profile.py", "read_outreach_prompt", env)
             with patch.dict(sys.modules, {"tracker": fake_tracker}):
-                for kind in ("followup", "cold_dm", "hr_email"):
+                for kind in ("followup", "cold_dm"):
                     result = endpoint(SimpleNamespace(url_for=lambda _: "https://api/pdf"), "https://app/dashboard", kind)
                     self.assertEqual(result.ready, expected)
                     self.assertEqual(result.job_count, 1 if kind == "cold_dm" else 0)
@@ -222,7 +211,6 @@ class OutreachSettingsTests(unittest.TestCase):
                  "and current stored cold_dm text.")
         stored = {"scoring_weights": {"application_prompt": {
             "cold_dm_template": stale, "followup_template": "My follow-ups",
-            "hr_email_template": "My initial email",
         }}}
         with patch.object(profile_data, "get_profile", return_value=stored):
             served = profile_data.get_application_prompt_settings()
@@ -250,61 +238,6 @@ class OutreachSettingsTests(unittest.TestCase):
         self.assertEqual(served["cold_dm_template"], profile_data.OUTREACH_DEFAULTS["cold_dm_template"])
         self.assertIn("Mine, revised.", written["automation_rules"])
 
-    def test_company_research_caches_the_hiring_email_for_reuse(self):
-        """The research agent was finding a published address and dropping it in
-        its report. Caching it per company means one search per employer instead
-        of one per posting, and it lands in the draft's To: line."""
-        captured = {}
-        db = MagicMock()
-        db.table.return_value.upsert.side_effect = lambda payload, **_: captured.update(payload) or MagicMock()
-        save = function(ROOT / "modules/tracker.py", "save_research_cache",
-                        {"_get_client": lambda: db,
-                         "_user_now": _fixed_now})
-        save("Acme", {
-            "product_url": "https://acme.example",
-            "hiring_email": "  Careers@Acme.Example  ",
-            "hiring_email_source": "https://acme.example/careers",
-            "hiring_contact": {"name": "Real Person", "title": "Recruiter"},
-        })
-        # Normalized, and stored with the page that published it.
-        self.assertEqual(captured["hiring_email"], "careers@acme.example")
-        self.assertEqual(captured["hiring_email_source"], "https://acme.example/careers")
-
-        # Absent keys must not break the older callers that omit them.
-        captured.clear()
-        save("Beta", {"product_url": "https://beta.example", "hiring_contact": {}})
-        self.assertEqual(captured["hiring_email"], "")
-        self.assertEqual(captured["hiring_email_source"], "")
-
-    def test_the_cached_email_leads_the_draft_recipients(self):
-        published = function(ROOT / "modules/pending_messages.py", "_cached_hiring_email", {})
-        import types
-        tracker = types.ModuleType("tracker")
-        tracker.get_cached_research = lambda _name: {"hiring_email": "HR@Acme.Example"}
-        with patch.dict(sys.modules, {"tracker": tracker}):
-            self.assertEqual(published("Acme"), "hr@acme.example")
-        # No cache row, and a failing lookup, both degrade to empty rather than
-        # blocking the draft.
-        tracker.get_cached_research = lambda _name: None
-        with patch.dict(sys.modules, {"tracker": tracker}):
-            self.assertEqual(published("Acme"), "")
-        def boom(_name):
-            raise RuntimeError("supabase down")
-        tracker.get_cached_research = boom
-        with patch.dict(sys.modules, {"tracker": tracker}):
-            self.assertEqual(published("Acme"), "")
-
-    def test_the_research_agent_is_told_to_find_the_email_during_research(self):
-        agent = (ROOT.parent / ".claude/agents/job-research.md").read_text()
-        for required in ("Find the hiring email here, during research",
-                         "hiring_email", "hiring_email_source",
-                         "HIRING EMAIL:", "Never construct an address"):
-            with self.subTest(required=required):
-                self.assertIn(required, agent)
-        migration = (ROOT.parent / "supabase/add_hiring_email.sql").read_text()
-        self.assertIn("add column if not exists hiring_email", migration)
-        schema = (ROOT.parent / "supabase/schema.sql").read_text()
-        self.assertIn("hiring_email             text", schema)
 
     def test_no_eligible_due_job_is_not_a_ready_to_copy_prompt(self):
         blocked = [{"blocked_reason": "No current Cold DM for the latest Settings PDF", "job_id": 8, "tracker_id": 4,

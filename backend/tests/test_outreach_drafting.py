@@ -6,10 +6,8 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 from test_settings_profile import ROOT, function
-from email_finder import extract_published_emails
 from outreach_quality import draft_recipient, unsourced_recipient
-from message_generator import (build_cold_dm_prompt, build_follow_up_prompt,
-                               build_hr_email_prompt)
+from message_generator import build_cold_dm_prompt, build_follow_up_prompt
 from outreach_quality import UNKNOWN_RECIPIENT
 from outreach_quality import validate_outreach_draft, wrong_demo_links
 
@@ -33,10 +31,6 @@ class DemoLinkValidationTests(unittest.TestCase):
         self.assertIsNotNone(problem)
         self.assertIn("54075", problem)
 
-    def test_hr_emails_are_checked_too(self):
-        body = f"Here is a demo for the role: {self.DEMO}999"
-        self.assertIsNotNone(validate_outreach_draft("hr_email", body, 54144))
-        self.assertIsNone(validate_outreach_draft("hr_email", body, 999))
 
     def test_a_draft_with_no_demo_link_is_unaffected(self):
         self.assertEqual(wrong_demo_links("No link here.", 54144), [])
@@ -65,7 +59,7 @@ class SaveJobMessageDemoGuardTests(unittest.TestCase):
         db.table.return_value.upsert.return_value.execute.side_effect = (
             lambda: writes.append(True))
         return function(ROOT / "modules/tracker.py", "save_job_message", {
-            "JOB_MESSAGE_TYPES": ("screen", "cold_dm", "hr_email", "resume_points", "demo_html"),
+            "JOB_MESSAGE_TYPES": ("screen", "cold_dm", "resume_points", "demo_html"),
             "DEFAULT_MESSAGE_TYPE": "cold_dm",
             "_get_client": lambda: db,
             "datetime": __import__("datetime").datetime,
@@ -97,70 +91,32 @@ class SaveJobMessageDemoGuardTests(unittest.TestCase):
 
 
 class OutreachDraftingTests(unittest.TestCase):
-    def test_connection_note_boundaries_and_malformed_outputs(self):
-        self.assertIsNone(validate_outreach_draft("cold_dm", "Hi [FIRST NAME], " + "x" * 281))
-        for text in ("x" * 301, "😀" * 151, "VARIANT 1: Hello", "Subject: Hello",
-                     "To: hr@example.test", "My resume is attached."):
-            # Token on its own line so each case still fails for its own reason
-            # (the header patterns are line-anchored), not for a missing greeting.
-            self.assertIsNotNone(validate_outreach_draft("cold_dm", "Hi [FIRST NAME],\n" + text))
-        self.assertIsNone(validate_outreach_draft("hr_email", "My resume is attached."))
 
-    def test_builders_separate_purpose_and_preserve_facts(self):
-        cold = build_cold_dm_prompt("Acme", "ML Engineer", "Python needed", profile_text="Coursework: Python")
-        self.assertEqual(cold["char_limit"], 300)
-        self.assertIn("ONE LinkedIn connection-request note", cold["prompt"])
-        self.assertIn("Coursework: Python", cold["prompt"])
-        self.assertNotIn("VARIANT 1", cold["prompt"])
-        email = build_hr_email_prompt("Acme", "ML Engineer", "Python needed", "https://demo/1", "Coursework: Python")
-        for text in ("Body 60–90 words", "https://demo/1", "unknown — recipient verification required",
-                     "Coursework: Python", "Turn coursework", "Do not send email"):
-            self.assertIn(text, email["prompt"])
 
-    def test_the_hr_email_is_short_and_drops_the_filler_opener(self):
-        """The stored drafts opened "I'm writing to express interest" and ran
-        60-word sentences. Short, plain and professional instead."""
-        email = build_hr_email_prompt("Acme", "ML Engineer", "JD", "https://demo/1",
-                                      "Fine-tuned an STT model")["prompt"]
-        for required in ("Body 60–90 words, never more than 110",
-                         'Open with "I\'m writing to express interest"',
-                         "Write a sentence longer than about 25 words",
-                         '"My resume is attached."',
-                         "Subject: ML Engineer — <verified sender name>"):
-            with self.subTest(required=required):
-                self.assertIn(required, email)
-
-    def test_a_shared_mailbox_never_gets_a_first_name(self):
-        """Greeting one person by name on an email to a team inbox reads as a
-        mail-merge slip; every cached contact name sits on a shared address."""
-        for prompt in (build_hr_email_prompt("Acme", "ML Engineer", "JD", "https://demo/1", "P")["prompt"],
-                       build_follow_up_prompt("Acme", "ML Engineer", 7, profile_text="P")["prompt"]):
-            with self.subTest(prompt=prompt[:40]):
-                self.assertIn('write "Hello," on its own line', prompt)
-                self.assertIn("role or shared mailbox (hr@, careers@, jobs@, info@", prompt)
-                self.assertIn("never when the recipient is unknown", prompt)
-
-    def test_the_follow_up_is_an_email_carrying_the_demo_and_resume(self):
-        """Follow-ups are delivered by Gmail, but were formatted by the job's
-        original platform — LinkedIn for nearly all of them — producing a
-        300-character blob with no greeting and no room for demo or resume."""
+    def test_the_follow_up_is_a_linkedin_message_carrying_the_demo(self):
+        """It was a Gmail email. Email is gone from the pipeline, so it goes
+        where the first message went — a DM to the person who accepted the
+        connection. Nothing can be attached there, so the demo link is what
+        carries the evidence."""
         spec = build_follow_up_prompt("Acme", "ML Engineer", 7, original_platform="LinkedIn",
                                       profile_text="Fine-tuned an STT model",
                                       demo_url="https://demo/1",
-                                      recipient_email="hr@acme.test")
+                                      recipient_name="Dana")
         self.assertIsNone(spec["char_limit"])
         prompt = spec["prompt"]
-        for required in ("Subject: Re: ML Engineer — <verified sender name>",
-                         "RECIPIENT (already evidenced): hr@acme.test",
+        for required in ("This is a direct message to an existing 1st-degree connection",
+                         "RECIPIENT: Dana, who accepted the connection request.",
                          "Exact live demo URL for this job: https://demo/1",
-                         '"My resume is attached again."',
-                         "Body 50–80 words"):
+                         "A greeting using this person's first name.",
+                         "50–80 words"):
             with self.subTest(required=required):
                 self.assertIn(required, prompt)
-        # The LinkedIn-DM shape it used to emit is gone.
-        for banned in ("no greeting, no sign-off", "Max 300 characters", "No greetings like"):
+        # No email shape survives, and nothing may claim an attachment.
+        for banned in ("Subject:", "To: <the evidenced recipient",
+                       "My resume is attached again."):
             with self.subTest(banned=banned):
                 self.assertNotIn(banned, prompt)
+        self.assertIn("nothing can be attached to a LinkedIn message", prompt)
         # "just following up" survives only as a banned-pattern rule for the writer.
         self.assertIn('- "just following up", "circling back"', prompt)
 
@@ -171,68 +127,6 @@ class OutreachDraftingTests(unittest.TestCase):
         self.assertNotIn("https://", prompt.split("Greeting:", 1)[0].replace(
             "r.neelam@company.com", ""))
 
-    def test_an_address_the_posting_publishes_is_offered_as_evidence(self):
-        """81% of stored drafts had no recipient because the only route was an
-        open-ended web search. An address the employer wrote into its own
-        posting is evidence already — the posting is the official source."""
-        email = build_hr_email_prompt(
-            "Acme", "ML Engineer", "Mail your CV to careers@acme.co.in", "https://demo/1",
-            "Coursework: Python", published_emails=["careers@acme.co.in"])
-        self.assertIn("PUBLISHED IN THIS POSTING (evidence", email["prompt"])
-        self.assertIn("careers@acme.co.in", email["prompt"])
-        # With nothing published the agent is sent to the employer's own pages,
-        # and the unknown marker still has to survive as the honest fallback.
-        blank = build_hr_email_prompt("Acme", "ML Engineer", "No email here", "https://demo/1",
-                                      "Coursework: Python")
-        self.assertIn("none — research the employer's own pages", blank["prompt"])
-        self.assertIn("unknown — recipient verification required", blank["prompt"])
-
-    def test_harvesting_keeps_hiring_mailboxes_and_drops_the_rest(self):
-        # The two real postings in the tracker that carry an address.
-        self.assertEqual(
-            extract_published_emails("Reach us at hello@operinlabs.com for a chat."),
-            ["hello@operinlabs.com"])
-        self.assertEqual(
-            extract_published_emails("Send to TalentAcquisitionIndia@revantage.com"),
-            ["talentacquisitionindia@revantage.com"])
-        for text, reason in (
-            ("noreply@acme.com", "automated mailbox"),
-            ("support@acme.com", "not a hiring mailbox"),
-            ("someone@gmail.com", "free mail, not the employer"),
-            ("jobs@naukri.com", "the job board, not the employer"),
-        ):
-            with self.subTest(reason=reason):
-                self.assertEqual(extract_published_emails(text), [])
-        # Punctuation, casing and duplicates.
-        self.assertEqual(extract_published_emails("(hr@a.com). Also HR@A.COM"), ["hr@a.com"])
-        self.assertEqual(extract_published_emails(None), [])
-
-    def test_a_recipient_without_a_source_on_record_is_rejected(self):
-        """17 of 27 stored drafts had an address traceable to nothing, and one
-        replaced its own cached address with hr@<tradingname>.in. Saving now
-        requires the recipient to match evidence we hold."""
-        body = "Subject: Application\n\nHello,\n\nBody text.\n\nSubidh Khanal"
-        cached = ["info@rawats.com"]
-
-        # The real failure: an evidenced address on record, a different one used.
-        invented = validate_outreach_draft(
-            "hr_email", f"To: hr@disruptive.in\n{body}", 7, evidenced_emails=cached)
-        self.assertIn("hr@disruptive.in", invented)
-        self.assertIn("no source on record", invented)
-
-        # The cached address, and one the posting printed, both pass.
-        for good in ("info@rawats.com", "careers@acme.co.in"):
-            with self.subTest(recipient=good):
-                self.assertIsNone(validate_outreach_draft(
-                    "hr_email", f"To: {good}\n{body}", 7,
-                    evidenced_emails=["info@rawats.com", "careers@acme.co.in"]))
-
-        # Honestly declining to name one stays valid — that is the fallback.
-        self.assertIsNone(validate_outreach_draft(
-            "hr_email", f"To: {UNKNOWN_RECIPIENT}\n{body}", 7, evidenced_emails=[]))
-        # Callers that pass no evidence list are unaffected, so cold DMs and
-        # older call sites keep saving exactly as before.
-        self.assertIsNone(validate_outreach_draft("hr_email", f"To: any@where.com\n{body}", 7))
 
     def test_recipient_parsing_survives_real_draft_shapes(self):
         self.assertEqual(draft_recipient("To:   Careers@ACME.com  \nSubject: x"),
@@ -243,46 +137,16 @@ class OutreachDraftingTests(unittest.TestCase):
         self.assertEqual(unsourced_recipient("To: HR@Acme.com", ["hr@acme.com"]), "")
         self.assertEqual(unsourced_recipient("To: hr@acme.com", []), "hr@acme.com")
 
-    def test_harvesting_imports_without_any_third_party_package(self):
-        """This lane installs nothing. A module-level `import requests` in
-        email_finder broke the whole file's collection in CI while passing
-        locally, so the harvester must need only the standard library."""
-        source = (ROOT / "modules/email_finder.py").read_text()
-        top_level = [
-            line for line in source.splitlines()
-            if line.startswith(("import ", "from ")) and "__future__" not in line
-        ]
-        self.assertNotIn("import requests", top_level)
-        for stdlib in ("import re", "import json"):
-            self.assertIn(stdlib, top_level)
-        # requests is still reachable where it is actually needed.
-        self.assertIn("    import requests", source)
-
-    def test_the_pattern_guesser_is_documented_as_unusable_here(self):
-        """Port 25 is blocked on Vercel and in the routine container, so every
-        candidate returns as an unverified guess. Nothing may read it as a
-        verified recipient."""
-        finder = (ROOT / "modules/email_finder.py").read_text()
-        self.assertIn("NOT evidence", finder)
-        self.assertIn("port 25 is blocked", finder)
-        agent = (ROOT.parent / ".claude/agents/recruiter-email.md").read_text()
-        self.assertIn("Do not use its output as a recipient", agent)
-        # The ordered source list that replaced the open-ended search.
-        for source in ("published_emails", "/careers", "/contact", "careers.",
-                       "The ATS the posting hands off to"):
-            with self.subTest(source=source):
-                self.assertIn(source, agent)
-        self.assertIn("careers@ or jobs@ either", agent)
 
     def test_list_emits_exact_job_and_single_profile_snapshot(self):
-        for kind in ("cold_dm", "hr_email"):
+        for kind in ("cold_dm",):
             profile = MagicMock(return_value="Verified Python coursework")
             command = function(ROOT / "modules/pending_messages.py", "cmd_list", {
                 "_tracked_jobs_missing": lambda *_: ([{"id": 7, "company": "Acme", "title": "ML Engineer",
                     "description": "Exact JD", "demo_url": "https://demo/7"}], 1),
                 "_profile_text": profile, "_demo_url_for_job": lambda _: "",
                 "_company_intel_text": lambda _: "", "json": json, "sys": sys,
-                "_cached_hiring_email": lambda _: ""})
+                })
             with patch("sys.stdout", new_callable=io.StringIO) as out:
                 command(SimpleNamespace(type=kind, limit=10))
                 result = json.loads(out.getvalue())

@@ -1,4 +1,4 @@
-name: Company HR email todo tests
+name: Outreach cadence tests
 on:
   pull_request:
   push:
@@ -13,5 +13,5 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: python -m unittest discover -s backend/tests -p test_hr_email_todo.py -v
+      - run: python -m unittest discover -s backend/tests -p test_outreach_cadence.py -v
       - run: python -m compileall -q backend/app backend/modules
