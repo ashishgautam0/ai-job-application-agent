@@ -234,6 +234,10 @@ export default function DashboardPage() {
   const dmTarget = stats?.dm_target || DEFAULT_DAILY_TARGET;
   const dmPct = Math.min(Math.round((dmCount / dmTarget) * 100), 100);
   const dmMet = dmCount >= dmTarget;
+  const hrCount = stats?.hr_emails_today ?? 0;
+  const hrTarget = stats?.hr_email_target || DEFAULT_DAILY_TARGET;
+  const hrPct = Math.min(Math.round((hrCount / hrTarget) * 100), 100);
+  const hrMet = hrCount >= hrTarget;
 
   return (
     <div className="space-y-8">
@@ -283,8 +287,8 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* ---- Daily Targets: applications, then cold DMs ---- */}
-      <div className="grid gap-4 md:grid-cols-2">
+      {/* ---- Daily Targets: applications, cold DMs, then HR emails ---- */}
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -321,6 +325,26 @@ export default function DashboardPage() {
               {dmMet
                 ? "Target reached — the agent stops for today"
                 : `${dmTarget - dmCount} to go · ${dmPct}%`}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5 text-amber-400" />
+              Daily Target — HR Emails
+            </CardTitle>
+            <CardDescription>
+              {hrCount} / {hrTarget} company HR emails sent today
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <Progress value={hrPct} className="h-3" />
+            <p className="text-muted-foreground text-right text-sm">
+              {hrMet
+                ? "Target reached — the rest wait for tomorrow"
+                : `${hrTarget - hrCount} to go · ${hrPct}%`}
             </p>
           </CardContent>
         </Card>
