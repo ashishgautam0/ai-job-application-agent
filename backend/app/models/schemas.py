@@ -53,7 +53,6 @@ class ApplicationPromptSettings(BaseModel):
     prompt_template: str = Field(default="", max_length=12_000)
     automation_rules: str = Field(default="", max_length=12_000)
     desktop_prompt_template: str = Field(default="", max_length=40_000)
-    hr_email_template: str = Field(default="", max_length=12_000)
     followup_template: str = Field(default="", max_length=12_000)
     cold_dm_template: str = Field(default="", max_length=12_000)
 
@@ -177,12 +176,6 @@ class UpdateNotesRequest(BaseModel):
 class SnoozeRequest(BaseModel):
     new_date: date
 
-
-class HrEmailTodoRequest(BaseModel):
-    completed: bool = True
-
-
-# ---- Scraped Jobs ----
 
 class MarkScrapedJobRequest(BaseModel):
     action: str  # "applied" or "dismissed"

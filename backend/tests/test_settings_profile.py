@@ -317,22 +317,6 @@ class SettingsProfileTests(unittest.TestCase):
         self.assertIn("{{missing_rule_value}}", custom)
         self.assertEqual(unresolved, ["missing_rule_value"])
 
-    def test_standalone_hr_workflow_retains_queue_and_send_guards(self):
-        prompt = profile_data.OUTREACH_DEFAULTS["hr_email_template"]
-        self.assertIn("Do not generate or send HR email before tracking", prompt)
-        self.assertIn("HR email pending assets", prompt)
-        self.assertIn("HR email blocked: mail access required", prompt)
-        self.assertIn("Do not treat saved application", prompt)
-        self.assertIn("If already completed, skip", prompt)
-        self.assertIn("never guess a Tracker ID", prompt)
-        self.assertIn("Use only its 'Email Company HR' todo section", prompt)
-        self.assertIn("can include previously tracked jobs", prompt)
-        self.assertIn("click that dashboard card", prompt)
-        self.assertIn("Do not scan company details or every Tracker record", prompt)
-        self.assertIn("report a queue error", prompt)
-        self.assertIn("verify that todo is no longer pending", prompt)
-        self.assertNotIn("For each eligible job in this fixed batch", prompt)
-        self.assertNotIn("pay a fee, send email, or apply", prompt)
 
     def test_interview_prep_is_removed_but_the_resume_bucket_survives(self):
         """The 28-day prep feature is gone. Its Supabase bucket name is not: the
@@ -363,7 +347,6 @@ class SettingsProfileTests(unittest.TestCase):
         page = (ROOT.parent / "frontend/src/app/(app)/settings/page.tsx").read_text()
         order = [
             "<DesktopPrompt />",
-            'kind="hr_email"',
             'kind="followup"',
             "Exclude companies from scraped jobs",
             '<h1 className="text-2xl font-bold">Resume profile</h1>',
@@ -399,11 +382,14 @@ class SettingsProfileTests(unittest.TestCase):
 
     def test_followups_use_dashboard_and_separate_confirmed_history_logging(self):
         followup = profile_data.OUTREACH_DEFAULTS["followup_template"]
-        for requirement in ("Dashboard's 'Follow-ups Due'", "Click each dashboard follow-up card",
-                            "skip future dates", "defer the follow-up", "pending draft",
-                            "existing conversation/channel", "actual latest Settings PDF attachment",
+        for requirement in ("Dashboard's 'Follow-ups Due'", "Click each card to open its linked Tracker detail",
+                            "skip future dates", "pending draft",
+                            # A LinkedIn DM, so no attachment and no email to
+                            # collide with — the deferral rule went with it.
+                            "THIS IS A LINKEDIN MESSAGE, NOT AN EMAIL",
+                            "existing conversation",
                             "confirmation immediately before Send", "never blindly resend",
-                            "Record sent follow-up", "do not also change status",
+                            "Record sent follow-up",
                             "at most one follow-up per record", "Never fabricate history"):
             self.assertIn(requirement, followup)
         detail = (ROOT.parent / "frontend/src/app/(app)/jobs/[id]/page.tsx").read_text()

@@ -1119,7 +1119,6 @@ class DesktopPromptTests(unittest.TestCase):
         """Nothing expands into the prompt now that the answers are inline, so
         its own length is the whole measurement."""
         limit = function(ROOT / "app/routers/profile.py", "_settings_field_limit", {})
-        self.assertEqual(limit("hr_email_template"), 12_000)
         self.assertLess(len(self.prompt), limit("desktop_prompt_template"))
 
 

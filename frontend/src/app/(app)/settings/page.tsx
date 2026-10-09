@@ -22,7 +22,6 @@ import { DesktopPrompt } from "./desktop-prompt";
 
 const MAX_BYTES = 10 * 1024 * 1024;
 const EMPTY_APPLICATION_SETTINGS: ApplicationPromptSettings = {
-  hr_email_template: "",
   followup_template: "",
   cold_dm_template: "",
   prompt_template: "",
@@ -130,8 +129,7 @@ export default function SettingsPage() {
     </div>
     <DesktopPrompt />
     {!loadError && <>
-      <OutreachPrompt kind="hr_email" title="Initial HR email prompt" description="Send through your Gmail. Use Dashboard’s HR todos; verify recipients and research official hiring contacts if Claude’s address is invalid or unverified." initialValue={applicationSettings.hr_email_template} />
-      <OutreachPrompt kind="followup" title="HR follow-up email prompt" description="Use your Gmail and Dashboard’s Follow-ups Due queue. Check recipient evidence, dates, Sent history and bounces before sending." initialValue={applicationSettings.followup_template} />
+      <OutreachPrompt kind="followup" title="LinkedIn follow-up prompt" description="Use Dashboard’s Follow-ups Due queue. The follow-up is a LinkedIn message to whoever accepted the connection — check the dates and the conversation before sending." initialValue={applicationSettings.followup_template} />
     </>}
     <Card>
       <CardHeader><CardTitle>Exclude companies from scraped jobs</CardTitle><p className="text-sm text-muted-foreground">This list is written into the Claude Desktop prompt above, so the agent never applies to these companies. Add one employer per line. Only the companies you name here are skipped — applying to a company does not exclude it, so the agent is free to apply to a second role at a company already in your Tracker.</p></CardHeader>

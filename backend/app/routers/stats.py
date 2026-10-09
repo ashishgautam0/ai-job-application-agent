@@ -3,7 +3,6 @@ from fastapi import APIRouter
 from tracker import (
     get_cold_dm_todos,
     get_post_connection_follow_ups_due,
-    get_hr_email_todos,
     get_platform_effectiveness,
     get_role_analysis,
     get_stats,
@@ -24,31 +23,25 @@ def dashboard_stats():
 def follow_ups():
     """Due follow-ups, each marked with whether it is actually sendable.
 
-    A follow-up needs both halves: a written draft and an address to send it
-    to. Dashboard hides the ones missing either rather than offering a card
-    that cannot be acted on.
+    A follow-up needs both halves: a written draft, and the person it goes to.
+    It is a LinkedIn message now rather than an email, so the recipient is
+    whoever accepted this job's connection request. Dashboard hides the ones
+    missing either rather than offering a card that cannot be acted on.
     """
-    from tracker import get_cached_research, get_follow_up_draft
+    from pending_messages import _connection_recipient
+    from tracker import get_follow_up_draft
 
     df = get_post_connection_follow_ups_due()
     if df.empty:
         return []
     rows = json_records(df)
 
-    recipients = {}
     for row in rows:
-        company = row.get("company") or ""
-        if company not in recipients:
-            try:
-                cached = get_cached_research(company) or {}
-                recipients[company] = (cached.get("hiring_email") or "").strip()
-            except Exception:
-                recipients[company] = ""
         try:
             draft = get_follow_up_draft(row["id"]) or {}
         except Exception:
             draft = {}
-        row["recipient"] = recipients[company] or None
+        row["recipient"] = _connection_recipient(row["id"]) or None
         row["draft_ready"] = draft.get("status") == "ready" and bool(
             (draft.get("content") or "").strip())
     return rows
@@ -61,12 +54,6 @@ def cold_dm_todos():
     from profile import get_latest_profile_snapshot
     resume = get_latest_profile_snapshot()
     return get_cold_dm_todos((resume or {}).get("version"))
-
-
-@router.get("/hr-email-todos")
-def hr_email_todos():
-    df = get_hr_email_todos()
-    return json_records(df)
 
 
 @router.get("/weekly-trend")

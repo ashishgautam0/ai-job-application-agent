@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 
 export function OutreachPrompt({ kind, title, description, initialValue }: {
-  kind: "hr_email" | "followup" | "cold_dm"; title: string; description: string; initialValue: string;
+  kind: "followup" | "cold_dm"; title: string; description: string; initialValue: string;
 }) {
   const [busy, setBusy] = useState(false);
   const [generated, setGenerated] = useState<RenderedApplicationPrompt | null>(null);

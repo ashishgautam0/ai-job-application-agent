@@ -18,7 +18,6 @@ import {
   updateApplicationNotes,
   deleteApplication,
   updateFollowUpOutcome,
-  setHrEmailTodoCompleted,
 } from "@/lib/api";
 import type {
   Application,
@@ -97,12 +96,6 @@ const SECTIONS = [
     icon: MessageSquareText,
   },
   {
-    type: "hr_email",
-    title: "Email to Company HR",
-    description: "A brief professional email with the mini demo; attach your latest Settings PDF.",
-    icon: Mail,
-  },
-  {
     type: "resume_points",
     title: "Resume Customization",
     description:
@@ -157,7 +150,6 @@ export default function JobDetailPage() {
     null
   );
   const [emailLoading, setEmailLoading] = useState(false);
-  const [hrEmailSaving, setHrEmailSaving] = useState(false);
   const [followUpSaving, setFollowUpSaving] = useState(false);
   const [followUpRecordLocked, setFollowUpRecordLocked] = useState(false);
   const [sentFollowUp, setSentFollowUp] = useState("");
@@ -321,20 +313,6 @@ export default function JobDetailPage() {
       toast.error("Failed to delete application");
     } finally {
       setDeleting(false);
-    }
-  }
-
-  async function handleHrEmailTodo(completed: boolean) {
-    if (!application) return;
-    setHrEmailSaving(true);
-    try {
-      const result = await setHrEmailTodoCompleted(application.id, completed);
-      setApplication({ ...application, hr_email_sent_at: result.hr_email_sent_at });
-      toast.success(completed ? "Company HR email marked sent" : "Company HR email todo reopened");
-    } catch {
-      toast.error("Failed to update the Company HR email todo");
-    } finally {
-      setHrEmailSaving(false);
     }
   }
 
@@ -696,17 +674,6 @@ export default function JobDetailPage() {
               <CardDescription>{s.description}</CardDescription>
             </div>
             <div className="flex flex-wrap gap-2">
-            {s.type === "hr_email" && application && (
-              <Button
-                variant={application.hr_email_sent_at ? "outline" : "default"}
-                size="sm"
-                disabled={hrEmailSaving}
-                onClick={() => handleHrEmailTodo(!application.hr_email_sent_at)}
-              >
-                {hrEmailSaving && <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />}
-                {application.hr_email_sent_at ? "Reopen todo" : "Mark emailed"}
-              </Button>
-            )}
             {messages[s.type] && (
               <div className="flex gap-2"><Button variant="outline" size="sm" onClick={() => handleCopy(s.type)}>
                 {copied === s.type ? (
@@ -715,21 +682,14 @@ export default function JobDetailPage() {
                   <Copy className="mr-1.5 h-3.5 w-3.5" />
                 )}
                 {copied === s.type ? "Copied" : "Copy"}
-              </Button>{s.type === "cover_letter" && <Button variant="outline" size="sm" onClick={downloadCoverLetter}><Download className="mr-1.5 h-3.5 w-3.5" />Download</Button>}{s.type === "hr_email" && <Button variant="outline" size="sm" asChild><a href={getApplicationResumePdfUrl()} target="_blank" rel="noopener noreferrer"><Download className="mr-1.5 h-3.5 w-3.5" />Resume to attach</a></Button>}</div>
+              </Button>{s.type === "cover_letter" && <Button variant="outline" size="sm" onClick={downloadCoverLetter}><Download className="mr-1.5 h-3.5 w-3.5" />Download</Button>}</div>
             )}
             </div>
           </CardHeader>
           <CardContent>
-            {s.type === "hr_email" && application && (
-              <p className={`mb-3 rounded-md border p-3 text-sm ${application.hr_email_sent_at ? "border-emerald-500/30 bg-emerald-500/5 text-emerald-400" : "border-sky-500/30 bg-sky-500/5 text-sky-400"}`}>
-                {application.hr_email_sent_at
-                  ? `Completed ${new Date(application.hr_email_sent_at).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })}`
-                  : "Todo now — email Company HR after adding this job to the tracker."}
-              </p>
-            )}
             {messages[s.type] ? (
               <div className="space-y-2"><p className="rounded-md border bg-muted/40 p-3 text-sm leading-relaxed whitespace-pre-wrap break-words">{messages[s.type]}</p>
-                {s.type === "hr_email" && <p className="text-xs text-muted-foreground">Before sending: attach the latest resume PDF using the button above. Nothing is sent automatically.</p>}
+                
                 {s.type === "cover_letter" && <p className="text-xs text-muted-foreground">Resume v{messageRows[s.type]?.resume_version} · JD v{messageRows[s.type]?.jd_version} · match {messageRows[s.type]?.match_score}/100 · generated {messageRows[s.type]?.generated_at ? new Date(messageRows[s.type].generated_at!).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" }) : "time unavailable"}</p>}
               </div>
             ) : job.applied ? (

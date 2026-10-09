@@ -82,20 +82,6 @@ def count_dms_today():
     return resp.count if resp.count is not None else len(resp.data or [])
 
 
-# The one-time HR email per application, the cadence's other day-8 action.
-# Counted from the application row rather than follow_up_history: sending it
-# stamps hr_email_sent_at, and that stamp is what retires the todo.
-DAILY_HR_EMAIL_TARGET = 10
-
-
-def count_hr_emails_today():
-    """HR emails marked sent since midnight, user's timezone."""
-    midnight = _user_now().replace(hour=0, minute=0, second=0, microsecond=0)
-    resp = (_get_client().table("applications").select("id", count="exact")
-            .gte("hr_email_sent_at", midnight.isoformat()).execute())
-    return resp.count if resp.count is not None else len(resp.data or [])
-
-
 def add_application(company, role, job_type, platform, url="",
                     noc_compatible="Unknown", conversion="N/A",
                     salary="", notes=""):
@@ -360,60 +346,14 @@ def get_cold_dm_prompt_jobs(resume_version=None, limit=100):
     return batch
 
 
-def get_hr_email_todos():
-    """Active applications whose one-time HR email is due and not yet sent.
-
-    Due on day 8, the cadence's first outreach day, alongside the cold DM —
-    not the moment the job lands in the tracker. Measured from date_applied
-    rather than follow_up_date, because recording the cold DM pushes
-    follow_up_date on to the next round and would hide a still-unsent email.
-    """
-    db = _get_client()
-    due_by = (_user_now().date() - timedelta(days=APPLICATION_CADENCE[0])).isoformat()
-    resp = (db.table("applications")
-            .select("*")
-            .is_("hr_email_sent_at", "null")
-            .lte("date_applied", due_by)
-            .order("created_at", desc=False)
-            .execute())
-    rows = [row for row in (resp.data or [])
-            if row.get("status") not in TERMINAL_STATUSES]
-    if not rows:
-        return pd.DataFrame()
-
-    from analytics import attach_tracker_job_ids
-    urls = [row.get("url") for row in rows if row.get("url")]
-    jobs = []
-    for start in range(0, len(urls), 200):
-        jobs.extend((db.table("scraped_jobs").select("id,url")
-                     .in_("url", urls[start:start + 200]).execute()).data or [])
-    return pd.DataFrame(attach_tracker_job_ids(rows, jobs))
-
-
-def set_hr_email_todo_completed(app_id, completed=True):
-    """Mark the immediate HR-email todo complete, or reopen it."""
-    value = _user_now().isoformat() if completed else None
-    (_get_client().table("applications")
-     .update({"hr_email_sent_at": value})
-     .eq("id", app_id)
-     .execute())
-    return value
-
-
 def _add_dm_progress(stats):
-    """Today's outreach for the Dashboard; a failed count must not hide the rest."""
+    """Today's Cold DMs for the Dashboard; a failed count must not hide the rest."""
     try:
         stats['dms_today'] = count_dms_today()
     except Exception as exc:
         print(f"[tracker] could not count today's Cold DMs: {exc}")
         stats['dms_today'] = 0
     stats['dm_target'] = DAILY_DM_TARGET
-    try:
-        stats['hr_emails_today'] = count_hr_emails_today()
-    except Exception as exc:
-        print(f"[tracker] could not count today's HR emails: {exc}")
-        stats['hr_emails_today'] = 0
-    stats['hr_email_target'] = DAILY_HR_EMAIL_TARGET
 
 
 def get_stats():
@@ -730,7 +670,7 @@ def get_scraped_jobs(source=None):
 # hosted LLM call — see backend/modules/pending_messages.py.
 
 DEFAULT_MESSAGE_TYPE = "cold_dm"
-JOB_MESSAGE_TYPES = ("screen", "cold_dm", "hr_email", "resume_points", "demo_html")
+JOB_MESSAGE_TYPES = ("screen", "cold_dm", "resume_points", "demo_html")
 REMOVED_MESSAGE_TYPES = {"evaluation"}
 
 
@@ -753,34 +693,6 @@ def get_job_message(scraped_job_id, message_type=DEFAULT_MESSAGE_TYPE):
         return None
 
 
-def evidenced_hiring_emails(scraped_job_id):
-    """Addresses on record for this job's employer, newest evidence first.
-
-    The address company research cached for the company, plus anything the
-    posting itself printed. Returns [] when the job cannot be read, which
-    leaves an unknown-recipient draft valid and a claimed address rejected.
-    """
-    from email_finder import extract_published_emails
-
-    try:
-        db = _get_client()
-        resp = (db.table("scraped_jobs")
-                .select("company,description")
-                .eq("id", int(scraped_job_id)).limit(1).execute())
-    except Exception as exc:
-        print(f"[tracker] evidenced_hiring_emails lookup failed: {exc}")
-        return []
-    row = (resp.data or [{}])[0]
-    found = []
-    cached = get_cached_research(row.get("company") or "") or {}
-    if cached.get("hiring_email"):
-        found.append(cached["hiring_email"].strip().lower())
-    for email in extract_published_emails(row.get("description")):
-        if email not in found:
-            found.append(email)
-    return found
-
-
 def save_job_message(scraped_job_id, content, message_type=DEFAULT_MESSAGE_TYPE,
                      generated_by="claude-routine", profile_version=None):
     """Store (or replace) the message for a job. Returns True on success."""
@@ -791,27 +703,16 @@ def save_job_message(scraped_job_id, content, message_type=DEFAULT_MESSAGE_TYPE,
     # other job's demo link, which would send this employer someone else's demo.
     # Only this check here — the rest of the outreach rules stay in cmd_save,
     # so this cannot start rejecting drafts that save fine today.
-    from outreach_quality import unsourced_recipient, wrong_demo_links
+    from outreach_quality import wrong_demo_links
     foreign = wrong_demo_links(content, scraped_job_id)
     if foreign:
         print(f"Rejected {message_type} for job {scraped_job_id}: "
               f"it links demo(s) {', '.join(foreign)} belonging to another job.")
         return False
-    # An HR email may only go to an address we can trace: the one company
-    # research cached for this employer, or one the posting itself printed.
-    # Without this a draft could carry an address assembled from a domain,
-    # which reads as evidenced and is not.
-    if message_type == "hr_email":
-        stray = unsourced_recipient(content, evidenced_hiring_emails(scraped_job_id))
-        if stray:
-            print(f"Rejected hr_email for job {scraped_job_id}: recipient {stray} "
-                  f"has no source on record. Cache it with its source URL first, "
-                  f"or leave the unknown-recipient marker.")
-            return False
     db = _get_client()
     try:
         profile_dependent = message_type in {
-            "screen", "cold_dm", "hr_email", "resume_points"
+            "screen", "cold_dm", "resume_points"
         }
         if profile_version is None and profile_dependent:
             try:
@@ -1199,10 +1100,6 @@ def save_research_cache(company_name, research_data):
         "hiring_contact_name": research_data.get("hiring_contact", {}).get("name", ""),
         "hiring_contact_title": research_data.get("hiring_contact", {}).get("title", ""),
         "hiring_contact_linkedin": research_data.get("hiring_contact", {}).get("linkedin_url", ""),
-        # Found during company research so the HR email agent does not repeat
-        # the search per job. Stored only with the page that published it.
-        "hiring_email": (research_data.get("hiring_email") or "").strip().lower(),
-        "hiring_email_source": (research_data.get("hiring_email_source") or "").strip(),
         "product_url": research_data.get("product_url", ""),
         # Stamp every save, not just the first. The column default only fires on
         # insert, so without this an upsert left the old date: a row went stale

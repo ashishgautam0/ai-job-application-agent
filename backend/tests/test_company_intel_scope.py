@@ -42,8 +42,6 @@ class CompanyIntelScopeTests(unittest.TestCase):
             "description": "must not survive",
             "recent_news": "must not survive",
             "tech_signals": ["Python"],
-            "hiring_email": "careers@obrien.example",
-            "hiring_email_source": "https://obrien.example/careers",
             "hiring_contact": {
                 "name": "Zoë O'Brien",
                 "title": "Technical Recruiter",
@@ -59,8 +57,6 @@ class CompanyIntelScopeTests(unittest.TestCase):
             "hiring_contact_name": "Zoë O'Brien",
             "hiring_contact_title": "Technical Recruiter",
             "hiring_contact_linkedin": "https://www.linkedin.com/in/zoe-obrien",
-            "hiring_email": "careers@obrien.example",
-            "hiring_email_source": "https://obrien.example/careers",
             "product_url": "https://obrien.example",
             # When it was researched, so a stale row can be told from a fresh
             # one. Still no description, news or tech signals.

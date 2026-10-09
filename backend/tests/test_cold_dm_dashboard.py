@@ -169,7 +169,7 @@ class ColdDmDashboardTests(unittest.TestCase):
             {"scraped_job_id": 901, "message_type": "screen", "content": "PASS: Eligible", "is_stale": False, "profile_version": 5},
             {"scraped_job_id": 901, "message_type": "cold_dm", "content": "Verified job-specific note", "is_stale": False, "profile_version": 5},
             {"scraped_job_id": 902, "message_type": "cold_dm", "content": "Old resume note", "is_stale": True, "profile_version": 4},
-            {"scraped_job_id": 902, "message_type": "hr_email", "content": "Wrong type", "is_stale": False},
+            {"scraped_job_id": 902, "message_type": "resume_points", "content": "Wrong type", "is_stale": False},
             {"scraped_job_id": 904, "message_type": "cold_dm", "content": "Closed", "is_stale": False},
             {"scraped_job_id": 905, "message_type": "cold_dm", "content": "Future", "is_stale": False},
         ]

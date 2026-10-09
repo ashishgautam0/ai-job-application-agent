@@ -504,10 +504,10 @@ def download_application_resume():
     })
 
 
-def _render_outreach_prompt(template, resume, page_url, resume_url, kind="hr_email",
+def _render_outreach_prompt(template, resume, page_url, resume_url, kind="cold_dm",
                             cold_dm_jobs=None, snapshot_at=None, excluded_count=0,
                             excluded_reasons=None):
-    from outreach_prompts import (GMAIL_HR_DELIVERY_RULES, LINKEDIN_CONNECTION_RULES,
+    from outreach_prompts import (LINKEDIN_CONNECTION_RULES,
                                   FOLLOW_UP_AFTER_CONNECTION_RULES,
                                   remove_legacy_cold_dm_navigation)
     from urllib.parse import quote, urlsplit
@@ -542,14 +542,18 @@ def _render_outreach_prompt(template, resume, page_url, resume_url, kind="hr_ema
             rules += (f"Omitted because: {reasons}. An older saved draft may still be visible; "
                       "review the active PDF and regenerate stale drafts as needed. "
                       "Do not send notes for omitted jobs.\n\n")
-    delivery = GMAIL_HR_DELIVERY_RULES if kind in {"hr_email", "followup"} else LINKEDIN_CONNECTION_RULES
+    # Both workflows run on LinkedIn, but they are different acts: the Cold DM
+    # is an invitation with a note, the follow-up is a message to someone who
+    # already accepted one. Only the Cold DM takes the connection-request
+    # rules; the follow-up takes the timing block below and nothing else.
+    delivery = LINKEDIN_CONNECTION_RULES if kind == "cold_dm" else ""
     timing = FOLLOW_UP_AFTER_CONNECTION_RULES if kind == "followup" else ""
     return rules + delivery + timing + rendered, unresolved
 
 
 @router.get("/outreach-prompt", response_model=RenderedApplicationPrompt)
 def read_outreach_prompt(request: Request, page_url: str,
-                         kind: Literal["hr_email", "followup", "cold_dm"]):
+                         kind: Literal["followup", "cold_dm"]):
     page_url = _clean_text(page_url, 1_000)
     if not page_url.startswith(("https://", "http://localhost")):
         raise HTTPException(status_code=422, detail="App page URL is invalid.")

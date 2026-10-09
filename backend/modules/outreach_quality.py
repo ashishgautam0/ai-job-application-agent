@@ -2,7 +2,7 @@
 import re
 
 _DEMO_LINK = re.compile(r"/api/demo/(\d+)")
-_DEMO_LINKED_KINDS = {"cold_dm", "cold-dm", "hr_email"}
+_DEMO_LINKED_KINDS = {"cold_dm", "cold-dm"}
 # The recipient on an HR email draft's To: line.
 _TO_LINE = re.compile(r"(?im)^\s*to\s*:\s*(.+?)\s*$")
 _ADDRESS = re.compile(r"[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}")
@@ -49,13 +49,6 @@ def wrong_demo_links(content, scraped_job_id):
 
 
 def validate_outreach_draft(kind, content, scraped_job_id=None, evidenced_emails=None):
-    if kind == "hr_email" and evidenced_emails is not None:
-        stray = unsourced_recipient(content, evidenced_emails)
-        if stray:
-            return (f"Recipient {stray} has no source on record. Use the address "
-                    f"company research cached, or one the posting prints; if you "
-                    f"found a new one, save it to the company intel with its "
-                    f"source URL first. Otherwise write 'To: {UNKNOWN_RECIPIENT}'.")
     if kind in _DEMO_LINKED_KINDS:
         foreign = wrong_demo_links(content, scraped_job_id)
         if foreign:

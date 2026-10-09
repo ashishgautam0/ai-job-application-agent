@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Query
 from typing import Optional
 
-from ..models.schemas import AddApplicationRequest, UpdateStatusRequest, UpdateNotesRequest, SnoozeRequest, HrEmailTodoRequest
+from ..models.schemas import AddApplicationRequest, UpdateStatusRequest, UpdateNotesRequest, SnoozeRequest
 from tracker import (
     add_application,
     delete_application,
@@ -10,7 +10,6 @@ from tracker import (
     update_status,
     update_notes,
     snooze_follow_up,
-    set_hr_email_todo_completed,
 )
 from json_safe import json_records
 
@@ -84,12 +83,6 @@ def patch_notes(
 def snooze(app_id: int, body: SnoozeRequest):
     snooze_follow_up(app_id, body.new_date.isoformat())
     return {"success": True}
-
-
-@router.patch("/{app_id}/hr-email-todo")
-def update_hr_email_todo(app_id: int, body: HrEmailTodoRequest):
-    completed_at = set_hr_email_todo_completed(app_id, body.completed)
-    return {"success": True, "hr_email_sent_at": completed_at}
 
 
 @router.delete("/{app_id}")
