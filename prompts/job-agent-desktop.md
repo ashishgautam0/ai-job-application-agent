@@ -413,11 +413,11 @@ This is the exclusion list from my Settings. It applies on every portal and on
 an employer's own site. Skip the posting before opening the JD and record it as
 `skipped` with the reason "Excluded company".
 
-It includes **every company I have already applied to** — one application per
-company is enough. **The same goes for this run:** once you submit an
-application to a company, treat that company as excluded and skip every other
-posting from it until the run ends, even though it is not on the list below
-yet.
+It is only the list below — the companies I named myself. **Applying to a
+company does not exclude it.** A second role at a company I have already
+applied to is still worth applying for, here and in the same run, so never
+skip a posting merely because that employer is already in my Tracker or
+because you applied to another of its jobs earlier today.
 
 {{excluded_companies}}
 

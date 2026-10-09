@@ -49,7 +49,6 @@ export default function SettingsPage() {
   const [pending, setPending] = useState<ResumeProfile | null>(null);
   const [busy, setBusy] = useState(false);
   const [excludedCompaniesText, setExcludedCompaniesText] = useState("");
-  const [trackedCompanies, setTrackedCompanies] = useState<string[]>([]);
   const [exclusionsLoaded, setExclusionsLoaded] = useState(false);
   const [exclusionsDirty, setExclusionsDirty] = useState(false);
   const [savingExclusions, setSavingExclusions] = useState(false);
@@ -59,9 +58,8 @@ export default function SettingsPage() {
   const [applicationSettings, setApplicationSettings] = useState<ApplicationPromptSettings>(EMPTY_APPLICATION_SETTINGS);
 
   useEffect(() => {
-    getCompanyExclusions().then(({ companies, tracked }) => {
+    getCompanyExclusions().then(({ companies }) => {
       setExcludedCompaniesText(companies.join("\n"));
-      setTrackedCompanies(tracked);
       setExclusionsLoaded(true);
     }).catch(() => toast.error("Could not load excluded companies. Retry Settings before saving changes."));
   }, []);
@@ -115,7 +113,6 @@ export default function SettingsPage() {
     try {
       const saved = await updateCompanyExclusions(companies);
       setExcludedCompaniesText(saved.companies.join("\n"));
-      setTrackedCompanies(saved.tracked);
       setExclusionsDirty(false);
       toast.success("Company exclusions saved — they reach the agent on the next Generate.");
     } catch (e) {
@@ -137,22 +134,13 @@ export default function SettingsPage() {
       <OutreachPrompt kind="followup" title="HR follow-up email prompt" description="Use your Gmail and Dashboard’s Follow-ups Due queue. Check recipient evidence, dates, Sent history and bounces before sending." initialValue={applicationSettings.followup_template} />
     </>}
     <Card>
-      <CardHeader><CardTitle>Exclude companies from scraped jobs</CardTitle><p className="text-sm text-muted-foreground">Both lists below are written into the Claude Desktop prompt above, so the agent never applies to these companies. Add your own, one employer per line; every company in your Tracker is excluded automatically as well, so you never apply to the same company twice. Existing Tracker jobs and history stay intact.</p></CardHeader>
+      <CardHeader><CardTitle>Exclude companies from scraped jobs</CardTitle><p className="text-sm text-muted-foreground">This list is written into the Claude Desktop prompt above, so the agent never applies to these companies. Add one employer per line. Only the companies you name here are skipped — applying to a company does not exclude it, so the agent is free to apply to a second role at a company already in your Tracker.</p></CardHeader>
       <CardContent className="space-y-3">
         <label htmlFor="excluded-company-names" className="text-sm font-medium">Your companies to skip</label>
         <Textarea id="excluded-company-names" value={excludedCompaniesText} rows={8} disabled={!exclusionsLoaded || savingExclusions} onChange={(event) => { setExcludedCompaniesText(event.target.value); setExclusionsDirty(true); }} placeholder="Example Company\nAnother Company" />
         <p className="text-xs text-muted-foreground">Matches the employer name after normalizing punctuation and common legal suffixes. It does not match companies merely mentioned in the job description. Existing large-company and experience filters still apply.</p>
         <Button type="button" disabled={!exclusionsLoaded || !exclusionsDirty || savingExclusions} onClick={saveCompanyExclusions}>{savingExclusions && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Save excluded companies</Button>
         {!exclusionsLoaded && <p role="status" className="text-xs text-amber-600">Company list unavailable. Reload Settings to retry.</p>}
-        {exclusionsLoaded && <details className="rounded-lg border p-3">
-          <summary className="cursor-pointer text-sm font-medium">Already in your Tracker — excluded automatically ({trackedCompanies.length})</summary>
-          {trackedCompanies.length === 0
-            ? <p className="mt-2 text-xs text-muted-foreground">No Tracker companies yet.</p>
-            : <ul aria-label="Tracker companies excluded automatically" className="mt-2 grid max-h-64 gap-x-4 gap-y-1 overflow-y-auto text-xs text-muted-foreground sm:grid-cols-2 lg:grid-cols-3">
-                {trackedCompanies.map((name) => <li key={name} className="truncate" title={name}>{name}</li>)}
-              </ul>}
-          <p className="mt-2 text-xs text-muted-foreground">Read from your Tracker each time — nothing to save here. A company leaves this list only if its Tracker entry is deleted.</p>
-        </details>}
       </CardContent>
     </Card>
     <div className="flex flex-wrap items-start justify-between gap-3">
