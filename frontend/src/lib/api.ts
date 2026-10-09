@@ -245,9 +245,8 @@ export async function getApplicationPromptSettings(): Promise<ApplicationPromptS
   return apiFetch<ApplicationPromptSettings>("/api/profile/application-settings");
 }
 
-// companies: the user's own list. tracked: every Tracker company, excluded
-// automatically and read live — never saved into the user's list.
-export interface CompanyExclusions { companies: string[]; tracked: string[] }
+// The user's own exclusion list — the only employers the agent skips.
+export interface CompanyExclusions { companies: string[] }
 
 export async function getCompanyExclusions(): Promise<CompanyExclusions> {
   return apiFetch<CompanyExclusions>("/api/profile/company-exclusions");

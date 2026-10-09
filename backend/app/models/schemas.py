@@ -65,9 +65,8 @@ class CompanyExclusionsSettings(BaseModel):
 
 
 class CompanyExclusionsResponse(BaseModel):
-    """The user's own exclusions plus the companies excluded by being tracked."""
+    """The user's own exclusions — the only employers the agent skips."""
     companies: list[str]
-    tracked: list[str] = Field(default_factory=list)
 
 
 class RenderedApplicationPrompt(BaseModel):

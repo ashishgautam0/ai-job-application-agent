@@ -103,36 +103,6 @@ def add_application(company, role, job_type, platform, url="",
     }).execute()
 
 
-# Company values that stand for "no company", left by older imports, which
-# must never become an exclusion the agent then matches against.
-_PLACEHOLDER_COMPANIES = {"", "nan", "none", "null", "unknown", "n a", "na"}
-
-
-def get_tracked_companies():
-    """Every real company in the tracker, once each, in the order first applied.
-
-    Read live for the exclusion list rather than copied into the Settings list,
-    so a company is excluded from the moment its application is recorded and
-    the saved list stays the user's own to edit.
-    """
-    from intake_policy import normalize_employer
-
-    db = _get_client()
-    names, seen = [], set()
-    for start in range(0, 1000000, 1000):
-        rows = (db.table("applications").select("company").order("id")
-                .range(start, start + 999).execute()).data or []
-        for row in rows:
-            name = str(row.get("company") or "").strip()
-            key = normalize_employer(name)
-            if key not in _PLACEHOLDER_COMPANIES and key not in seen:
-                names.append(name)
-                seen.add(key)
-        if len(rows) < 1000:
-            break
-    return names
-
-
 def update_status(app_id, new_status):
     db = _get_client()
     update_data = {"status": new_status}
