@@ -94,37 +94,62 @@ class SaveJobMessageDemoGuardTests(unittest.TestCase):
 class OutreachDraftingTests(unittest.TestCase):
 
 
-    def test_the_follow_up_is_a_linkedin_message_carrying_the_demo(self):
-        """The follow-up goes where the first message went — a DM to the person
-        who accepted the connection. Nothing can be attached there, so the demo
-        link is what carries the evidence."""
+    def test_the_follow_up_is_a_nudge_not_a_second_pitch(self):
+        """The recipient accepted the invitation and read the connection note,
+        so they already hold the pitch, the matching fact and the demo link.
+        Re-sending any of it makes the message longer, not more useful."""
         spec = build_follow_up_prompt("Acme", "ML Engineer", 7, original_platform="LinkedIn",
                                       profile_text="Fine-tuned an STT model",
                                       demo_url="https://demo/1",
                                       recipient_name="Dana")
         self.assertIsNone(spec["char_limit"])
         prompt = spec["prompt"]
-        for required in ("This is a direct message to an existing 1st-degree connection",
+        for required in ("already accepted my connection request and read my",
+                         "a nudge and not a second pitch",
                          "RECIPIENT: Dana, who accepted the connection request.",
-                         "Exact live demo URL for this job: https://demo/1",
                          "A greeting using this person's first name.",
-                         "50–80 words"):
+                         "One short question asking where it stands.",
+                         "25-45 words"):
             with self.subTest(required=required):
                 self.assertIn(required, prompt)
-        # No letter shape survives, and nothing may claim an attachment.
-        for banned in ("Subject:", "To: <the evidenced recipient",
-                       "My resume is attached again."):
+        # The demo link was passed in and must still not reach the writer.
+        self.assertNotIn("https://demo/1", prompt)
+        for banned in ("Subject:", "My resume is attached again.",
+                       "Exact live demo URL", "50–80 words"):
             with self.subTest(banned=banned):
                 self.assertNotIn(banned, prompt)
         self.assertIn("nothing can be attached to a LinkedIn message", prompt)
         # "just following up" survives only as a banned-pattern rule for the writer.
         self.assertIn('- "just following up", "circling back"', prompt)
 
-    def test_a_follow_up_without_a_recipient_or_demo_invents_neither(self):
+    def test_the_writer_is_told_not_to_restate_or_add_anything(self):
+        prompt = build_follow_up_prompt("Acme", "ML Engineer", 7,
+                                        recipient_name="Dana")["prompt"]
+        for rule in ("do not restate what",
+                     "do not add a new fact",
+                     "do not send any link again",
+                     "Anything already said in the connection note",
+                     "A new fact, a skill list, a number, an employer or a project"):
+            with self.subTest(rule=rule):
+                self.assertIn(rule, prompt)
+
+    def test_a_follow_up_without_a_recipient_keeps_the_placeholder(self):
         prompt = build_follow_up_prompt("Acme", "ML Engineer", 7, profile_text="P")["prompt"]
         self.assertIn("RECIPIENT: none on record", prompt)
-        self.assertIn("No demo exists for this job", prompt)
-        self.assertNotIn("https://", prompt.split("Greeting:", 1)[0])
+        self.assertIn("never guess a name", prompt)
+        self.assertNotIn("https://", prompt)
+
+    def test_an_unused_param_from_an_older_queued_row_still_builds(self):
+        """Requests queued by an older build carry profile_text, demo_url and
+        company_intel, and the builder is called with **params."""
+        spec = build_follow_up_prompt("Acme", "ML Engineer", 7, original_platform="LinkedIn",
+                                      profile_text="P", demo_url="https://demo/9",
+                                      company_intel="Website: https://acme.test",
+                                      follow_up_number=2, previous_messages=["Hi Dana, note."],
+                                      recipient_name="Dana")
+        self.assertIn("Connection note:", spec["prompt"])
+        self.assertNotIn("https://demo/9", spec["prompt"])
+        self.assertNotIn("acme.test", spec["prompt"])
 
 
     def test_list_emits_exact_job_and_single_profile_snapshot(self):
