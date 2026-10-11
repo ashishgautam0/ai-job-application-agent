@@ -156,12 +156,69 @@ class ColdDmDashboardTests(unittest.TestCase):
 
     def test_dashboard_endpoint_uses_same_pdf_version_as_settings_prompt(self):
         captured = []
-        endpoint = function(ROOT / "app/routers/stats.py", "cold_dm_todos", {
-            "get_cold_dm_todos": lambda version: captured.append(version) or []})
+        env = {"get_cold_dm_todos": lambda version: captured.append(version) or []}
+        env["_resume_version"] = function(ROOT / "app/routers/stats.py", "_resume_version", env)
+        endpoint = function(ROOT / "app/routers/stats.py", "cold_dm_todos", env)
         metadata = SimpleNamespace(get_latest_profile_snapshot=lambda: {"version": 7})
         with patch.dict(sys.modules, {"profile": metadata}):
             self.assertEqual(endpoint(), [])
         self.assertEqual(captured, [7])
+        # A profile that has never been snapshotted must not crash the card.
+        captured.clear()
+        with patch.dict(sys.modules, {"profile": SimpleNamespace(
+                get_latest_profile_snapshot=lambda: None)}):
+            self.assertEqual(endpoint(), [])
+        self.assertEqual(captured, [None])
+
+    def test_both_queues_off_one_snapshot_match_reading_them_separately(self):
+        """Loading the Dashboard used to re-read the due applications and the
+        recorded connection dates once per queue. Sharing one snapshot has to
+        produce exactly what the separate reads did."""
+        apps = [
+            # Connected 2026-09-21, so its follow-up is due from 2026-09-28.
+            {"id": 8, "company": "Connected", "role": "Engineer", "url": "https://jobs/8",
+             "status": "Follow-up Sent", "platform": "LinkedIn",
+             "date_applied": "2026-08-01", "follow_up_date": "2026-09-20"},
+            # No connection recorded, so it belongs to the Cold DM queue.
+            {"id": 9, "company": "Fresh", "role": "Analyst", "url": "https://jobs/9",
+             "status": "Applied", "follow_up_date": "2026-09-20"},
+        ]
+        jobs = [{"id": 908, "company": "Connected", "url": "https://jobs/8"},
+                {"id": 909, "company": "Fresh", "url": "https://jobs/9"}]
+        notes = [{"scraped_job_id": 909, "message_type": "cold_dm", "content": "Note",
+                  "is_stale": False, "profile_version": 5}]
+        history = [{"id": 1, "entity_type": "application", "entity_id": 8,
+                    "channel": "LinkedIn connection", "sent_at": "2026-09-21T00:00:00Z"}]
+        db = Database(apps, jobs, notes, history)
+        with patch.object(tracker, "_get_client", return_value=db), patch.object(
+            tracker, "_user_now",
+            return_value=datetime.fromisoformat("2026-09-29T12:00:00+05:30")
+        ):
+            db.queries.clear()
+            separate_follow_ups = tracker.get_post_connection_follow_ups_due()
+            separate_cold_dms = tracker.get_cold_dm_todos(5)
+            separate_reads = list(db.queries)
+            # Now the shared path: one due list, one read of the dates.
+            db.queries.clear()
+            due = tracker.get_follow_ups_due()
+            dates = tracker._linkedin_connection_dates(due["id"].tolist())
+            shared_follow_ups = tracker.get_post_connection_follow_ups_due(due, dates)
+            shared_cold_dms = tracker.get_cold_dm_todos(5, due, dates)
+            shared_reads = list(db.queries)
+        self.assertEqual(shared_follow_ups["id"].tolist(),
+                         separate_follow_ups["id"].tolist())
+        self.assertEqual(shared_cold_dms, separate_cold_dms)
+        # Same answers, fewer reads — which is the whole point. The separate
+        # path reads applications and follow_up_history once per queue; the
+        # shared path reads each once for both.
+        self.assertEqual(separate_reads.count("applications"), 2)
+        self.assertEqual(separate_reads.count("follow_up_history"), 2)
+        self.assertEqual(shared_reads.count("applications"), 1)
+        self.assertEqual(shared_reads.count("follow_up_history"), 1)
+        # ...and the split is the one the cadence calls for: the connected job
+        # is a follow-up, the other is still a Cold DM.
+        self.assertEqual(shared_follow_ups["id"].tolist(), [8])
+        self.assertEqual([card["id"] for card in shared_cold_dms], [9])
 
     def test_due_cards_map_to_exact_jobs_and_only_current_drafts_are_ready(self):
         apps = [

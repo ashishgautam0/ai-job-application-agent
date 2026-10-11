@@ -113,32 +113,9 @@ def _tracked_jobs_missing(message_type, limit):
 _PROFILE_URL = re.compile(r"https?://[a-zA-Z0-9.\-]*linkedin\.com/in/[^\s)]+")
 
 
-def _connection_record(application_id):
-    """(name, profile_url) of whoever the Cold DM went to for this application.
-
-    The follow-up is a LinkedIn message to that same person, so it needs both:
-    the name to greet them, and the profile URL to open and check the invitation
-    was actually accepted before writing anything.
-
-    Newer records carry these in `recipient_name` / `recipient_profile_url`;
-    older ones only have the "Sent to <name>: <profile url>" trailer the desktop
-    agent appends to message_content, and a record made by hand before the form
-    had those fields may have neither. The columns are preferred and the trailer
-    is the fallback, so both keep working. Empty strings leave the draft's
-    placeholder in place rather than inventing someone.
-
-    One query returns both, so the Dashboard's per-row lookup does not double.
-    """
-    try:
-        from tracker import DM_CHANNEL, _get_client
-        rows = (_get_client().table("follow_up_history")
-                .select("recipient_name,recipient_profile_url,message_content")
-                .eq("entity_type", "application").eq("entity_id", int(application_id))
-                .eq("channel", DM_CHANNEL).order("id").execute()).data or []
-    except Exception as exc:
-        print(f"[pending-messages] could not read the connection recipient: {exc}",
-              file=sys.stderr)
-        return "", ""
+def _record_from_rows(rows):
+    """(name, profile_url) from one application's Cold DM history rows, oldest
+    first. The newest row that carries either half wins."""
     for row in reversed(rows):
         content = row.get("message_content") or ""
         name = (row.get("recipient_name") or "").strip()
@@ -153,6 +130,52 @@ def _connection_record(application_id):
         if name or url:
             return name, url
     return "", ""
+
+
+def _connection_records(application_ids):
+    """{application_id: (name, profile_url)} for whoever each Cold DM went to.
+
+    The follow-up is a LinkedIn message to that same person, so it needs both:
+    the name to greet them, and the profile URL to open and check the invitation
+    was actually accepted before writing anything.
+
+    Newer records carry these in `recipient_name` / `recipient_profile_url`;
+    older ones only have the "Sent to <name>: <profile url>" trailer the desktop
+    agent appends to message_content, and a record made by hand before the form
+    had those fields may have neither. The columns are preferred and the trailer
+    is the fallback, so both keep working. Empty strings leave the draft's
+    placeholder in place rather than inventing someone.
+
+    One query covers every application asked about. The Dashboard resolves a
+    recipient for each due follow-up, and asking per application meant one
+    round-trip each to a database a continent away. Applications with no Cold DM
+    recorded are absent from the mapping; the caller reads that as ("", "").
+    """
+    ids = sorted({int(value) for value in application_ids if value is not None})
+    if not ids:
+        return {}
+    by_app = {}
+    try:
+        from tracker import DM_CHANNEL, _get_client
+        db = _get_client()
+        for offset in range(0, len(ids), 200):
+            chunk = ids[offset:offset + 200]
+            rows = (db.table("follow_up_history")
+                    .select("entity_id,recipient_name,recipient_profile_url,message_content")
+                    .eq("entity_type", "application").in_("entity_id", chunk)
+                    .eq("channel", DM_CHANNEL).order("id").execute()).data or []
+            for row in rows:
+                by_app.setdefault(int(row["entity_id"]), []).append(row)
+    except Exception as exc:
+        print(f"[pending-messages] could not read the connection recipients: {exc}",
+              file=sys.stderr)
+        return {}
+    return {app_id: _record_from_rows(rows) for app_id, rows in by_app.items()}
+
+
+def _connection_record(application_id):
+    """The one application's (name, profile_url); ("", "") if nothing recorded."""
+    return _connection_records([application_id]).get(int(application_id), ("", ""))
 
 
 def _connection_recipient(application_id):

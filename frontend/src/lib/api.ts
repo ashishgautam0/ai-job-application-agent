@@ -111,6 +111,18 @@ export async function getColdDmTodos(): Promise<ColdDmTodo[]> {
   return apiFetch<ColdDmTodo[]>("/api/stats/cold-dm-todos");
 }
 
+/** Both Dashboard queues from one snapshot of the due list, in one request.
+ *  Fetching them separately made the backend re-read the due applications and
+ *  the recorded connection dates for each. */
+export async function getDueQueues(): Promise<{
+  follow_ups: FollowUp[];
+  cold_dms: ColdDmTodo[];
+}> {
+  return apiFetch<{ follow_ups: FollowUp[]; cold_dms: ColdDmTodo[] }>(
+    "/api/stats/due-queues"
+  );
+}
+
 export async function getWeeklyTrend(): Promise<WeeklyTrend[]> {
   return apiFetch<WeeklyTrend[]>("/api/stats/weekly-trend");
 }
@@ -167,6 +179,18 @@ export async function getJobMessage(
 ): Promise<JobMessage> {
   return apiFetch<JobMessage>(
     `/api/scraped-jobs/${id}/message?type=${encodeURIComponent(type)}`
+  );
+}
+
+/** Several of one job's drafts in a single request, keyed by message_type.
+ *  Each value has the same shape as getJobMessage, "not generated yet"
+ *  included, so callers read them identically. */
+export async function getJobMessages(
+  id: number,
+  types: readonly string[]
+): Promise<Record<string, JobMessage>> {
+  return apiFetch<Record<string, JobMessage>>(
+    `/api/scraped-jobs/${id}/messages?types=${encodeURIComponent(types.join(","))}`
   );
 }
 

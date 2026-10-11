@@ -317,10 +317,17 @@ class ConnectionRecipientTests(unittest.TestCase):
     """
 
     def _call(self, rows, name):
+        """Run one of the recipient readers with the data layer stubbed.
+
+        The readers now batch: one query covers every application asked about,
+        so the stub answers `.in_("entity_id", [...])` and the rows carry the
+        entity_id the real table returns.
+        """
         from unittest.mock import MagicMock
         db = MagicMock()
-        (db.table.return_value.select.return_value.eq.return_value.eq.return_value
-         .eq.return_value.order.return_value.execute.return_value) = SimpleNamespace(data=rows)
+        (db.table.return_value.select.return_value.eq.return_value.in_.return_value
+         .eq.return_value.order.return_value.execute.return_value) = SimpleNamespace(
+             data=[{**row, "entity_id": 131} for row in rows])
         tracker = types.ModuleType("tracker")
         tracker.DM_CHANNEL = "LinkedIn connection"
         tracker._get_client = lambda: db
@@ -330,7 +337,10 @@ class ConnectionRecipientTests(unittest.TestCase):
         literal = re.search(r"_PROFILE_URL = re\.compile\((r.[^\n]+?.)\)\n",
                             module.read_text()).group(1)
         env = {"sys": sys, "re": re, "_PROFILE_URL": re.compile(eval(literal))}
-        env["_connection_record"] = function(module, "_connection_record", env)
+        # The readers delegate down this chain, and `function` only lifts one
+        # definition at a time, so each must be in the shared namespace.
+        for helper in ("_record_from_rows", "_connection_records", "_connection_record"):
+            env[helper] = function(module, helper, env)
         with patch.dict(sys.modules, {"tracker": tracker}):
             return function(module, name, env)(131)
 
@@ -389,6 +399,42 @@ class ConnectionRecipientTests(unittest.TestCase):
             {"recipient_name": "", "recipient_profile_url": "",
              "message_content": "note https://www.linkedin.com/in/viren done"}]),
             ("", "https://www.linkedin.com/in/viren"))
+
+    def test_one_query_keeps_each_application_s_own_recipient(self):
+        """The Dashboard resolves a recipient for every due follow-up at once,
+        so the batched read has to keep them apart — handing one job's contact
+        to another would address the message to the wrong person."""
+        from unittest.mock import MagicMock
+        db = MagicMock()
+        (db.table.return_value.select.return_value.eq.return_value.in_.return_value
+         .eq.return_value.order.return_value.execute.return_value) = SimpleNamespace(data=[
+             {"entity_id": 131, "recipient_name": "Viren Khatri",
+              "recipient_profile_url": "https://www.linkedin.com/in/viren/",
+              "message_content": "note"},
+             {"entity_id": 140, "recipient_name": "Dana Rao",
+              "recipient_profile_url": "", "message_content":
+              "note\n\nSent to Ignored Trailer: https://www.linkedin.com/in/dana"},
+         ])
+        tracker = types.ModuleType("tracker")
+        tracker.DM_CHANNEL = "LinkedIn connection"
+        tracker._get_client = lambda: db
+        module = ROOT / "modules/pending_messages.py"
+        literal = re.search(r"_PROFILE_URL = re\.compile\((r.[^\n]+?.)\)\n",
+                            module.read_text()).group(1)
+        env = {"sys": sys, "re": re, "_PROFILE_URL": re.compile(eval(literal))}
+        env["_record_from_rows"] = function(module, "_record_from_rows", env)
+        with patch.dict(sys.modules, {"tracker": tracker}):
+            got = function(module, "_connection_records", env)([131, 140, 999])
+        self.assertEqual(got, {
+            131: ("Viren Khatri", "https://www.linkedin.com/in/viren/"),
+            140: ("Dana Rao", "https://www.linkedin.com/in/dana"),
+        })
+        # One query for all three, and an application with nothing recorded is
+        # simply absent rather than borrowing a neighbour's contact.
+        db.table.assert_called_once_with("follow_up_history")
+        self.assertEqual(
+            db.table.return_value.select.return_value.eq.return_value.in_.call_args.args,
+            ("entity_id", [131, 140, 999]))
 
     def test_the_latest_record_wins(self):
         self.assertEqual(self.recipient([
