@@ -129,11 +129,82 @@ class AnalyticsTests(unittest.TestCase):
         self.assertEqual(trend[0]["total"], 2)
         self.assertEqual(trend[0]["Internship"], 1)
 
-    def test_role_families_are_mutually_exclusive_and_evidenced(self):
+    def test_every_application_lands_in_exactly_one_group(self):
         rows = role_analysis(self.rows)
         self.assertEqual(sum(row["applied"] for row in rows), len(self.rows))
-        genai = next(row for row in rows if row["role_keyword"] == "Generative AI / LLM")
-        self.assertIn("Generative AI Engineer", genai["example_roles"])
+        self.assertEqual(len({row["role_keyword"] for row in rows}), len(rows))
+
+
+class RoleGroupingTests(unittest.TestCase):
+    """The groups are learned from the job titles, not a list in the code.
+
+    The old version sorted every job into seven hardcoded families. The catch-all
+    one swallowed half of a real tracker, and kinds of role nobody had added —
+    computer vision among them — fell into "Other / unclassified".
+    """
+
+    @staticmethod
+    def groups(*titles):
+        return {row["role_keyword"]: row["applied"]
+                for row in role_analysis([{"role": t, "status": "Applied"} for t in titles])}
+
+    def test_a_kind_of_role_nobody_anticipated_gets_its_own_group(self):
+        """Nothing in the code mentions robotics; three of them is a pattern."""
+        got = self.groups(*["Robotics Engineer"] * 3, *["AI Engineer"] * 3)
+        self.assertEqual(got.get("Robotics"), 3)
+
+    def test_a_broad_word_does_not_swallow_a_specific_title(self):
+        """Every one of these says "AI", so a first-match rule files them all
+        under AI. The rarest term in each title wins instead."""
+        got = self.groups(*["AI Engineer"] * 3,
+                          *["AI Engineer - Computer Vision"] * 3,
+                          *["Applied AI Engineer, Computer Vision"] * 0,
+                          *["AI Engineer (NLP)"] * 3)
+        self.assertEqual(got.get("Computer Vision"), 3)
+        self.assertEqual(got.get("NLP"), 3)
+        self.assertEqual(got.get("AI"), 3)
+
+    def test_one_subject_written_several_ways_is_one_group(self):
+        got = self.groups("AI/ML Engineer", "AI ML Developer", "Machine Learning Engineer",
+                          "ML Engineer", "Machine-Learning Intern")
+        self.assertEqual(got, {"ML": 5})
+
+    def test_word_order_does_not_split_a_group(self):
+        # "Agent", "Agentic" and "Agents" are one subject, and the pair it
+        # forms with "AI" must not become a second group beside it.
+        got = self.groups("AI Agent Engineer", "Agentic AI Developer", "AI Agents Engineer")
+        self.assertEqual(got, {"Agents": 3})
+
+    def test_a_pair_only_groups_where_it_is_rarer_than_its_own_words(self):
+        # Both titles say AI, so the pair "ai computervision" describes exactly
+        # the titles "computervision" already does and adds nothing; the
+        # shorter label is the honest one.
+        got = self.groups(*["AI Engineer"] * 3, *["AI Engineer - Computer Vision"] * 3)
+        self.assertEqual(got, {"AI": 3, "Computer Vision": 3})
+
+    def test_seniority_and_working_arrangement_never_become_groups(self):
+        """These describe how a job is packaged, not what it is about."""
+        got = self.groups(*["Senior NLP Engineer (Remote)"] * 3,
+                          *["Junior NLP Developer - Onsite Intern"] * 3)
+        self.assertEqual(got, {"NLP": 6})
+
+    def test_one_off_titles_fall_to_other_which_sorts_last(self):
+        rows = role_analysis([{"role": t, "status": "Applied"} for t in
+                              ["NLP Engineer"] * 3 + ["Quantum Cryptography Lead"]])
+        self.assertEqual([row["role_keyword"] for row in rows], ["NLP", "Other"])
+        self.assertEqual(rows[-1]["applied"], 1)
+
+    def test_response_rate_is_counted_per_group(self):
+        rows = role_analysis([
+            {"role": "NLP Engineer", "status": "Offer"},
+            {"role": "NLP Engineer", "status": "Applied"},
+            {"role": "NLP Engineer", "status": "Rejected"},
+        ])
+        self.assertEqual((rows[0]["applied"], rows[0]["responses"],
+                          rows[0]["response_rate"]), (3, 1, 33.3))
+
+    def test_no_applications_is_no_groups(self):
+        self.assertEqual(role_analysis([]), [])
 
     def test_tracker_navigation_uses_exact_id_and_preserves_missing(self):
         apps = [

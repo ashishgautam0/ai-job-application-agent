@@ -1529,6 +1529,50 @@ class ColdDmTests(unittest.TestCase):
         self.assertIn('s.type === "cold_dm" ? "cold-dm" : undefined', job)
         self.assertIn("document.getElementById(id)?.scrollIntoView", job)
 
+    def test_a_retired_channel_is_left_out_of_the_effectiveness_report(self):
+        # Email outreach was removed from the pipeline, but the rows it wrote
+        # stay in follow_up_history as a record of what was sent, and they kept
+        # the Dashboard quoting a response rate for a channel that cannot be
+        # used again. They are excluded from the report, not deleted.
+        from unittest.mock import MagicMock
+        client = MagicMock()
+        client.table.return_value.select.return_value.execute.return_value = SimpleNamespace(
+            data=[
+                {"channel": "Email", "follow_up_outcome": "responded", "follow_up_number": 1},
+                {"channel": "LinkedIn connection", "follow_up_outcome": "responded",
+                 "follow_up_number": 1},
+                {"channel": "LinkedIn connection", "follow_up_outcome": "pending",
+                 "follow_up_number": 2},
+            ])
+        env = {"_get_client": lambda: client, "RETIRED_CHANNELS": {"email"}}
+        env["_response_rates"] = function(
+            ROOT / "modules" / "tracker.py", "_response_rates", env)
+        report = function(
+            ROOT / "modules" / "tracker.py", "get_follow_up_effectiveness", env)()
+        self.assertEqual([row["channel"] for row in report["by_channel"]],
+                         ["LinkedIn connection"])
+        # The totals have to reconcile, or the card reports a rate over rows it
+        # does not show: 2 LinkedIn rows, 1 of them answered.
+        self.assertEqual(report["overall"], {"total": 2, "responded": 1, "rate": 50.0})
+        self.assertEqual(sum(row["total"] for row in report["by_channel"]), 2)
+        self.assertEqual(sum(row["total"] for row in report["by_number"]), 2)
+
+    def test_the_dashboard_no_longer_carries_email_or_the_duplicated_panels(self):
+        dashboard = (ROOT.parent / "frontend/src/app/(app)/dashboard/page.tsx").read_text()
+        # Platform Effectiveness and Status Funnel are gone; the stat cards at
+        # the top of the page already break applications down by status.
+        for removed in ("Platform Effectiveness", "Status Funnel", "platformData",
+                        "statusFunnel", "getPlatformEffectiveness", "getStatusFunnel"):
+            with self.subTest(removed=removed):
+                self.assertNotIn(removed, dashboard)
+        # ...and no mention of email survives, including the unused icon import.
+        self.assertNotIn("Mail", dashboard)
+        self.assertNotIn("mail", dashboard.casefold())
+        # The panels that stay are untouched.
+        for kept in ("Weekly Trend", "Role Analysis", "Follow-up Effectiveness"):
+            with self.subTest(kept=kept):
+                self.assertIn(kept, dashboard)
+
     def test_the_dm_target_matches_the_prompt(self):
         source = (ROOT / "modules" / "tracker.py").read_text()
         line = next(l for l in source.splitlines() if l.startswith("DAILY_DM_TARGET"))

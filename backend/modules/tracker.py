@@ -1117,10 +1117,32 @@ def update_follow_up_outcome(history_id, outcome):
     ).eq("id", history_id).execute()
 
 
+# Channels the pipeline no longer sends on. Email outreach was removed, but the
+# rows it wrote stay in follow_up_history as a record of what was sent, so they
+# are excluded from the report rather than deleted — otherwise the Dashboard
+# keeps offering a response rate for a channel that cannot be used again.
+RETIRED_CHANNELS = {"email"}
+
+
+def _response_rates(rows, key):
+    """[{key: value, total, responded, rate}] grouped by one field."""
+    grouped = {}
+    for row in rows:
+        grouped.setdefault(row.get(key), []).append(row)
+    out = []
+    for value, members in grouped.items():
+        total = len(members)
+        responded = sum(r.get("follow_up_outcome") == "responded" for r in members)
+        out.append({key: value, "total": total, "responded": responded,
+                    "rate": round(responded / total * 100, 1) if total else 0})
+    return out
+
+
 def get_follow_up_effectiveness():
     db = _get_client()
     resp = db.table("follow_up_history").select("*").execute()
-    rows = resp.data
+    rows = [row for row in (resp.data or [])
+            if str(row.get("channel") or "").strip().casefold() not in RETIRED_CHANNELS]
     if not rows:
         return {
             "by_channel": [],
@@ -1128,37 +1150,18 @@ def get_follow_up_effectiveness():
             "overall": {"total": 0, "responded": 0, "rate": 0},
         }
 
-    df = pd.DataFrame(rows)
-    total = len(df)
-    responded = len(df[df["follow_up_outcome"] == "responded"])
-    overall_rate = round(responded / total * 100, 1) if total else 0
-
-    by_channel = []
-    for channel, group in df.groupby("channel"):
-        ch_total = len(group)
-        ch_responded = len(group[group["follow_up_outcome"] == "responded"])
-        by_channel.append({
-            "channel": channel,
-            "total": ch_total,
-            "responded": ch_responded,
-            "rate": round(ch_responded / ch_total * 100, 1) if ch_total else 0,
-        })
-
-    by_number = []
-    for num, group in df.groupby("follow_up_number"):
-        n_total = len(group)
-        n_responded = len(group[group["follow_up_outcome"] == "responded"])
-        by_number.append({
-            "follow_up_number": int(num),
-            "total": n_total,
-            "responded": n_responded,
-            "rate": round(n_responded / n_total * 100, 1) if n_total else 0,
-        })
+    total = len(rows)
+    responded = sum(row.get("follow_up_outcome") == "responded" for row in rows)
+    by_number = _response_rates(rows, "follow_up_number")
+    for entry in by_number:
+        entry["follow_up_number"] = int(entry["follow_up_number"])
 
     return {
-        "by_channel": by_channel,
-        "by_number": sorted(by_number, key=lambda x: x["follow_up_number"]),
-        "overall": {"total": total, "responded": responded, "rate": overall_rate},
+        "by_channel": sorted(_response_rates(rows, "channel"),
+                             key=lambda row: str(row["channel"])),
+        "by_number": sorted(by_number, key=lambda row: row["follow_up_number"]),
+        "overall": {"total": total, "responded": responded,
+                    "rate": round(responded / total * 100, 1) if total else 0},
     }
 
 
