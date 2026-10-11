@@ -82,6 +82,23 @@ def count_dms_today():
     return resp.count if resp.count is not None else len(resp.data or [])
 
 
+# The day-16 LinkedIn message, sent per day. The agent works the due queue until
+# it hits this, then stops for the day.
+DAILY_FOLLOW_UP_TARGET = 10
+
+
+def count_follow_ups_today():
+    """Follow-up rounds recorded since midnight, user's timezone.
+
+    Counted by round rather than by channel: the Cold DM is always round 1, so
+    round 2 and up are follow-ups however they went out.
+    """
+    midnight = _user_now().replace(hour=0, minute=0, second=0, microsecond=0)
+    resp = (_get_client().table("follow_up_history").select("id", count="exact")
+            .gte("follow_up_number", 2).gte("sent_at", midnight.isoformat()).execute())
+    return resp.count if resp.count is not None else len(resp.data or [])
+
+
 def add_application(company, role, job_type, platform, url="",
                     noc_compatible="Unknown", conversion="N/A",
                     salary="", notes=""):
@@ -347,13 +364,20 @@ def get_cold_dm_prompt_jobs(resume_version=None, limit=100):
 
 
 def _add_dm_progress(stats):
-    """Today's Cold DMs for the Dashboard; a failed count must not hide the rest."""
+    """Today's outreach counts for the Dashboard; a failed count must not hide
+    the rest of the stats, so each one falls back to zero on its own."""
     try:
         stats['dms_today'] = count_dms_today()
     except Exception as exc:
         print(f"[tracker] could not count today's Cold DMs: {exc}")
         stats['dms_today'] = 0
     stats['dm_target'] = DAILY_DM_TARGET
+    try:
+        stats['follow_ups_today'] = count_follow_ups_today()
+    except Exception as exc:
+        print(f"[tracker] could not count today's follow-ups: {exc}")
+        stats['follow_ups_today'] = 0
+    stats['follow_up_target'] = DAILY_FOLLOW_UP_TARGET
 
 
 def get_stats():

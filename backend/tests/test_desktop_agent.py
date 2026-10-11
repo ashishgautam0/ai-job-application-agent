@@ -1349,6 +1349,74 @@ class ColdDmTests(unittest.TestCase):
             with self.subTest(url=bad):
                 self.assertIsNone(re.match(pattern, bad))
 
+    def test_todays_follow_ups_are_counted_by_round_from_local_midnight(self):
+        """The Dashboard's follow-up target needs today's count. Rounds, not
+        channels: the Cold DM is always round 1, so round 2 and up are the
+        follow-ups however they went out."""
+        from datetime import datetime
+        from unittest.mock import MagicMock
+        from zoneinfo import ZoneInfo
+        client = MagicMock()
+        gte = client.table.return_value.select.return_value.gte
+        gte.return_value.gte.return_value.execute.return_value = \
+            SimpleNamespace(count=4, data=[])
+        count = function(ROOT / "modules" / "tracker.py", "count_follow_ups_today", {
+            "_get_client": lambda: client,
+            "_user_now": lambda: datetime(2026, 9, 30, 1, 15, tzinfo=ZoneInfo("Asia/Kolkata"))})()
+        self.assertEqual(count, 4)
+        client.table.assert_called_once_with("follow_up_history")
+        gte.assert_called_once_with("follow_up_number", 2)
+        gte.return_value.gte.assert_called_once_with("sent_at", "2026-09-30T00:00:00+05:30")
+
+    def test_the_dashboard_gets_the_follow_up_count_and_target(self):
+        progress = function(ROOT / "modules" / "tracker.py", "_add_dm_progress", {
+            "count_dms_today": lambda: 3, "DAILY_DM_TARGET": 10,
+            "count_follow_ups_today": lambda: 4, "DAILY_FOLLOW_UP_TARGET": 10})
+        stats = {}
+        progress(stats)
+        self.assertEqual((stats["follow_ups_today"], stats["follow_up_target"]), (4, 10))
+        # The two counts are independent: one failing must not hide the other.
+        def boom():
+            raise RuntimeError("database unavailable")
+        for broken, survivor in (("count_dms_today", "follow_ups_today"),
+                                 ("count_follow_ups_today", "dms_today")):
+            with self.subTest(broken=broken):
+                env = {"count_dms_today": lambda: 3, "DAILY_DM_TARGET": 10,
+                       "count_follow_ups_today": lambda: 4, "DAILY_FOLLOW_UP_TARGET": 10}
+                env[broken] = boom
+                stats = {}
+                function(ROOT / "modules" / "tracker.py", "_add_dm_progress", env)(stats)
+                self.assertEqual(stats[survivor], 3 if survivor == "dms_today" else 4)
+                self.assertEqual(stats["dm_target"], 10)
+                self.assertEqual(stats["follow_up_target"], 10)
+
+    def test_the_follow_up_target_matches_the_prompt(self):
+        """The number in the prompt and the number the Dashboard shows are the
+        same number, so the agent's stopping point is the one on screen."""
+        source = (ROOT / "modules" / "tracker.py").read_text()
+        line = next(l for l in source.splitlines() if l.startswith("DAILY_FOLLOW_UP_TARGET"))
+        self.assertEqual(line.split("=", 1)[1].strip(), "10")
+        rules = (ROOT / "modules" / "outreach_prompts.py").read_text()
+        flat = " ".join(rules.split())
+        self.assertIn("MY DAILY FOLLOW-UP TARGET: 10 follow-ups per Asia/Kolkata calendar day",
+                      flat)
+        self.assertIn("until 10 are sent and recorded, then STOP for the day", flat)
+        self.assertIn("Daily Target \u2014 Follow-ups", flat)
+
+    def test_the_follow_up_opens_the_recorded_profile_before_sending(self):
+        """A LinkedIn message only reaches someone who accepted the invitation,
+        so the rules order it: open the recorded URL, read the state, then send
+        or leave it queued."""
+        rules = " ".join((ROOT / "modules" / "outreach_prompts.py").read_text().split())
+        for required in ("open that exact URL first \u2014 not a search, not a guess",
+                         "only if it shows you are connected",
+                         "it stays in the due queue and a later run picks it up",
+                         "not accepted yet \u2014 left queued",
+                         "OPEN THE RECORDED PROFILE URL FIRST, before writing anything",
+                         "recorded URL means STOP on that job"):
+            with self.subTest(required=required):
+                self.assertIn(required, rules)
+
     def test_the_dm_target_matches_the_prompt(self):
         source = (ROOT / "modules" / "tracker.py").read_text()
         line = next(l for l in source.splitlines() if l.startswith("DAILY_DM_TARGET"))

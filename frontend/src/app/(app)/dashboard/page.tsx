@@ -224,6 +224,12 @@ export default function DashboardPage() {
   const dmTarget = stats?.dm_target || DEFAULT_DAILY_TARGET;
   const dmPct = Math.min(Math.round((dmCount / dmTarget) * 100), 100);
   const dmMet = dmCount >= dmTarget;
+  // Follow-ups have their own daily target, tracked separately from the Cold
+  // DMs: a Cold DM is round 1, a follow-up is round 2 and up.
+  const followUpCount = stats?.follow_ups_today ?? 0;
+  const followUpTarget = stats?.follow_up_target || DEFAULT_DAILY_TARGET;
+  const followUpPct = Math.min(Math.round((followUpCount / followUpTarget) * 100), 100);
+  const followUpMet = followUpCount >= followUpTarget;
 
   return (
     <div className="space-y-8">
@@ -273,8 +279,8 @@ export default function DashboardPage() {
         ))}
       </div>
 
-      {/* ---- Daily Targets: applications, then cold DMs ---- */}
-      <div className="grid gap-4 md:grid-cols-2">
+      {/* ---- Daily Targets: applications, cold DMs, then follow-ups ---- */}
+      <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -311,6 +317,26 @@ export default function DashboardPage() {
               {dmMet
                 ? "Target reached — the agent stops for today"
                 : `${dmTarget - dmCount} to go · ${dmPct}%`}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-amber-400" />
+              Daily Target — Follow-ups
+            </CardTitle>
+            <CardDescription>
+              {followUpCount} / {followUpTarget} LinkedIn follow-ups sent today
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <Progress value={followUpPct} className="h-3" />
+            <p className="text-muted-foreground text-right text-sm">
+              {followUpMet
+                ? "Target reached — the agent stops for today"
+                : `${followUpTarget - followUpCount} to go · ${followUpPct}%`}
             </p>
           </CardContent>
         </Card>

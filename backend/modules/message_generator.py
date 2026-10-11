@@ -98,7 +98,8 @@ Pick the fact that matches the job most closely, count the characters, and retur
 def build_follow_up_prompt(company_name, role_title, days_since_applied,
                        original_platform="LinkedIn", profile_text="",
                        follow_up_number=1, previous_messages=None,
-                       demo_url="", company_intel="", recipient_name=""):
+                       demo_url="", company_intel="", recipient_name="",
+                       recipient_profile_url=""):
     """One short LinkedIn nudge on an application that has had no reply.
 
     It goes to the person who accepted the connection request — the same
@@ -122,6 +123,17 @@ def build_follow_up_prompt(company_name, role_title, days_since_applied,
         if recipient_name else
         "RECIPIENT: none on record. Open with the placeholder below and nothing else.\n"
     )
+    if recipient_profile_url:
+        recipient_section += (
+            f"THEIR PROFILE: {recipient_profile_url}\n"
+            "Open it first and confirm the invitation was accepted. If it is still\n"
+            "pending, was withdrawn or was ignored, write nothing for this job.\n"
+        )
+    else:
+        recipient_section += (
+            "THEIR PROFILE: none recorded. Without it you cannot confirm the\n"
+            "invitation was accepted, so write nothing for this job.\n"
+        )
 
     history_section = ""
     if previous_messages and follow_up_number > 1:
