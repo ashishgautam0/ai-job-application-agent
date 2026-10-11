@@ -135,8 +135,13 @@ def build_follow_up_prompt(company_name, role_title, days_since_applied,
 
     history_section = ""
     if previous_messages and follow_up_number > 1:
-        lines = "\n".join(f'- Follow-up #{i}: "{m}"'
-                           for i, m in enumerate(previous_messages, 1))
+        # Round 1 is the connection note, not a follow-up: calling it
+        # "Follow-up #1" told the writer to avoid repeating a round that never
+        # happened, and hid that the earlier contact was the invitation.
+        labels = ["Connection note"] + [f"Follow-up #{n}" for n in
+                                        range(2, len(previous_messages) + 1)]
+        lines = "\n".join(f'- {label}: "{message}"'
+                           for label, message in zip(labels, previous_messages))
         history_section = ("\nALREADY SENT — do not repeat the wording or the angle:\n"
                            + lines + "\n")
 

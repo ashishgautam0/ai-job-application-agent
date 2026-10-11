@@ -28,6 +28,7 @@ Requires SUPABASE_URL and SUPABASE_KEY. No LLM key of any kind.
 import argparse
 import json
 import os
+import re
 import sys
 
 from tracker import (
@@ -132,6 +133,22 @@ def _connection_recipient(application_id):
         if marker and rest.strip():
             return rest.split(":")[0].strip()
     return ""
+
+
+_SENT_TO_TRAILER = re.compile(r"\n\s*Sent to [^\n]*\Z")
+
+
+def _sent_message_text(content):
+    """A recorded message as it was actually sent, without the trailer.
+
+    Recording a Cold DM appends "Sent to <name>: <profile url>" so the
+    recipient can be read back later (_connection_recipient reads exactly
+    that). It is bookkeeping, not part of the message, so it has no business
+    in the next round's "already sent" context — the writer was being told not
+    to reuse the wording of a line that was never sent. Anything without the
+    trailer, such as a message recorded by hand in the UI, is returned as-is.
+    """
+    return _SENT_TO_TRAILER.sub("", (content or "").strip()).strip()
 
 
 def _company_intel_text(company_name):
@@ -465,7 +482,7 @@ def cmd_followups(args):
             pass
 
         previous = [
-            h.get("message_content", "")
+            _sent_message_text(h.get("message_content", ""))
             for h in sorted(history, key=lambda h: h.get("sent_at") or "")
         ][-3:]
 

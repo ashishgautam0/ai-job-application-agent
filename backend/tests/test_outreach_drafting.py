@@ -1,5 +1,6 @@
 import io
 import json
+import re
 import sys
 import unittest
 from types import SimpleNamespace
@@ -8,6 +9,8 @@ from unittest.mock import MagicMock, patch
 from test_settings_profile import ROOT, function
 from message_generator import build_cold_dm_prompt, build_follow_up_prompt
 from outreach_quality import validate_outreach_draft, wrong_demo_links
+
+_TRAILER = re.compile(r"\n\s*Sent to [^\n]*\Z")
 
 
 class DemoLinkValidationTests(unittest.TestCase):
@@ -235,3 +238,58 @@ class OutreachDraftingTests(unittest.TestCase):
         with patch("sys.stdout", new_callable=io.StringIO):
             self.assertEqual(queue(SimpleNamespace(request_id=8, content=note)), 0)
         complete.assert_called_once_with(8, note)
+
+
+class PriorRoundContextTests(unittest.TestCase):
+    """What the follow-up writer is told was already sent.
+
+    Recording a Cold DM appends "Sent to <name>: <profile url>" to the stored
+    message so the recipient can be read back. Two things were wrong with
+    feeding that straight into the next round: the writer was told not to
+    reuse the wording of a trailer that was never sent, and round 1 was
+    labelled "Follow-up #1" when it was the connection invitation.
+    """
+
+    NOTE = "Hi Viren, I applied for the GenAI role. Demo: https://d/1. Glad to connect."
+    RECORDED = f"{NOTE}\n\nSent to Viren Khatri: https://www.linkedin.com/in/viren"
+
+    def setUp(self):
+        self.strip = function(ROOT / "modules/pending_messages.py",
+                              "_sent_message_text", {"_SENT_TO_TRAILER": _TRAILER})
+
+    def test_the_recording_trailer_is_not_part_of_the_message(self):
+        self.assertEqual(self.strip(self.RECORDED), self.NOTE)
+
+    def test_a_message_recorded_by_hand_is_left_alone(self):
+        """The UI stores exactly what was pasted, with no trailer to strip."""
+        for untouched in (self.NOTE,
+                          "I was sent to the team by a friend.",
+                          "Line one\n\nSent to Viren: https://a\nand a later real line"):
+            with self.subTest(untouched=untouched[:30]):
+                self.assertEqual(self.strip(untouched), untouched)
+
+    def test_nothing_recorded_yields_nothing(self):
+        self.assertEqual(self.strip(""), "")
+        self.assertEqual(self.strip(None), "")
+
+    def test_round_one_is_named_the_connection_note_not_a_follow_up(self):
+        prompt = build_follow_up_prompt(
+            "Steps AI", "GenAI Engineer", 11, follow_up_number=2,
+            previous_messages=[self.strip(self.RECORDED)],
+            profile_text="Built a RAG platform", recipient_name="Viren")["prompt"]
+        self.assertIn(f'- Connection note: "{self.NOTE}"', prompt)
+        # The invitation is round 1, so no round of that name was ever sent.
+        self.assertNotIn("Follow-up #1:", prompt)
+        # And the bookkeeping must not reach the writer at all.
+        self.assertNotIn("Sent to Viren Khatri", prompt)
+        self.assertNotIn("linkedin.com/in/viren", prompt)
+
+    def test_a_later_round_keeps_its_own_number(self):
+        prompt = build_follow_up_prompt(
+            "Steps AI", "GenAI Engineer", 19, follow_up_number=3,
+            previous_messages=[self.NOTE, "Following up on the GenAI role."],
+            profile_text="Built a RAG platform", recipient_name="Viren")["prompt"]
+        self.assertIn('- Connection note: "', prompt)
+        self.assertIn('- Follow-up #2: "Following up on the GenAI role."', prompt)
+        self.assertNotIn("Follow-up #1:", prompt)
+        self.assertNotIn("Follow-up #3:", prompt)
