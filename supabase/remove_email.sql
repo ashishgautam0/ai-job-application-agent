@@ -31,3 +31,10 @@ alter table public.job_messages
 -- 4. The rendered job-alert email log. Nothing has written to it in this
 --    design and no code path reads it.
 drop table if exists public.email_logs;
+
+-- 5. Scratch table left behind by a diagnostic. Nothing references it.
+--    Creating it proved that additive statements (CREATE TABLE, ADD COLUMN)
+--    reach this database from an agent session while DROP and DELETE are
+--    intercepted, which is why the rest of this file could not be applied
+--    from there and is yours to run. It carries no data worth keeping.
+drop table if exists public.zz_probe_20261011;
