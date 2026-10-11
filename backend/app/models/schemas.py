@@ -187,6 +187,20 @@ class CompanyResearchRequest(BaseModel):
     company_name: str
 
 
+# ---- Mini demo live model ----
+
+class DemoAiRequest(BaseModel):
+    """One turn posted by a built mini demo's own page.
+
+    The demo is public, so both fields are capped here rather than trusted:
+    `prompt` is what the viewer typed, `task` is the one-line description the
+    demo supplies about itself so the reply stays on topic.
+    """
+    model_config = ConfigDict(extra="forbid")
+    prompt: str = Field(min_length=1, max_length=2_000)
+    task: str = Field(default="", max_length=400)
+
+
 # ---- Follow-up History ----
 
 class LogFollowUpRequest(BaseModel):
