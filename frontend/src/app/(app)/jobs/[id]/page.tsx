@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import {
   API_URL,
   getScrapedJob,
-  getJobMessage,
+  getJobMessages,
   getCachedCompanyIntel,
   lookupApplication,
   snoozeFollowUp,
@@ -156,12 +156,10 @@ export default function JobDetailPage() {
     setHistory([]);
     setFollowUpDraft(null);
     try {
-      const messagesPromise = Promise.all(
-        SECTIONS.map((s) =>
-          getJobMessage(jobId, s.type).catch(() => ({ content: null }))
-        )
-      );
-      const demoPromise = getJobMessage(jobId, "demo_html").catch(() => ({ content: null }));
+      // Every draft this page shows in one request rather than one each.
+      const messagesPromise = getJobMessages(
+        jobId, [...SECTIONS.map((s) => s.type), "demo_html"]
+      ).catch(() => ({}) as Record<string, JobMessage>);
       const j = await getScrapedJob(jobId);
       setJob(j);
       const trackedPromise = lookupApplication(j.url).catch(() => null);
@@ -170,12 +168,22 @@ export default function JobDetailPage() {
           .then(setIntel)
           .catch(() => setIntel({ found: false }));
       }
-      const [tracked, results, demoRow] = await Promise.all([
-        trackedPromise, messagesPromise, demoPromise,
-      ]);
+      const [tracked, results] = await Promise.all([trackedPromise, messagesPromise]);
+      const next: Record<string, string | null> = {};
+      const rows: Record<string, JobMessage> = {};
+      SECTIONS.forEach((s) => {
+        next[s.type] = results[s.type]?.content ?? null;
+        rows[s.type] = results[s.type] as JobMessage;
+      });
+      setMessages(next);
+      setMessageRows(rows);
+      setDemoReady(Boolean(results.demo_html?.content));
+      // The page is readable now; the tracker record's history and draft fill
+      // in behind it rather than holding everything at "Loading...".
       setApplication(tracked);
       if (tracked) {
         setNoteText(tracked.notes || "");
+        setLoading(false);
         const [historyRows, draft] = await Promise.all([
           getFollowUpHistory("application", tracked.id).catch(() => []),
           getFollowUpDraft(tracked.id).catch(() => null),
@@ -183,15 +191,6 @@ export default function JobDetailPage() {
         setHistory(historyRows);
         setFollowUpDraft(draft);
       }
-      const next: Record<string, string | null> = {};
-      const rows: Record<string, JobMessage> = {};
-      SECTIONS.forEach((s, i) => {
-        next[s.type] = results[i]?.content ?? null;
-        rows[s.type] = results[i] as JobMessage;
-      });
-      setMessages(next);
-      setMessageRows(rows);
-      setDemoReady(Boolean(demoRow.content));
     } catch {
       setNotFound(true);
     } finally {
@@ -204,10 +203,13 @@ export default function JobDetailPage() {
     else setNotFound(true);
   }, [jobId, load]);
 
+  // A Dashboard card links straight to the section it is about (#cold-dm from
+  // Cold DMs Due, #follow-up from Follow-ups Due), so honour whatever it asks
+  // for rather than one hard-coded id.
   useEffect(() => {
-    if (!loading && !notFound && window.location.hash === "#cold-dm") {
-      document.getElementById("cold-dm")?.scrollIntoView({ block: "start" });
-    }
+    if (loading || notFound) return;
+    const id = window.location.hash.slice(1);
+    if (id) document.getElementById(id)?.scrollIntoView({ block: "start" });
   }, [loading, notFound]);
 
   function handleCopy(type: string) {
@@ -403,7 +405,7 @@ export default function JobDetailPage() {
         </div>
       </div>
 
-      <Card>
+      <Card id="follow-up" className="scroll-mt-24">
         <CardHeader>
           <CardTitle className="text-base">Tracker record</CardTitle>
           <CardDescription>

@@ -192,6 +192,7 @@ ENDPOINTS = (
     "/api/stats/status-funnel",
     "/api/stats/cold-dm-todos",
     "/api/stats/follow-ups",
+    "/api/stats/due-queues",
     "/api/demos",
     "/api/scraped-jobs",
     "/api/notifications",

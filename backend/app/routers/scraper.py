@@ -85,23 +85,14 @@ def mark_job(
     return {"success": True}
 
 
-@router.get("/{job_id}/message")
-def job_message(
-    job_id: int,
-    type: str = "cold_dm",
-):
-    """Draft content written for this job by the configured cloud routine.
-
-    Returns {"content": null} when the routine has not written one yet, rather
-    than 404 — the UI treats "not generated yet" as a normal state.
-    """
-    row = (get_current_cover_letter(job_id) if type == "cover_letter"
-           else get_job_message(job_id, message_type=type))
+def _message_payload(job_id, message_type, row):
+    """One draft, shaped for the UI. A missing row is "not generated yet"."""
     if not row:
-        return {"job_id": job_id, "message_type": type, "content": None}
+        return {"job_id": job_id, "message_type": message_type, "content": None}
     return {
         "job_id": job_id,
-        "message_type": "cover_letter" if type == "cover_letter" else row.get("message_type"),
+        "message_type": ("cover_letter" if message_type == "cover_letter"
+                         else row.get("message_type")),
         "content": row.get("content"),
         "generated_by": row.get("generated_by"),
         "generated_at": row.get("generated_at"),
@@ -114,3 +105,42 @@ def job_message(
         "generation_rules_version": row.get("generation_rules_version"),
         "run_id": row.get("run_id"),
     }
+
+
+@router.get("/{job_id}/message")
+def job_message(
+    job_id: int,
+    type: str = "cold_dm",
+):
+    """Draft content written for this job by the configured cloud routine.
+
+    Returns {"content": null} when the routine has not written one yet, rather
+    than 404 — the UI treats "not generated yet" as a normal state.
+    """
+    row = (get_current_cover_letter(job_id) if type == "cover_letter"
+           else get_job_message(job_id, message_type=type))
+    return _message_payload(job_id, type, row)
+
+
+@router.get("/{job_id}/messages")
+def job_messages(
+    job_id: int,
+    types: str = "cold_dm",
+):
+    """Several of this job's drafts at once, keyed by message_type.
+
+    The detail page needs four, and one request per draft meant a round-trip
+    each to a database a continent away. Each value has the same shape the
+    single-draft route returns, including the "not generated yet" form, so the
+    UI reads them identically.
+    """
+    wanted = [t for t in dict.fromkeys(part.strip() for part in types.split(",")) if t]
+    from tracker import get_job_messages
+    # The cover letter has its own currency rules, so it keeps its own read.
+    plain = [t for t in wanted if t != "cover_letter"]
+    rows = get_job_messages(job_id, plain) if plain else {}
+    payload = {t: _message_payload(job_id, t, rows.get(t)) for t in plain}
+    if "cover_letter" in wanted:
+        payload["cover_letter"] = _message_payload(
+            job_id, "cover_letter", get_current_cover_letter(job_id))
+    return payload

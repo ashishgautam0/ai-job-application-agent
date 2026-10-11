@@ -3,8 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   getDashboard,
-  getFollowUps,
-  getColdDmTodos,
+  getDueQueues,
   getFollowUpDraft,
   getWeeklyTrend,
   getPlatformEffectiveness,
@@ -47,6 +46,7 @@ import {
   Briefcase,
   Clock,
   Copy,
+  ExternalLink,
   Loader2,
   MessageSquareText,
   ThumbsUp,
@@ -80,6 +80,13 @@ export default function DashboardPage() {
   const [fuDrafts, setFuDrafts] = useState<Record<number, FollowUpDraft>>({});
   const [fuOpen, setFuOpen] = useState<Set<number>>(new Set());
   const [fuLoading, setFuLoading] = useState<number | null>(null);
+
+  // Open the job's Tracker record — the section that holds this follow-up's
+  // draft and its "Record completed outreach" form — not the top of the page.
+  const openFollowUpJob = (fu: FollowUp) => {
+    if (fu.scraped_job_id) router.push(`/jobs/${fu.scraped_job_id}#follow-up`);
+    else toast.info("This tracker record has no matching scraped-job detail page.");
+  };
 
   const toggleFuDraft = async (fu: FollowUp) => {
     const id = fu.id;
@@ -120,49 +127,48 @@ export default function DashboardPage() {
   const [roleAnalysis, setRoleAnalysis] = useState<RoleAnalysis[]>([]);
   const [effectiveness, setEffectiveness] = useState<FollowUpEffectiveness | null>(null);
   const [dataErrors, setDataErrors] = useState<Set<string>>(new Set());
+  // The eight reads behind this page do not arrive together, and the slowest
+  // used to hold all of it at "Loading...". Each section now paints as its own
+  // data lands, and says it is still loading rather than claiming "none".
+  const [queuesPending, setQueuesPending] = useState(true);
+  const [analyticsPending, setAnalyticsPending] = useState(true);
 
   useEffect(() => {
-    async function fetchAll() {
-      try {
-        const [
-          dashboardRes,
-          followUpsRes,
-          coldDmTodosRes,
-          weeklyTrendRes,
-          platformRes,
-          statusFunnelRes,
-          roleAnalysisRes,
-          effectivenessRes,
-        ] = await Promise.allSettled([
-          getDashboard(),
-          getFollowUps(),
-          getColdDmTodos(),
-          getWeeklyTrend(),
-          getPlatformEffectiveness(),
-          getStatusFunnel(),
-          getRoleAnalysis(),
-          getFollowUpEffectiveness(),
-        ]);
+    // The counters at the top only need the stats, so they stop the full-page
+    // spinner on their own.
+    getDashboard()
+      .then(setStats)
+      .catch((err) => console.error("Failed to load dashboard stats", err))
+      .finally(() => setLoading(false));
 
-        if (dashboardRes.status === "fulfilled") setStats(dashboardRes.value);
-        if (followUpsRes.status === "fulfilled") setFollowUps(Array.isArray(followUpsRes.value) ? followUpsRes.value : []);
-        if (coldDmTodosRes.status === "fulfilled") setColdDmTodos(Array.isArray(coldDmTodosRes.value) ? coldDmTodosRes.value : []);
-        setColdDmLoadError(coldDmTodosRes.status === "rejected");
-        if (weeklyTrendRes.status === "fulfilled") setWeeklyTrend(Array.isArray(weeklyTrendRes.value) ? weeklyTrendRes.value : []);
-        if (platformRes.status === "fulfilled") setPlatformData(Array.isArray(platformRes.value) ? platformRes.value : []);
-        if (statusFunnelRes.status === "fulfilled" && statusFunnelRes.value && typeof statusFunnelRes.value === "object") setStatusFunnel(statusFunnelRes.value);
-        if (roleAnalysisRes.status === "fulfilled") setRoleAnalysis(Array.isArray(roleAnalysisRes.value) ? roleAnalysisRes.value : []);
-        if (effectivenessRes.status === "fulfilled") setEffectiveness(effectivenessRes.value);
-        const named = [["weekly trend", weeklyTrendRes], ["platform effectiveness", platformRes], ["status breakdown", statusFunnelRes], ["role analysis", roleAnalysisRes]] as const;
-        setDataErrors(new Set(named.filter(([, result]) => result.status === "rejected").map(([name]) => name)));
-      } catch (err) {
-        console.error("Failed to load dashboard data", err);
-      } finally {
-        setLoading(false);
-      }
-    }
+    // Both due queues in one request: they come off the same snapshot of the
+    // due list, so splitting them made the backend compute it twice.
+    getDueQueues()
+      .then((queues) => {
+        setFollowUps(Array.isArray(queues.follow_ups) ? queues.follow_ups : []);
+        setColdDmTodos(Array.isArray(queues.cold_dms) ? queues.cold_dms : []);
+      })
+      .catch((err) => {
+        console.error("Failed to load the due queues", err);
+        setColdDmLoadError(true);
+      })
+      .finally(() => setQueuesPending(false));
 
-    fetchAll();
+    Promise.allSettled([
+      getWeeklyTrend(),
+      getPlatformEffectiveness(),
+      getStatusFunnel(),
+      getRoleAnalysis(),
+      getFollowUpEffectiveness(),
+    ]).then(([weeklyTrendRes, platformRes, statusFunnelRes, roleAnalysisRes, effectivenessRes]) => {
+      if (weeklyTrendRes.status === "fulfilled") setWeeklyTrend(Array.isArray(weeklyTrendRes.value) ? weeklyTrendRes.value : []);
+      if (platformRes.status === "fulfilled") setPlatformData(Array.isArray(platformRes.value) ? platformRes.value : []);
+      if (statusFunnelRes.status === "fulfilled" && statusFunnelRes.value && typeof statusFunnelRes.value === "object") setStatusFunnel(statusFunnelRes.value);
+      if (roleAnalysisRes.status === "fulfilled") setRoleAnalysis(Array.isArray(roleAnalysisRes.value) ? roleAnalysisRes.value : []);
+      if (effectivenessRes.status === "fulfilled") setEffectiveness(effectivenessRes.value);
+      const named = [["weekly trend", weeklyTrendRes], ["platform effectiveness", platformRes], ["status breakdown", statusFunnelRes], ["role analysis", roleAnalysisRes]] as const;
+      setDataErrors(new Set(named.filter(([, result]) => result.status === "rejected").map(([name]) => name)));
+    }).finally(() => setAnalyticsPending(false));
   }, []);
 
   if (loading) {
@@ -355,7 +361,9 @@ export default function DashboardPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {coldDmLoadError ? (
+          {queuesPending ? (
+            <p className="text-sm text-muted-foreground">Loading Cold DMs…</p>
+          ) : coldDmLoadError ? (
             <p role="alert" className="text-sm text-red-400">Cold DM todos could not be loaded. Retry the dashboard before sending.</p>
           ) : (
             <div className="space-y-3">
@@ -405,7 +413,9 @@ export default function DashboardPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {followUps.length === 0 ? (
+          {queuesPending ? (
+            <p className="text-muted-foreground text-sm">Loading follow-ups…</p>
+          ) : followUps.length === 0 ? (
             <p className="text-muted-foreground text-sm">
               No follow-ups due. You&apos;re all caught up!
             </p>
@@ -436,9 +446,10 @@ export default function DashboardPage() {
                     key={fu.id}
                     role="link"
                     tabIndex={0}
-                    onClick={() => fu.scraped_job_id ? router.push(`/jobs/${fu.scraped_job_id}`) : toast.info("This tracker record has no matching scraped-job detail page.")}
-                    onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); if (fu.scraped_job_id) router.push(`/jobs/${fu.scraped_job_id}`); else toast.info("This tracker record has no matching scraped-job detail page."); } }}
-                    className={`rounded-lg border p-4 space-y-1 ${borderClass} cursor-pointer hover:border-primary/60`}
+                    aria-label={`Open the Tracker record for ${fu.role} at ${fu.company}`}
+                    onClick={() => openFollowUpJob(fu)}
+                    onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); openFollowUpJob(fu); } }}
+                    className={`rounded-lg border p-4 space-y-1 ${borderClass} cursor-pointer hover:border-primary/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary`}
                   >
                     <div className="flex items-center justify-between">
                       <p className="font-semibold">{fu.company}</p>
@@ -455,7 +466,7 @@ export default function DashboardPage() {
                         )}
                         {(fu.follow_up_count ?? 0) > 0 && (
                           <Badge variant="outline" className="text-[10px] h-5 bg-amber-500/10 text-amber-400 border-amber-500/30">
-                            #{(fu.follow_up_count ?? 0) + 1} of 3
+                            #{(fu.follow_up_count ?? 0) + 1} of 2
                           </Badge>
                         )}
                       </div>
@@ -513,6 +524,15 @@ export default function DashboardPage() {
                           <MessageSquareText className="mr-1.5 h-3.5 w-3.5" />
                         )}
                         {fuOpen.has(fu.id) ? "Hide Draft" : "View Draft"}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1 text-amber-400"
+                        onClick={(e) => { e.stopPropagation(); openFollowUpJob(fu); }}
+                      >
+                        <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+                        Open job
                       </Button>
                     </div>
                   </div>
@@ -603,7 +623,7 @@ export default function DashboardPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {dataErrors.has("platform effectiveness") ? <p className="text-sm text-red-400">Platform data could not be loaded.</p> : platformData.length === 0 ? (
+          {analyticsPending ? <p className="text-sm text-muted-foreground">Loading…</p> : dataErrors.has("platform effectiveness") ? <p className="text-sm text-red-400">Platform data could not be loaded.</p> : platformData.length === 0 ? (
             <p className="text-muted-foreground text-sm">
               No platform data available yet.
             </p>
@@ -653,7 +673,7 @@ export default function DashboardPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {dataErrors.has("status breakdown") ? <p className="text-sm text-red-400">Status data could not be loaded.</p> : !statusFunnel || Object.keys(statusFunnel).length === 0 ? (
+          {analyticsPending ? <p className="text-sm text-muted-foreground">Loading…</p> : dataErrors.has("status breakdown") ? <p className="text-sm text-red-400">Status data could not be loaded.</p> : !statusFunnel || Object.keys(statusFunnel).length === 0 ? (
             <p className="text-muted-foreground text-sm">
               No status data available yet.
             </p>
@@ -689,7 +709,7 @@ export default function DashboardPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {dataErrors.has("weekly trend") ? <p className="text-sm text-red-400">Weekly trend could not be loaded.</p> : weeklyTrend.length === 0 ? (
+          {analyticsPending ? <p className="text-sm text-muted-foreground">Loading…</p> : dataErrors.has("weekly trend") ? <p className="text-sm text-red-400">Weekly trend could not be loaded.</p> : weeklyTrend.length === 0 ? (
             <p className="text-muted-foreground text-sm">
               No weekly trend data available yet.
             </p>
@@ -719,7 +739,7 @@ export default function DashboardPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {dataErrors.has("role analysis") ? <p className="text-sm text-red-400">Role analysis could not be loaded.</p> : roleAnalysis.length === 0 ? (
+          {analyticsPending ? <p className="text-sm text-muted-foreground">Loading…</p> : dataErrors.has("role analysis") ? <p className="text-sm text-red-400">Role analysis could not be loaded.</p> : roleAnalysis.length === 0 ? (
             <p className="text-muted-foreground text-sm">
               No role analysis data available yet.
             </p>

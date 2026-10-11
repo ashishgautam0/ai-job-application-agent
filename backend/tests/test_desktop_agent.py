@@ -1417,6 +1417,118 @@ class ColdDmTests(unittest.TestCase):
             with self.subTest(required=required):
                 self.assertIn(required, rules)
 
+    def test_every_follow_up_draft_is_read_in_one_query(self):
+        """The Dashboard asks about every due application at once. The rows are
+        the same 100 newest requests whichever application it asks about, so a
+        per-application read cost a round-trip each to a database a continent
+        away and held the page at "Loading..."."""
+        from unittest.mock import MagicMock
+        client = MagicMock()
+        rows = [
+            {"id": 9, "status": "ready", "content": "newer", "params": {"_application_id": 8}},
+            {"id": 8, "status": "ready", "content": "older", "params": {"_application_id": 8}},
+            {"id": 7, "status": "pending", "content": "", "params": {"_application_id": 12}},
+            {"id": 6, "status": "failed", "content": "x", "params": {"_application_id": 20}},
+            {"id": 5, "status": "ready", "content": "y", "params": {}},
+            {"id": 4, "status": "ready", "content": "z", "params": {"_application_id": 99}},
+        ]
+        (client.table.return_value.select.return_value.eq.return_value.order
+         .return_value.limit.return_value.execute.return_value) = SimpleNamespace(data=rows)
+        batch = function(ROOT / "modules" / "tracker.py", "get_follow_up_drafts",
+                         {"_get_client": lambda: client})
+        drafts = batch([8, 12, 20])
+        # One query for the whole queue, however many applications it covers.
+        client.table.assert_called_once_with("message_requests")
+        # Rows arrive newest first, so the newest request wins...
+        self.assertEqual(drafts[8]["content"], "newer")
+        # ...a queued one is still reported, so the card can say "queued"...
+        self.assertEqual(drafts[12]["status"], "pending")
+        # ...and a failed request, a row with no application, and an
+        # application nobody asked about are all left out.
+        self.assertEqual(sorted(drafts), [8, 12])
+
+    def test_a_failed_draft_read_is_not_mistaken_for_no_drafts(self):
+        """A dropped connection must not silently mark every follow-up unready;
+        it returns empty, which the caller already treats as not ready."""
+        from unittest.mock import MagicMock
+        client = MagicMock()
+        client.table.side_effect = RuntimeError("connection reset")
+        batch = function(ROOT / "modules" / "tracker.py", "get_follow_up_drafts",
+                         {"_get_client": lambda: client})
+        self.assertEqual(batch([8]), {})
+
+    def test_one_query_covers_every_job_message_the_page_shows(self):
+        """The job detail page shows four drafts; one request per draft cost a
+        round-trip each. A stale row still reads as absent, so the page shows
+        "not generated yet" instead of a draft written against an older
+        resume."""
+        from unittest.mock import MagicMock
+        client = MagicMock()
+        (client.table.return_value.select.return_value.eq.return_value.in_
+         .return_value.execute.return_value) = SimpleNamespace(data=[
+             {"message_type": "cold_dm", "content": "note", "is_stale": False},
+             {"message_type": "resume_points", "content": "stale draft", "is_stale": True},
+         ])
+        batch = function(ROOT / "modules" / "tracker.py", "get_job_messages",
+                         {"_get_client": lambda: client, "REMOVED_MESSAGE_TYPES": {"hr_email"}})
+        found = batch(53773, ["cold_dm", "resume_points", "demo_html", "hr_email"])
+        client.table.assert_called_once_with("job_messages")
+        # A removed type is never even asked for.
+        self.assertEqual(
+            client.table.return_value.select.return_value.eq.return_value.in_.call_args.args,
+            ("message_type", ["cold_dm", "resume_points", "demo_html"]))
+        self.assertEqual(found["cold_dm"]["content"], "note")
+        self.assertNotIn("resume_points", found)
+        self.assertNotIn("demo_html", found)
+
+    def test_the_dashboard_gets_a_whole_job_id_not_a_float(self):
+        """pandas widens an int column to float once a row is missing a match,
+        and that reached the UI as a link to "/jobs/53773.0"."""
+        import json as json_mod
+        rows = [{"id": 8, "company": "Example", "scraped_job_id": 53773.0},
+                {"id": 9, "company": "Other", "scraped_job_id": None}]
+        modules = {
+            "pending_messages": SimpleNamespace(
+                _connection_records=lambda ids: {8: ("Viren Khatri", "https://x")}),
+            "tracker": SimpleNamespace(
+                get_follow_up_drafts=lambda ids: {8: {"status": "ready", "content": "hi"}}),
+        }
+        shape = function(ROOT / "app/routers/stats.py", "_sendable_follow_ups", {
+            "json_records": lambda _df: [dict(row) for row in rows],
+        })
+        with patch.dict(sys.modules, modules):
+            got = shape(SimpleNamespace(empty=False))
+            # An empty due list is an empty queue, not an error.
+            self.assertEqual(shape(SimpleNamespace(empty=True)), [])
+        self.assertEqual([row["scraped_job_id"] for row in got], [53773, None])
+        self.assertIsInstance(got[0]["scraped_job_id"], int)
+        # The batched lookups still decide the same two fields per row.
+        self.assertEqual((got[0]["recipient"], got[0]["draft_ready"]),
+                         ("Viren Khatri", True))
+        self.assertEqual((got[1]["recipient"], got[1]["draft_ready"]), (None, False))
+        # And it stays JSON-serialisable, which a numpy float would not be.
+        json_mod.dumps(got)
+
+    def test_a_due_follow_up_card_opens_that_job_s_tracker_section(self):
+        """Clicking the card should land on the record that holds this
+        follow-up's draft and its recording form, not the top of the page."""
+        dashboard = (ROOT.parent / "frontend/src/app/(app)/dashboard/page.tsx").read_text()
+        self.assertIn("router.push(`/jobs/${fu.scraped_job_id}#follow-up`)", dashboard)
+        # Both the pointer and the keyboard path go through one handler, so
+        # they cannot drift apart.
+        # Pointer, keyboard and the explicit button all go through one
+        # handler, so they cannot drift apart. The card's own centre is the
+        # draft toggle, so "open the job" needs a control of its own rather
+        # than only bare card space.
+        self.assertEqual(dashboard.count("openFollowUpJob(fu)"), 3)
+        self.assertIn("Open job", dashboard)
+        job = (ROOT.parent / "frontend/src/app/(app)/jobs/[id]/page.tsx").read_text()
+        self.assertIn('<Card id="follow-up"', job)
+        # The Cold DM card's own anchor still has to work, so the page honours
+        # whichever id the link asks for rather than one hard-coded value.
+        self.assertIn('s.type === "cold_dm" ? "cold-dm" : undefined', job)
+        self.assertIn("document.getElementById(id)?.scrollIntoView", job)
+
     def test_the_dm_target_matches_the_prompt(self):
         source = (ROOT / "modules" / "tracker.py").read_text()
         line = next(l for l in source.splitlines() if l.startswith("DAILY_DM_TARGET"))

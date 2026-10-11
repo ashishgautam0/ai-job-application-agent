@@ -277,20 +277,27 @@ def _linkedin_connection_dates(application_ids):
     return dates
 
 
-def get_post_connection_follow_ups_due():
-    """Only follow-ups due at least seven Kolkata calendar days after a sent connection."""
-    due = get_follow_ups_due()
+def get_post_connection_follow_ups_due(due=None, connection_dates=None):
+    """Only follow-ups due at least seven Kolkata calendar days after a sent connection.
+
+    due and connection_dates let a caller that has already read them share them
+    rather than paying for the same two reads again; the Dashboard builds both
+    due queues from one snapshot. Left out, they are read here as before.
+    """
+    due = get_follow_ups_due() if due is None else due
     if due.empty:
         return due
-    dates = _linkedin_connection_dates(due["id"].tolist())
+    dates = (_linkedin_connection_dates(due["id"].tolist())
+             if connection_dates is None else connection_dates)
     today = _user_now().date()
     return due[due["id"].map(lambda app_id: dates.get(int(app_id)) is not None
                and today >= dates[int(app_id)] + timedelta(days=7))]
 
 
-def get_cold_dm_todos(resume_version=None):
+def get_cold_dm_todos(resume_version=None, due=None, connection_dates=None):
     """Use the same eligibility check for Dashboard badges and the copied batch."""
-    rows = get_cold_dm_prompt_jobs(resume_version, limit=None)
+    rows = get_cold_dm_prompt_jobs(resume_version, limit=None, due=due,
+                                   connection_dates=connection_dates)
     return [{"id": row["tracker_id"], "company": row["company"], "role": row["title"],
              "follow_up_date": row["follow_up_date"], "scraped_job_id": row["job_id"],
              "cold_dm_ready": not bool(row["blocked_reason"]),
@@ -298,19 +305,21 @@ def get_cold_dm_todos(resume_version=None):
             for row in rows]
 
 
-def get_cold_dm_prompt_jobs(resume_version=None, limit=100):
+def get_cold_dm_prompt_jobs(resume_version=None, limit=100, due=None,
+                            connection_dates=None):
     """Build a bounded, fixed batch of due Tracker jobs and their stored notes.
 
     Keep blocked records in the output so missing or stale drafts are visible.
     Reuse the same URL-to-job mapping and Asia/Kolkata due filter as Dashboard.
     """
-    due = get_follow_ups_due()
+    due = get_follow_ups_due() if due is None else due
     if due.empty:
         return []
     rows = due.astype(object).where(due.notna(), None).to_dict("records")
     # Once a connection has been logged, this job moves to the later follow-up
     # stage; never present it as a fresh invitation again.
-    connected = _linkedin_connection_dates(row["id"] for row in rows)
+    connected = (_linkedin_connection_dates(row["id"] for row in rows)
+                 if connection_dates is None else connection_dates)
     rows = [row for row in rows if int(row["id"]) not in connected]
     if limit is not None and len(rows) > limit:
         raise ValueError(f"{len(rows)} Cold DMs are due; the prompt limit is {limit}. Resolve due jobs before generating the batch.")
@@ -717,6 +726,34 @@ def get_job_message(scraped_job_id, message_type=DEFAULT_MESSAGE_TYPE):
         return None
 
 
+def get_job_messages(scraped_job_id, message_types):
+    """{message_type: row} for one job, in a single query.
+
+    The job detail page shows several drafts at once, and asking per type cost a
+    round-trip each. Applies the same rules as get_job_message: a removed type
+    is never queried, and a stale row reads as absent so the UI shows "not
+    generated yet" rather than a draft written against an older resume.
+    """
+    wanted = [t for t in dict.fromkeys(message_types) if t not in REMOVED_MESSAGE_TYPES]
+    if not wanted:
+        return {}
+    try:
+        db = _get_client()
+        resp = (db.table("job_messages")
+                .select("*")
+                .eq("scraped_job_id", scraped_job_id)
+                .in_("message_type", wanted)
+                .execute())
+    except Exception:
+        return {}
+    found = {}
+    for row in resp.data or []:
+        if row.get("is_stale"):
+            continue
+        found[row.get("message_type")] = row
+    return found
+
+
 def save_job_message(scraped_job_id, content, message_type=DEFAULT_MESSAGE_TYPE,
                      generated_by="claude-routine", profile_version=None):
     """Store (or replace) the message for a job. Returns True on success."""
@@ -914,12 +951,21 @@ def complete_message_request(request_id, content):
         return False
 
 
-def get_follow_up_draft(application_id):
-    """Latest auto-queued follow-up request for one tracked application.
+def get_follow_up_drafts(application_ids=None):
+    """Latest auto-queued follow-up request per tracked application.
 
-    Returns the newest pending/ready 'follow-up' message_request whose params
-    carry _application_id == application_id, or None.
+    One query serves every caller. The Dashboard asks about ~25 applications at
+    once, and the rows it needs are the same 100 newest 'follow-up' requests
+    whichever application it is asking about, so fetching them per application
+    meant 25 identical round-trips to a database a continent away.
+
+    application_ids narrows the returned mapping; it does not change the query,
+    since the filter lives in the params JSON rather than a column. Returns
+    {application_id: request}, newest kept, and {} if the read fails — the
+    caller treats a missing draft as not ready either way.
     """
+    wanted = None if application_ids is None else {int(v) for v in application_ids}
+    drafts = {}
     try:
         db = _get_client()
         resp = (db.table("message_requests")
@@ -928,14 +974,28 @@ def get_follow_up_draft(application_id):
                 .order("created_at", desc=True)
                 .limit(100)
                 .execute())
-        for r in resp.data or []:
-            params = r.get("params") or {}
-            if (params.get("_application_id") == application_id
-                    and r.get("status") in ("pending", "ready")):
-                return r
     except Exception:
-        pass
-    return None
+        return drafts
+    for r in resp.data or []:
+        if r.get("status") not in ("pending", "ready"):
+            continue
+        app_id = (r.get("params") or {}).get("_application_id")
+        if app_id is None:
+            continue
+        try:
+            app_id = int(app_id)
+        except (TypeError, ValueError):
+            continue
+        if wanted is not None and app_id not in wanted:
+            continue
+        # Rows arrive newest first, so the first one seen wins.
+        drafts.setdefault(app_id, r)
+    return drafts
+
+
+def get_follow_up_draft(application_id):
+    """The one application's latest follow-up request, or None."""
+    return get_follow_up_drafts([application_id]).get(int(application_id))
 
 
 def fail_message_request(request_id, error):
