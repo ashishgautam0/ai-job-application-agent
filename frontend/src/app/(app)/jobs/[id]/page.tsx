@@ -147,6 +147,8 @@ export default function JobDetailPage() {
   const [followUpRecordLocked, setFollowUpRecordLocked] = useState(false);
   const [sentFollowUp, setSentFollowUp] = useState("");
   const [sentChannel, setSentChannel] = useState("LinkedIn connection");
+  const [sentRecipient, setSentRecipient] = useState("");
+  const [sentRecipientUrl, setSentRecipientUrl] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -331,7 +333,9 @@ export default function JobDetailPage() {
       // Lock before the write: an uncertain response must not invite a duplicate retry.
       setFollowUpRecordLocked(true);
       await logFollowUp({ entity_type: "application", entity_id: application.id,
-        message_content: sentFollowUp.trim(), channel: sentChannel });
+        message_content: sentFollowUp.trim(), channel: sentChannel,
+        recipient_name: sentRecipient.trim(),
+        recipient_profile_url: sentRecipientUrl.trim() });
       toast.success("Sent follow-up recorded. Review the updated history and schedule.");
       await load();
     } catch {
@@ -504,14 +508,24 @@ export default function JobDetailPage() {
                       <p className="text-sm font-medium">Record completed outreach</p>
                       {!connectionDue && <p className="text-xs text-muted-foreground">Connection-note recording is available only once, when this active job’s initial date is due and no connection was recorded.</p>}
                       {!followUpDue && <p className="text-xs text-muted-foreground">Later follow-up recording becomes available seven days after the recorded LinkedIn connection and when the saved date is due.</p>}
-                      <p className="text-xs text-muted-foreground">Only record confirmed sending. A cold connection note counts as the first outreach slot. Paste the exact sent text and recipient profile URL, choose LinkedIn connection, then record once. This saves history and schedules the next round; it does not send anything.</p>
+                      <p className="text-xs text-muted-foreground">Only record confirmed sending. A cold connection note counts as the first outreach slot. Paste the exact sent text, give the recipient’s name and LinkedIn profile URL in their own fields, choose LinkedIn connection, then record once. This saves history and schedules the next round; it does not send anything.</p>
                       <label htmlFor="sent-follow-up" className="text-sm font-medium">Sent follow-up message</label>
                       <Textarea id="sent-follow-up" value={sentFollowUp} onChange={(event) => setSentFollowUp(event.target.value)} disabled={followUpSaving || followUpRecordLocked} placeholder="Paste the exact message you sent" />
+                      <label htmlFor="sent-recipient" className="block text-sm font-medium">Recipient name</label>
+                      <input id="sent-recipient" value={sentRecipient} onChange={(event) => setSentRecipient(event.target.value)} disabled={followUpSaving || followUpRecordLocked}
+                        placeholder="As their profile spells it — e.g. Viren Khatri"
+                        className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring" />
+                      <label htmlFor="sent-recipient-url" className="block text-sm font-medium">Recipient LinkedIn profile URL</label>
+                      <input id="sent-recipient-url" value={sentRecipientUrl} onChange={(event) => setSentRecipientUrl(event.target.value)} disabled={followUpSaving || followUpRecordLocked}
+                        placeholder="https://www.linkedin.com/in/…"
+                        className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring" />
+                      {sentChannel === "LinkedIn connection" && !/^https:\/\/([a-z]+\.)?linkedin\.com\//.test(sentRecipientUrl.trim()) &&
+                        <p className="text-xs text-muted-foreground">A LinkedIn connection needs the profile it went to, so the follow-up can reach the same person. It must start with https:// and be a linkedin.com URL.</p>}
                       <label htmlFor="sent-follow-up-channel" className="block text-sm font-medium">Sent via</label>
                       <select id="sent-follow-up-channel" className="rounded border bg-background p-2 text-sm" value={sentChannel} onChange={(event) => setSentChannel(event.target.value)} disabled={followUpSaving || followUpRecordLocked}>
                         <option>LinkedIn</option><option>LinkedIn connection</option><option>WhatsApp</option><option>Other</option>
                       </select>
-                      <Button className="ml-2" size="sm" disabled={!sentFollowUp.trim() || (sentChannel === "LinkedIn connection" ? !connectionDue : !followUpDue || !followUpDraft?.follow_up_number) || followUpSaving || followUpRecordLocked} onClick={recordSentFollowUp}>
+                      <Button className="ml-2" size="sm" disabled={!sentFollowUp.trim() || (sentChannel === "LinkedIn connection" ? (!connectionDue || !/^https:\/\/([a-z]+\.)?linkedin\.com\//.test(sentRecipientUrl.trim())) : !followUpDue || !followUpDraft?.follow_up_number) || followUpSaving || followUpRecordLocked} onClick={recordSentFollowUp}>
                         {followUpSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Record sent follow-up
                       </Button>
                     </div>
@@ -574,7 +588,7 @@ export default function JobDetailPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>#</TableHead><TableHead>Channel</TableHead><TableHead>Sent</TableHead><TableHead>Message</TableHead><TableHead>Outcome</TableHead>
+                      <TableHead>#</TableHead><TableHead>Channel</TableHead><TableHead>Sent</TableHead><TableHead>Recipient</TableHead><TableHead>Message</TableHead><TableHead>Outcome</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -582,7 +596,18 @@ export default function JobDetailPage() {
                       <TableCell>{event.follow_up_number}</TableCell>
                       <TableCell>{event.channel || "—"}</TableCell>
                       <TableCell>{new Date(event.sent_at).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata" })}</TableCell>
-                      <TableCell className="max-w-72 whitespace-pre-wrap break-words">{event.message_content || "—"}</TableCell>
+                      <TableCell className="text-sm">
+                        {event.recipient_profile_url ? (
+                          <a href={event.recipient_profile_url} target="_blank" rel="noopener noreferrer"
+                             className="inline-flex items-center gap-1.5 text-sky-400 hover:underline">
+                            <ExternalLink className="h-3.5 w-3.5" />
+                            {event.recipient_name || "profile"}
+                          </a>
+                        ) : (event.recipient_name || "—")}
+                      </TableCell>
+                      {/* The "Sent to <name>: <url>" trailer is recording metadata, not
+                          part of what was sent, and it now has its own column. */}
+                      <TableCell className="max-w-72 whitespace-pre-wrap break-words">{(event.message_content || "").replace(/\n\s*Sent to [^\n]*$/, "").trim() || "—"}</TableCell>
                       <TableCell>
                         <Select value={event.follow_up_outcome} onValueChange={(value) => handleOutcomeChange(event.id, value)}>
                           <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>

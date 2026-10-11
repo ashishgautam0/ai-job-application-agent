@@ -86,6 +86,8 @@ export interface FollowUpHistory {
   follow_up_number: number;
   follow_up_outcome: "pending" | "responded" | "no_response";
   sent_at: string;
+  recipient_name?: string | null;
+  recipient_profile_url?: string | null;
 }
 
 export interface FollowUpEffectiveness {
@@ -99,6 +101,8 @@ export interface LogFollowUpRequest {
   entity_id: number;
   message_content?: string;
   channel?: string;
+  recipient_name?: string;
+  recipient_profile_url?: string;
 }
 
 export interface WeeklyTrend {

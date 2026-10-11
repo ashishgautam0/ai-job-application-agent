@@ -977,7 +977,8 @@ def get_role_analysis():
 # ===================== FOLLOW-UP HISTORY =====================
 
 
-def log_follow_up(entity_type, entity_id, message_content="", channel=""):
+def log_follow_up(entity_type, entity_id, message_content="", channel="",
+                  recipient_name="", recipient_profile_url=""):
     db = _get_client()
     # Determine follow_up_number from existing history
     resp = (db.table("follow_up_history")
@@ -995,14 +996,22 @@ def log_follow_up(entity_type, entity_id, message_content="", channel=""):
      .eq("follow_up_outcome", "pending")
      .execute())
 
-    db.table("follow_up_history").insert({
+    row = {
         "entity_type": entity_type,
         "entity_id": int(entity_id),
         "message_content": message_content,
         "channel": channel,
         "follow_up_number": follow_up_number,
         "follow_up_outcome": "pending",
-    }).execute()
+    }
+    # Only written when supplied: a WhatsApp or Other record has no LinkedIn
+    # profile behind it, and an empty string would read as "looked and found
+    # none" rather than "never applicable".
+    if (recipient_name or "").strip():
+        row["recipient_name"] = recipient_name.strip()
+    if (recipient_profile_url or "").strip():
+        row["recipient_profile_url"] = recipient_profile_url.strip()
+    db.table("follow_up_history").insert(row).execute()
     return follow_up_number
 
 

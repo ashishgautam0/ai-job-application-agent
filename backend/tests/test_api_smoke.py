@@ -70,7 +70,17 @@ TABLES = {
          "channel": "LinkedIn connection", "message_content": None,
          "follow_up_number": 1, "follow_up_outcome": None,
          "sent_at": "2026-10-02T00:00:00+00:00",
-         "created_at": "2026-10-02T00:00:00+00:00"},
+         "created_at": "2026-10-02T00:00:00+00:00",
+         "recipient_name": "Dana", "recipient_profile_url": "https://www.linkedin.com/in/dana",
+         "accepted_at": None},
+        # The same row with every nullable recipient column NULL: a new nullable
+        # column is exactly the shape that 500'd the tracker under pandas 3.
+        {"id": 32, "entity_type": "application", "entity_id": 2,
+         "channel": "LinkedIn connection", "message_content": None,
+         "follow_up_number": 1, "follow_up_outcome": None,
+         "sent_at": "2026-09-21T00:00:00+00:00",
+         "created_at": "2026-09-21T00:00:00+00:00",
+         "recipient_name": None, "recipient_profile_url": None, "accepted_at": None},
     ],
     "company_research_cache": [
         {"id": 41, "company": "Alpha AI", "website": "https://alpha.test",

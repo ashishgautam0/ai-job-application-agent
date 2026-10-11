@@ -1273,9 +1273,37 @@ class ColdDmTests(unittest.TestCase):
         self.assertEqual(args, ("application", 1))
         self.assertEqual(kwargs["channel"], "LinkedIn connection")
         self.assertIn("Hi Priya, I applied for ML Engineer.", kwargs["message_content"])
+        # The trailer stays: it is the human-readable history entry.
         self.assertIn("https://www.linkedin.com/in/priya/", kwargs["message_content"])
+        # And the same facts go to their own columns, so the follow-up can find
+        # the person without parsing prose.
+        self.assertEqual(kwargs["recipient_name"], "Priya Sharma")
+        self.assertEqual(kwargs["recipient_profile_url"], "https://www.linkedin.com/in/priya/")
         # Advances the follow-up schedule exactly as a manual record does.
         self.assertEqual(calls["status"], [(1, "Follow-up Sent")])
+
+    def test_the_recipient_is_written_to_its_own_columns(self):
+        """log_follow_up gained two optional parameters. They are written only
+        when supplied: a WhatsApp or Other record has no LinkedIn profile, and
+        an empty string there would read as "looked and found none"."""
+        from unittest.mock import MagicMock
+        db = MagicMock()
+        db.table.return_value.select.return_value.eq.return_value.eq.return_value.execute.return_value = (
+            SimpleNamespace(data=[]))
+        log = function(ROOT / "modules/tracker.py", "log_follow_up", {"_get_client": lambda: db})
+
+        log("application", 7, message_content="note", channel="LinkedIn connection",
+            recipient_name="  Priya Sharma  ",
+            recipient_profile_url="  https://www.linkedin.com/in/priya/  ")
+        row = db.table.return_value.insert.call_args.args[0]
+        self.assertEqual(row["recipient_name"], "Priya Sharma")
+        self.assertEqual(row["recipient_profile_url"], "https://www.linkedin.com/in/priya/")
+        self.assertEqual(row["channel"], "LinkedIn connection")
+
+        log("application", 7, message_content="note", channel="WhatsApp")
+        bare = db.table.return_value.insert.call_args.args[0]
+        self.assertNotIn("recipient_name", bare)
+        self.assertNotIn("recipient_profile_url", bare)
 
     def test_a_job_that_already_has_a_note_is_never_logged_twice(self):
         env, calls = self.env([cold_dm_row(1)], connected={1})

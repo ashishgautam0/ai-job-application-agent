@@ -163,8 +163,12 @@ def record_cold_dm(body: DesktopAgentColdDmRequest):
         raise HTTPException(status_code=404, detail="That Tracker job is not in today's Cold DM list.")
     log_follow_up(
         "application", body.tracker_id,
+        # The trailer stays: it is the human-readable record in the history
+        # table, and the columns below are the queryable copy of the same facts.
         message_content=f"{body.note}\n\nSent to {body.recipient_name}: {body.recipient_profile_url}",
         channel=DM_CHANNEL,
+        recipient_name=body.recipient_name,
+        recipient_profile_url=body.recipient_profile_url,
     )
     update_status(body.tracker_id, "Follow-up Sent")
     return {"recorded": True, "duplicate": False, **_daily_progress()}

@@ -1,6 +1,7 @@
 import io
 import json
 import re
+import types
 import sys
 import unittest
 from types import SimpleNamespace
@@ -286,6 +287,52 @@ class OutreachDraftingTests(unittest.TestCase):
         with patch("sys.stdout", new_callable=io.StringIO):
             self.assertEqual(queue(SimpleNamespace(request_id=8, content=note)), 0)
         complete.assert_called_once_with(8, note)
+
+
+class ConnectionRecipientTests(unittest.TestCase):
+    """Where the follow-up's recipient comes from.
+
+    Newer records carry it in `recipient_name`; older ones only have the
+    "Sent to <name>: <url>" trailer, and a note recorded by hand before the
+    form had a recipient field has neither. The column is preferred and the
+    trailer is the fallback, so both keep working.
+    """
+
+    def recipient(self, rows):
+        from unittest.mock import MagicMock
+        db = MagicMock()
+        (db.table.return_value.select.return_value.eq.return_value.eq.return_value
+         .eq.return_value.order.return_value.execute.return_value) = SimpleNamespace(data=rows)
+        tracker = types.ModuleType("tracker")
+        tracker.DM_CHANNEL = "LinkedIn connection"
+        tracker._get_client = lambda: db
+        with patch.dict(sys.modules, {"tracker": tracker}):
+            return function(ROOT / "modules/pending_messages.py",
+                            "_connection_recipient", {"sys": sys})(131)
+
+    def test_the_column_is_preferred(self):
+        self.assertEqual(self.recipient([
+            {"recipient_name": "Viren Khatri",
+             "message_content": "note\n\nSent to Someone Else: https://x"}]),
+            "Viren Khatri")
+
+    def test_the_trailer_is_the_fallback_for_older_rows(self):
+        self.assertEqual(self.recipient([
+            {"recipient_name": None,
+             "message_content": "note\n\nSent to Viren Khatri: https://www.linkedin.com/in/viren"}]),
+            "Viren Khatri")
+        self.assertEqual(self.recipient([
+            {"message_content": "note\n\nSent to Viren Khatri: https://x"}]), "Viren Khatri")
+
+    def test_a_hand_recorded_row_with_neither_invents_nobody(self):
+        self.assertEqual(self.recipient([
+            {"recipient_name": "", "message_content": "Exact text I pasted, no trailer."}]), "")
+        self.assertEqual(self.recipient([]), "")
+
+    def test_the_latest_record_wins(self):
+        self.assertEqual(self.recipient([
+            {"recipient_name": "First Person", "message_content": ""},
+            {"recipient_name": "Second Person", "message_content": ""}]), "Second Person")
 
 
 class PriorRoundContextTests(unittest.TestCase):

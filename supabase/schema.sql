@@ -107,7 +107,15 @@ create table if not exists follow_up_history (
     channel            text        not null default '',
     follow_up_number   integer     not null default 1,
     follow_up_outcome  text        not null default 'pending',  -- pending | responded | no_response
-    sent_at            timestamptz not null default now()
+    sent_at            timestamptz not null default now(),
+    created_at         timestamptz not null default now(),
+    -- Who the Cold DM went to. The desktop agent also leaves a human-readable
+    -- "Sent to <name>: <url>" trailer on message_content; these columns are the
+    -- queryable copy, and what _connection_recipient prefers.
+    recipient_name         text,
+    recipient_profile_url  text,
+    -- Set when the invitation is confirmed accepted. Not yet written by anything.
+    accepted_at            timestamptz
 );
 
 create index if not exists idx_follow_up_history_entity  on follow_up_history (entity_type, entity_id);
