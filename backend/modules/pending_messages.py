@@ -247,8 +247,9 @@ def cmd_save(args):
         # The note is the follow-up on an application: it says so, and links
         # this job's demo whenever one exists.
         if "applied" not in content.lower():
-            print('Cold DM must open "Hi, I recently applied for the <Role> role at '
-                  '<Company>." — follow up on the application.', file=sys.stderr)
+            print('Cold DM must open "Hi [FIRST NAME], I recently applied for the '
+                  '<Role> role at <Company>." — follow up on the application, and '
+                  'keep the token literal.', file=sys.stderr)
             return 1
         demo_url = _demo_url_for_job(args.job_id)
         if demo_url and demo_url not in content:

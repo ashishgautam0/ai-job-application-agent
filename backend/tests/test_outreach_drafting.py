@@ -224,7 +224,12 @@ class OutreachDraftingTests(unittest.TestCase):
     def test_a_note_that_praises_the_company_is_rejected(self):
         for opener in ("Your real-time voice agents stood out.",
                        "Docusign's gateway work caught my eye.",
-                       "Impressive platform!"):
+                       "Impressive platform!",
+                       # The prompt bans "exciting"; the rule caught only the
+                       # two-word "exciting work", so bare praise slipped by.
+                       "Your product is exciting.",
+                       "Exciting work on the gateway.",
+                       "I love what you are building."):
             with self.subTest(opener=opener):
                 self.assertIn("praises the company",
                               validate_outreach_draft("cold_dm", f"{opener} Glad to connect."))
@@ -253,6 +258,24 @@ class OutreachDraftingTests(unittest.TestCase):
             no_demo = good.replace(f" I built a short demo for this role: {demo}.", "")
             self.assertEqual(command("")(SimpleNamespace(type="cold_dm", job_id=7, content=no_demo)), 0)
         self.assertEqual(save.call_count, 2)
+
+    def test_the_save_guidance_names_the_token_it_requires(self):
+        """The message told the writer to open a bare "Hi, I recently applied",
+        which validate_outreach_draft rejects for missing the token — so an
+        agent that tripped this check was sent to the other one."""
+        save = MagicMock(return_value=True)
+        command = function(ROOT / "modules/pending_messages.py", "cmd_save", {
+            "sys": sys, "save_job_message": save,
+            "_demo_url_for_job": lambda _: "",
+            "get_job_message": lambda *a, **kw: {"content": "saved"}})
+        stderr = io.StringIO()
+        with patch("sys.stderr", stderr), patch("sys.stdout", new_callable=io.StringIO):
+            self.assertEqual(command(SimpleNamespace(
+                type="cold_dm", job_id=7, content="Hi [FIRST NAME], about the role.")), 1)
+        guidance = stderr.getvalue()
+        self.assertIn("[FIRST NAME]", guidance)
+        self.assertNotIn('"Hi, I recently applied', guidance)
+        save.assert_not_called()
 
     def test_queue_keeps_valid_note_exactly(self):
         complete = MagicMock(return_value=True)

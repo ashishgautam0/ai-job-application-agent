@@ -47,7 +47,7 @@ def validate_outreach_draft(kind, content, scraped_job_id=None):
     if kind in {"cold_dm", "cold-dm"}:
         if len(content.encode("utf-16-le")) // 2 > 300:
             return "Connection note exceeds 300 characters; rewrite, do not truncate."
-        if re.search(r"(?i)stood out|caught my eye|impress(?:ed|ive)|exciting work|love what", content):
+        if re.search(r"(?i)stood out|caught my eye|impress(?:ed|ive)|exciting|love what", content):
             return ("Connection note praises the company; follow up on the application "
                     "instead, in the draft_spec's four-sentence shape.")
         # "Hi," reads as a finished sentence, so a skipped personalisation ships

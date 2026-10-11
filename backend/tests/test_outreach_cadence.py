@@ -167,6 +167,27 @@ class OutreachCadenceTests(unittest.TestCase):
         self.assertIn("The follow-up is a LinkedIn message", agent)
         self.assertIn("There is no fallback channel", agent)
 
+    def test_the_rules_claim_two_rounds_because_the_code_allows_two(self):
+        """APPLICATION_CADENCE is [7, 15] and update_status marks the record
+        Ghosted once count reaches its length, so a third round is unreachable.
+        The connection rules still promised "up to three rounds total", which
+        contradicted the follow-up block in the same prompt."""
+        # The shipped constant, read without importing pandas: this lane
+        # installs nothing, so importing tracker here fails in CI even though
+        # it passes locally.
+        cadence = next(line for line in (ROOT / "modules/tracker.py").read_text().splitlines()
+                       if line.startswith("APPLICATION_CADENCE"))
+        self.assertIn("[7, 15]", cadence)
+        # Collapsed: these blocks wrap across lines, and a rewrap is not a
+        # behaviour change.
+        rules = " ".join((ROOT / "modules/outreach_prompts.py").read_text().split())
+        for stale in ("three rounds", "rounds total", "up to three"):
+            with self.subTest(stale=stale):
+                self.assertNotIn(stale, rules)
+        # The surrounding guard must survive the deletion.
+        self.assertIn("An overdue next date never permits another send in this run", rules)
+        self.assertIn("Day 16 is the single follow-up round, and the last", rules)
+
 
     def test_dashboard_lists_a_cold_dm_only_once_its_note_is_ready(self):
         """A due job whose note is not written yet is counted, not listed —
