@@ -260,6 +260,51 @@ class ApiSmokeTests(unittest.TestCase):
         scores = {row["id"]: row.get("match_score") for row in rows if "id" in row}
         self.assertIn(None, scores.values(), f"no NULL score survived: {scores}")
 
+    def test_the_demo_model_route_needs_a_key_and_a_built_demo(self):
+        """The demo page is public, so this route is too. Without a configured
+        key it must refuse rather than fail obscurely, and a guessed job id must
+        not reach the model."""
+        from app.config import get_settings
+        settings = get_settings()
+        self.assertEqual(settings.ANTHROPIC_API_KEY, "",
+                         "the test environment must not carry a real key")
+        response = self.client.post("/api/demo/11/ai", json={"prompt": "hello"})
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.json()["error"], "unconfigured")
+
+    def test_the_demo_model_route_caps_what_it_accepts(self):
+        """Per-request limits are the only thing between a shared demo link and
+        an open relay: there is deliberately no daily cap."""
+        for body, why in (
+            ({"prompt": ""}, "an empty prompt"),
+            ({"prompt": "x" * 2001}, "a prompt over the 2000-char cap"),
+            ({"prompt": "hi", "task": "t" * 401}, "a task over the 400-char cap"),
+            ({"prompt": "hi", "model": "claude-opus-5-5"}, "a caller-chosen model"),
+            ({"task": "only a task"}, "no prompt at all"),
+        ):
+            with self.subTest(rejected=why):
+                self.assertEqual(
+                    self.client.post("/api/demo/11/ai", json=body).status_code, 422)
+
+    def test_no_api_key_is_hardcoded_anywhere_in_the_repo(self):
+        """A demo is a public page and this repo is public. The key belongs in
+        the environment, and nowhere a commit can reach."""
+        import subprocess
+        tracked = subprocess.run(["git", "ls-files"], cwd=ROOT.parent,
+                                 capture_output=True, text=True).stdout.split()
+        # Built from parts so this test file does not itself contain the pattern.
+        needle = "sk-" + "ant-"
+        for name in tracked:
+            path = ROOT.parent / name
+            if not path.is_file():
+                continue
+            try:
+                body = path.read_text(errors="ignore")
+            except OSError:
+                continue
+            with self.subTest(file=name):
+                self.assertNotIn(needle, body, f"{name} looks like it carries an API key")
+
     def test_the_resolved_dependencies_are_reported(self):
         """Printed so a red lane shows which resolution broke it."""
         import fastapi
