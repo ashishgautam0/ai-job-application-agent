@@ -32,16 +32,14 @@ TABLES = {
          "date_applied": "2026-10-01", "status": "Applied",
          "follow_up_date": "2026-10-08", "noc_compatible": "Unknown",
          "conversion_potential": "N/A", "salary_range": "", "notes": "",
-         "created_at": "2026-10-01T00:00:00+00:00", "follow_up_count": 0,
-         "hr_email_sent_at": "2026-10-02T00:00:00+00:00"},
+         "created_at": "2026-10-01T00:00:00+00:00", "follow_up_count": 0},
         # Every nullable column NULL — one such row used to 500 the endpoint.
         {"id": 2, "company": "Beta Labs", "role": "ML Engineer", "type": "Job",
          "platform": "Wellfound", "url": "https://jobs.test/2",
          "date_applied": "2026-09-20", "status": "Applied",
          "follow_up_date": None, "noc_compatible": "Unknown",
          "conversion_potential": "N/A", "salary_range": "", "notes": "",
-         "created_at": "2026-09-20T00:00:00+00:00", "follow_up_count": 0,
-         "hr_email_sent_at": None},
+         "created_at": "2026-09-20T00:00:00+00:00", "follow_up_count": 0},
     ],
     "scraped_jobs": [
         {"id": 11, "title": "AI Engineer", "company": "Alpha AI",
@@ -76,10 +74,10 @@ TABLES = {
     ],
     "company_research_cache": [
         {"id": 41, "company": "Alpha AI", "website": "https://alpha.test",
-         "hiring_email": "jobs@alpha.test", "hiring_contact_name": "Dana",
+         "hiring_contact_name": "Dana",
          "researched_at": "2026-10-02T00:00:00+00:00"},
         {"id": 42, "company": "Beta Labs", "website": None,
-         "hiring_email": None, "hiring_contact_name": None,
+         "hiring_contact_name": None,
          "researched_at": "2026-09-21T00:00:00+00:00"},
     ],
     "mini_demos": [
@@ -245,7 +243,6 @@ class ApiSmokeTests(unittest.TestCase):
         self.assertEqual(by_id[1]["follow_up_date"], "2026-10-08")
         # The row whose nullable columns are all NULL is the regression.
         self.assertIsNone(by_id[2]["follow_up_date"])
-        self.assertIsNone(by_id[2]["hr_email_sent_at"])
         self.assertEqual(by_id[2]["company"], "Beta Labs")
 
     def test_a_nullable_score_survives_as_null_on_the_jobs_page(self):

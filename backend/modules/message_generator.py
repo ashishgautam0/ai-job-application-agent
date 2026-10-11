@@ -103,10 +103,9 @@ def build_follow_up_prompt(company_name, role_title, days_since_applied,
                        demo_url="", company_intel="", recipient_name=""):
     """One LinkedIn follow-up on an application that has had no reply.
 
-    This was a Gmail email. Email is gone from the pipeline, and the follow-up
-    goes where the first message went: a direct message to the person who
-    accepted the connection request. That means no subject line, no attachment
-    and no address — a resume cannot ride along, so the demo link carries the
+    It goes where the first message went: a direct message to the person who
+    accepted the connection request. That means no subject line and no
+    attachment — a resume cannot ride along, so the demo link carries the
     evidence instead.
     """
     sender_profile = profile_text or _get_profile_text()
@@ -143,8 +142,8 @@ def build_follow_up_prompt(company_name, role_title, days_since_applied,
 
     prompt = f"""Write LinkedIn follow-up message #{follow_up_number} for my existing job application.
 
-This is a direct message to an existing 1st-degree connection, not an email and
-not a connection note. No subject line, no "To:" line, no attachment.
+This is a direct message to an existing 1st-degree connection, not a connection
+note. No subject line, no "To:" line, no attachment.
 
 CONTEXT:
 - I applied to {company_name} for the {role_title} role {days_since_applied} days ago
@@ -171,7 +170,7 @@ NEVER:
 - A sentence longer than about 25 words.
 - A skill list, or any fact, number, employer or project PROFILE does not show.
 - A claim that a resume is attached: nothing can be attached to a LinkedIn message.
-- A subject line or an email address of any kind.
+- A subject line or a postal or web address of any kind.
 - A demo link belonging to any other job.
 - Any mention of Canada, immigration or PR goals.
 
@@ -220,7 +219,7 @@ def build_thank_you_prompt(company_name, interviewer_name,
                        key_discussion_point=""):
     """Generate a post-interview thank you message."""
     
-    prompt = f"""Write a thank-you email after a job interview.
+    prompt = f"""Write a thank-you message after a job interview.
 
 CONTEXT:
 - Company: {company_name}
@@ -263,10 +262,10 @@ RULES:
 4. End with: "Happy to walk through the approach — would 15 minutes work?"
 5. Under 120 words total
 6. This is NOT a job application — it's a value-first introduction
-7. Generate 2 variants: one for LinkedIn DM, one for email
+7. Write it as a LinkedIn direct message
 8. Do NOT mention immigration or PR goals
 
-Generate both variants.
+Generate the message.
 """
 
     return {"prompt": prompt, "system": None, "char_limit": 900}

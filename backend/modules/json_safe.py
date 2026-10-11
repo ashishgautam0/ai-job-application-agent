@@ -6,7 +6,7 @@ NaN is not valid JSON; Starlette rejects it rather than emit the invalid `NaN`
 literal, so a single NULL turns a whole endpoint into a 500 and the page that
 reads it renders empty.
 
-The tracker hit exactly that: `follow_up_date` and `hr_email_sent_at` are NULL
+The tracker hit exactly that: `follow_up_date` is NULL
 on most applications, which stayed None under the pandas 2 pinned here but
 became NaN under the pandas 3 that an unpinned `pandas>=2.0.0` resolves to in
 the deployed function. Every frame that becomes an HTTP response goes through

@@ -33,5 +33,3 @@ Read: `list_applications`, `get_follow_ups_due`, `get_stats`,
 Write (additive only — there is deliberately no delete-application tool):
 `add_application`, `update_application_status`, `snooze_follow_up`,
 `save_job_message`, `save_company_intel` (website and hiring contact only).
-
-Utility: `find_recruiter_emails` (pattern-guess + best-effort SMTP verify).

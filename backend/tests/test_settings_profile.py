@@ -384,9 +384,9 @@ class SettingsProfileTests(unittest.TestCase):
         followup = profile_data.OUTREACH_DEFAULTS["followup_template"]
         for requirement in ("Dashboard's 'Follow-ups Due'", "Click each card to open its linked Tracker detail",
                             "skip future dates", "pending draft",
-                            # A LinkedIn DM, so no attachment and no email to
+                            # A LinkedIn DM, so no attachment and nothing to
                             # collide with — the deferral rule went with it.
-                            "THIS IS A LINKEDIN MESSAGE, NOT AN EMAIL",
+                            "THIS IS A LINKEDIN DIRECT MESSAGE, NOT A NEW INVITATION",
                             "existing conversation",
                             "confirmation immediately before Send", "never blindly resend",
                             "Record sent follow-up",

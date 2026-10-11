@@ -72,12 +72,12 @@ class CompanyResearchSelectionTests(unittest.TestCase):
         self.assertEqual(len(got), 3)
 
     def test_research_no_longer_collects_or_caches_an_address(self):
-        """Email is gone from the pipeline, so nothing stores one."""
+        """There is no email channel, so no address is collected or stored."""
         save = (ROOT / "modules/tracker.py").read_text()
         body = save.split("def save_research_cache", 1)[1].split("\n\n\n", 1)[0]
         self.assertNotIn("hiring_email", body)
         agent = (ROOT.parent / ".claude/agents/job-research.md").read_text()
-        self.assertIn("Do not look for an email address", agent)
+        self.assertIn("Do not look for a contact address of any kind", agent)
         self.assertNotIn("hiring_email", agent)
 
     def test_saving_research_stamps_when_it_was_researched(self):
@@ -154,8 +154,8 @@ class OutreachCadenceTests(unittest.TestCase):
             "Day 16 is the single follow-up round",
             "THE FOLLOW-UP IS A LINKEDIN MESSAGE AND IT IS CONDITIONAL",
             "once the invitation has been ACCEPTED",
-            # There is no email to fall back on any more.
-            "email was removed from this pipeline",
+            # Nothing to fall back on: no acceptance means no round.
+            "There is no fallback channel",
         ):
             with self.subTest(required=required):
                 self.assertIn(required, rules)
@@ -164,8 +164,8 @@ class OutreachCadenceTests(unittest.TestCase):
         agent = " ".join((ROOT.parent / ".claude/agents/followup.md").read_text().split())
         self.assertIn("requires an accepted connection", agent)
         self.assertIn("Never send another invitation in its place", agent)
-        self.assertIn("The follow-up is a LinkedIn message, not an email", agent)
-        self.assertIn("Email is gone from this pipeline", agent)
+        self.assertIn("The follow-up is a LinkedIn message", agent)
+        self.assertIn("There is no fallback channel", agent)
 
 
     def test_dashboard_lists_a_cold_dm_only_once_its_note_is_ready(self):

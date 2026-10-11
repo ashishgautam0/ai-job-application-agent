@@ -794,7 +794,7 @@ class DesktopPromptTests(unittest.TestCase):
 
     def test_prompt_asks_for_the_real_jd_not_a_summary(self):
         """The outreach agents read this text as the JD, so a paraphrase degrades
-        every cold DM, HR email and demo written from it."""
+        every cold DM and demo written from it."""
         step2 = self.prompt.split("STEP 2 — RECORD EVERY JOB", 1)[1].split("## KEEP GOING", 1)[0]
         self.assertIn("actual job description text", step2)
         self.assertIn("Do **not** send a summary or paraphrase", step2)
@@ -1125,7 +1125,7 @@ class DesktopPromptTests(unittest.TestCase):
 class JsonSafeRecordsTests(unittest.TestCase):
     """The tracker rendered empty because /api/applications returned a 500.
 
-    `follow_up_date` and `hr_email_sent_at` are NULL on most applications.
+    `follow_up_date` and `salary_range` are NULL on most applications.
     Pandas 2 kept those as None; pandas 3 — which an unpinned `pandas>=2.0.0`
     resolves to in the deployed function — turns them into NaN, which is not
     valid JSON, so Starlette refused the whole response.
@@ -1164,12 +1164,12 @@ class JsonSafeRecordsTests(unittest.TestCase):
 
     def test_a_missing_value_becomes_json_null_not_nan(self):
         rows = self.json_records(self.Frame([
-            {"id": 1, "follow_up_date": "2026-10-12", "hr_email_sent_at": "NaN"},
-            {"id": 2, "follow_up_date": "NaN", "hr_email_sent_at": "NaN"},
+            {"id": 1, "follow_up_date": "2026-10-12", "salary_range": "NaN"},
+            {"id": 2, "follow_up_date": "NaN", "salary_range": "NaN"},
         ]))
         self.assertEqual(rows, [
-            {"id": 1, "follow_up_date": "2026-10-12", "hr_email_sent_at": None},
-            {"id": 2, "follow_up_date": None, "hr_email_sent_at": None},
+            {"id": 1, "follow_up_date": "2026-10-12", "salary_range": None},
+            {"id": 2, "follow_up_date": None, "salary_range": None},
         ])
         for row in rows:
             for key, value in row.items():

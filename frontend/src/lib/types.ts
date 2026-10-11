@@ -191,35 +191,6 @@ export interface CachedCompanyIntel {
   researched_at?: string;
 }
 
-export type EmailStatus =
-  | "valid"
-  | "catch_all"
-  | "invalid"
-  | "pattern"
-  | "no_mx";
-
-export interface EmailCandidate {
-  email: string;
-  status: EmailStatus;
-}
-
-export interface RecruiterContact {
-  name: string;
-  candidates: EmailCandidate[];
-}
-
-export interface RecruiterEmailReport {
-  ok: boolean;
-  reason?: string;
-  message?: string;
-  domain?: string;
-  mx_ok?: boolean;
-  smtp_checked?: boolean;
-  catch_all?: boolean | null;
-  email_pattern?: string | null;
-  contacts?: RecruiterContact[];
-}
-
 // ---- Profile ----
 export interface ProjectEntry {
   name: string;

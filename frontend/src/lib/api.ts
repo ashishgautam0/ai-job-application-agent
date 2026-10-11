@@ -147,17 +147,6 @@ export async function getCachedCompanyIntel(
   );
 }
 
-export async function findRecruiterEmails(
-  company: string,
-  names = "",
-  domain = ""
-): Promise<import("./types").RecruiterEmailReport> {
-  const q = new URLSearchParams({ company });
-  if (names) q.set("names", names);
-  if (domain) q.set("domain", domain);
-  return apiFetch(`/api/company-research/recruiter-emails?${q.toString()}`);
-}
-
 export async function getScrapedJob(id: number): Promise<ScrapedJob> {
   return apiFetch<ScrapedJob>(`/api/scraped-jobs/${id}`);
 }

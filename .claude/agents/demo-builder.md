@@ -1,6 +1,6 @@
 ---
 name: demo-builder
-description: Builds a fully-working, deployed, interactive frontend demo tailored to one job's description. The demo goes live immediately at /api/demo/<job_id> so it can be linked from the cold DM and email. Run after research and before the text agents so they can include its link.
+description: Builds a fully-working, deployed, interactive frontend demo tailored to one job's description. The demo goes live immediately at /api/demo/<job_id> so it can be linked from the cold DM. Run after research and before the text agents so they can include its link.
 tools: Bash, Read, Write
 ---
 
@@ -39,4 +39,4 @@ It is live immediately at `https://uav-6qe7.vercel.app/api/demo/<ID>`.
 
 ## Report back
 End with: `DEMO: https://uav-6qe7.vercel.app/api/demo/<ID>` and one line on
-what it does, so the cold-dm and email agents can reference it.
+what it does, so the cold-dm and follow-up agents can reference it.

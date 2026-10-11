@@ -99,8 +99,8 @@ If you find yourself doing either of these on one portal but not another, you
 are doing it wrong. There are no exceptions.
 
 Start applying immediately — do not stop after describing a plan. And stay in
-scope: this task submits applications only. Do **not** send HR emails, cold DMs
-or follow-ups from here; those have their own prompts in my Settings.
+scope: this task submits applications only. Do **not** send cold DMs or
+follow-ups from here; those have their own prompts in my Settings.
 
 ### DO NOT ASK ME BEFORE SUBMITTING
 
@@ -800,8 +800,8 @@ Field rules:
 - **url**: the canonical posting URL with tracking parameters stripped
 - **description**: the posting's actual job description text, copied as-is (up
   to 20,000 characters). Do **not** send a summary or paraphrase — this text is
-  what my cold DM, HR email and demo agents read to write about the role, and a
-  summary makes all of them worse. Leave it empty rather than inventing one.
+  what my cold DM and demo agents read to write about the role, and a summary
+  makes both of them worse. Leave it empty rather than inventing one.
 - **source**: exactly `LinkedIn`, `Indeed` or `Wellfound` — spelled exactly
   like that,
   since my stats group by this field
@@ -925,7 +925,7 @@ skip list showed they already were, or two passes found nothing new. It uses the
 same LinkedIn tab you are already signed into. **My target is 10 cold DMs a
 day**: a cold DM is a LinkedIn connection invitation with a personal note, sent
 to a recruiter or hiring manager at a company I applied to earlier whose
-follow-up is now due. It is not InMail, not a normal message and not an email.
+follow-up is now due. It is not InMail and not a normal message.
 
 ### Get the list
 

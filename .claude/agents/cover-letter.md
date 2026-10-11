@@ -28,6 +28,6 @@ snapshot:
 python pending_messages.py save-cover-letter --job-id <ID> < /tmp/letter.txt
 ```
 
-Do not send, email, submit, or apply. Saving stamps the resume version, JD
+Do not send, submit, or apply. Saving stamps the resume version, JD
 version/hash, score, analysis version, run ID, and timestamp, and is
 idempotent across retries.

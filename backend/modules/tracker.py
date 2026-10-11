@@ -14,9 +14,9 @@ import json
 
 # --- Outreach cadence (global defaults) ---
 # Day offsets from the application date. Day 1 the job is tracked; day 8
-# (offset 7) is the first outreach — HR email plus a LinkedIn connection note,
-# each carrying that job's demo. Day 16 (offset 15) is the single follow-up
-# round. Two rounds only: after the second, the record is marked Ghosted.
+# (offset 7) is the first outreach — a LinkedIn connection note carrying that
+# job's demo. Day 16 (offset 15) is the single follow-up round, a LinkedIn
+# message to whoever accepted that invitation. Two rounds only: after the second, the record is marked Ghosted.
 APPLICATION_CADENCE = [7, 15]
 INTERVIEW_FOLLOW_UP_DAYS = 3
 TERMINAL_STATUSES = ["Offer", "Rejected", "Ghosted", "Not Interested"]

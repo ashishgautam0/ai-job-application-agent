@@ -10,8 +10,8 @@ and cache the company's official primary website URL and a real hiring contact
 where one can be verified. Do not collect or store company descriptions, news,
 technology lists, or candidate-fit evaluations.
 
-**Do not look for an email address.** Email was removed from this pipeline:
-nothing sends mail and no address is stored. Outreach goes out on LinkedIn.
+**Do not look for a contact address of any kind.** Nothing in this pipeline
+sends mail and no address is stored. Outreach goes out on LinkedIn.
 
 Use WebSearch/WebFetch to verify that the URL belongs to the actual company,
 not a job board, social profile, directory, or similarly named business. A

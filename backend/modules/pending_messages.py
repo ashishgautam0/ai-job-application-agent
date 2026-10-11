@@ -11,8 +11,6 @@ script is the interface it drives.
     # save one message (body on stdin avoids shell-quoting multi-line text)
     python pending_messages.py save --job-id 4821 < message.txt
 
-    # one-time Company HR email drafts for newly tracked jobs
-
     # freeform requests queued from the UI, each with its ready-made prompt
     python pending_messages.py requests
     python pending_messages.py fulfil --request-id 12 < message.txt
@@ -811,13 +809,6 @@ def cmd_notify(args):
     except Exception as e:
         print(f"Could not send push: {e}", file=sys.stderr)
         return 1
-
-    # Also email the summary (no-ops if no email backend is configured).
-    try:
-        from emailer import send_email
-        send_email(subject=args.title, body_text=args.body)
-    except Exception as e:
-        print(f"Could not send email: {e}", file=sys.stderr)
 
     return 0
 
