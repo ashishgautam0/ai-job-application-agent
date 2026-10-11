@@ -172,8 +172,12 @@ class OutreachCadenceTests(unittest.TestCase):
         Ghosted once count reaches its length, so a third round is unreachable.
         The connection rules still promised "up to three rounds total", which
         contradicted the follow-up block in the same prompt."""
-        import tracker
-        self.assertEqual(len(tracker.APPLICATION_CADENCE), 2)
+        # The shipped constant, read without importing pandas: this lane
+        # installs nothing, so importing tracker here fails in CI even though
+        # it passes locally.
+        cadence = next(line for line in (ROOT / "modules/tracker.py").read_text().splitlines()
+                       if line.startswith("APPLICATION_CADENCE"))
+        self.assertIn("[7, 15]", cadence)
         # Collapsed: these blocks wrap across lines, and a rewrap is not a
         # behaviour change.
         rules = " ".join((ROOT / "modules/outreach_prompts.py").read_text().split())
