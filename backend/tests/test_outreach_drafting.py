@@ -134,6 +134,24 @@ class OutreachDraftingTests(unittest.TestCase):
             with self.subTest(rule=rule):
                 self.assertIn(rule, prompt)
 
+    def test_the_recorded_profile_is_opened_before_anything_is_written(self):
+        """LinkedIn carries a direct message only once the invitation has been
+        accepted, and the only way to know is to open the profile the cold DM
+        went to."""
+        prompt = build_follow_up_prompt("Acme", "ML Engineer", 7, recipient_name="Dana",
+                                        recipient_profile_url="https://www.linkedin.com/in/dana/")["prompt"]
+        self.assertIn("THEIR PROFILE: https://www.linkedin.com/in/dana/", prompt)
+        flat = " ".join(prompt.split())
+        self.assertIn("Open it first and confirm the invitation was accepted", flat)
+        self.assertIn("pending, was withdrawn or was ignored, write nothing for this job", flat)
+
+    def test_no_recorded_profile_means_nothing_is_written(self):
+        prompt = build_follow_up_prompt("Acme", "ML Engineer", 7,
+                                        recipient_name="Dana")["prompt"]
+        flat = " ".join(prompt.split())
+        self.assertIn("THEIR PROFILE: none recorded", flat)
+        self.assertIn("you cannot confirm the invitation was accepted, so write nothing", flat)
+
     def test_a_follow_up_without_a_recipient_keeps_the_placeholder(self):
         prompt = build_follow_up_prompt("Acme", "ML Engineer", 7, profile_text="P")["prompt"]
         self.assertIn("RECIPIENT: none on record", prompt)
@@ -298,7 +316,7 @@ class ConnectionRecipientTests(unittest.TestCase):
     trailer is the fallback, so both keep working.
     """
 
-    def recipient(self, rows):
+    def _call(self, rows, name):
         from unittest.mock import MagicMock
         db = MagicMock()
         (db.table.return_value.select.return_value.eq.return_value.eq.return_value
@@ -306,9 +324,22 @@ class ConnectionRecipientTests(unittest.TestCase):
         tracker = types.ModuleType("tracker")
         tracker.DM_CHANNEL = "LinkedIn connection"
         tracker._get_client = lambda: db
+        module = ROOT / "modules/pending_messages.py"
+        # _PROFILE_URL is a module-level constant the AST helper does not carry,
+        # so take the pattern from the source rather than restating it here.
+        literal = re.search(r"_PROFILE_URL = re\.compile\((r.[^\n]+?.)\)\n",
+                            module.read_text()).group(1)
+        env = {"sys": sys, "re": re, "_PROFILE_URL": re.compile(eval(literal))}
+        env["_connection_record"] = function(module, "_connection_record", env)
         with patch.dict(sys.modules, {"tracker": tracker}):
-            return function(ROOT / "modules/pending_messages.py",
-                            "_connection_recipient", {"sys": sys})(131)
+            return function(module, name, env)(131)
+
+    def record(self, rows):
+        """(name, url) — both halves the follow-up needs."""
+        return self._call(rows, "_connection_record")
+
+    def recipient(self, rows):
+        return self._call(rows, "_connection_recipient")
 
     def test_the_column_is_preferred(self):
         self.assertEqual(self.recipient([
@@ -328,6 +359,36 @@ class ConnectionRecipientTests(unittest.TestCase):
         self.assertEqual(self.recipient([
             {"recipient_name": "", "message_content": "Exact text I pasted, no trailer."}]), "")
         self.assertEqual(self.recipient([]), "")
+
+    def test_the_url_column_is_preferred_over_the_trailer(self):
+        """The URL is what the sending step opens to check the invitation was
+        accepted, so it has to come back alongside the name."""
+        self.assertEqual(self.record([
+            {"recipient_name": "Viren Khatri",
+             "recipient_profile_url": "https://www.linkedin.com/in/viren/",
+             "message_content": "note\n\nSent to Someone Else: https://www.linkedin.com/in/other"}]),
+            ("Viren Khatri", "https://www.linkedin.com/in/viren/"))
+
+    def test_the_url_falls_back_to_the_trailer_for_older_rows(self):
+        self.assertEqual(self.record([
+            {"recipient_name": None, "recipient_profile_url": "",
+             "message_content": "note\n\nSent to Viren Khatri: https://www.linkedin.com/in/viren"}]),
+            ("Viren Khatri", "https://www.linkedin.com/in/viren"))
+
+    def test_a_row_with_no_url_anywhere_reports_none(self):
+        """No URL means the invitation cannot be confirmed, so the prompt has
+        to be told that rather than handed an empty-looking link."""
+        self.assertEqual(self.record([
+            {"recipient_name": "Viren Khatri", "recipient_profile_url": "",
+             "message_content": "Exact text I pasted, no trailer."}]),
+            ("Viren Khatri", ""))
+        self.assertEqual(self.record([]), ("", ""))
+
+    def test_a_url_half_alone_is_still_a_usable_record(self):
+        self.assertEqual(self.record([
+            {"recipient_name": "", "recipient_profile_url": "",
+             "message_content": "note https://www.linkedin.com/in/viren done"}]),
+            ("", "https://www.linkedin.com/in/viren"))
 
     def test_the_latest_record_wins(self):
         self.assertEqual(self.recipient([

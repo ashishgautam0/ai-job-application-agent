@@ -162,10 +162,20 @@ class OutreachCadenceTests(unittest.TestCase):
         # Collapsed: these phrases wrap across lines, and a rewrap is not a
         # behaviour change.
         agent = " ".join((ROOT.parent / ".claude/agents/followup.md").read_text().split())
-        self.assertIn("requires an accepted connection", agent)
-        self.assertIn("Never send another invitation in its place", agent)
+        # The acceptance check is an instruction to open the recorded profile:
+        # that URL is the only place the connection state can be read.
+        self.assertIn("Open the recorded profile URL first", agent)
+        self.assertIn("LinkedIn URL the cold DM's invitation went to", agent)
+        self.assertIn("write nothing for this job", agent)
+        # Unaccepted is not a failure: the request stays queued for a later run.
+        self.assertIn("Leave the request queued", agent)
+        self.assertIn("do not send another invitation, and do not look for "
+                      "another channel", agent)
         self.assertIn("The follow-up is a LinkedIn message", agent)
-        self.assertIn("There is no fallback channel", agent)
+        # ...and the agent stops at the same daily number the Dashboard shows.
+        self.assertIn("Stop at the daily target", agent)
+        self.assertIn("10 follow-ups sent per Asia/Kolkata calendar day", agent)
+        self.assertIn('"Daily Target \u2014 Follow-ups" card', agent)
 
     def test_the_rules_claim_two_rounds_because_the_code_allows_two(self):
         """APPLICATION_CADENCE is [7, 15] and update_status marks the record

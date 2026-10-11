@@ -110,37 +110,54 @@ def _tracked_jobs_missing(message_type, limit):
     return need, len(tracked)
 
 
-def _connection_recipient(application_id):
-    """The name the Cold DM went to for this application, as recorded.
+_PROFILE_URL = re.compile(r"https?://[a-zA-Z0-9.\-]*linkedin\.com/in/[^\s)]+")
 
-    The follow-up is a LinkedIn message to that same person, so it needs their
-    name. Newer records carry it in `recipient_name`; older ones only have the
-    "Sent to <name>: <profile url>" trailer the desktop agent appends to
-    message_content, and a record made by hand before the form had a recipient
-    field has neither. The column is preferred and the trailer is the fallback,
-    so both keep working. An empty string leaves the draft's placeholder in
-    place rather than inventing someone.
 
-    Returns the whole recorded name; the prompt greets by first name.
+def _connection_record(application_id):
+    """(name, profile_url) of whoever the Cold DM went to for this application.
+
+    The follow-up is a LinkedIn message to that same person, so it needs both:
+    the name to greet them, and the profile URL to open and check the invitation
+    was actually accepted before writing anything.
+
+    Newer records carry these in `recipient_name` / `recipient_profile_url`;
+    older ones only have the "Sent to <name>: <profile url>" trailer the desktop
+    agent appends to message_content, and a record made by hand before the form
+    had those fields may have neither. The columns are preferred and the trailer
+    is the fallback, so both keep working. Empty strings leave the draft's
+    placeholder in place rather than inventing someone.
+
+    One query returns both, so the Dashboard's per-row lookup does not double.
     """
     try:
         from tracker import DM_CHANNEL, _get_client
         rows = (_get_client().table("follow_up_history")
-                .select("recipient_name,message_content")
+                .select("recipient_name,recipient_profile_url,message_content")
                 .eq("entity_type", "application").eq("entity_id", int(application_id))
                 .eq("channel", DM_CHANNEL).order("id").execute()).data or []
     except Exception as exc:
         print(f"[pending-messages] could not read the connection recipient: {exc}",
               file=sys.stderr)
-        return ""
+        return "", ""
     for row in reversed(rows):
-        stored = (row.get("recipient_name") or "").strip()
-        if stored:
-            return stored
-        _, marker, rest = (row.get("message_content") or "").partition("Sent to ")
-        if marker and rest.strip():
-            return rest.split(":")[0].strip()
-    return ""
+        content = row.get("message_content") or ""
+        name = (row.get("recipient_name") or "").strip()
+        if not name:
+            _, marker, rest = content.partition("Sent to ")
+            if marker and rest.strip():
+                name = rest.split(":")[0].strip()
+        url = (row.get("recipient_profile_url") or "").strip()
+        if not url:
+            found = _PROFILE_URL.search(content)
+            url = found.group(0) if found else ""
+        if name or url:
+            return name, url
+    return "", ""
+
+
+def _connection_recipient(application_id):
+    """The recorded name alone; the prompt greets by first name."""
+    return _connection_record(application_id)[0]
 
 
 _SENT_TO_TRAILER = re.compile(r"\n\s*Sent to [^\n]*\Z")
@@ -499,8 +516,9 @@ def cmd_followups(args):
         demo = _demo_url_for_scraped_job_by_app_url(app.get("url", ""))
         intel = _company_intel_text(company)
         # The follow-up is a LinkedIn message to whoever accepted the
-        # connection request, so it needs their name, not an address.
-        recipient = _connection_recipient(app["id"])
+        # connection request: their name to greet them, and their profile URL
+        # so the sending step can open it and check the invitation was accepted.
+        recipient, recipient_url = _connection_record(app["id"])
 
         row = create_message_request("follow-up", {
             "company_name": company,
@@ -512,6 +530,7 @@ def cmd_followups(args):
             "demo_url": demo,
             "company_intel": intel,
             "recipient_name": recipient,
+            "recipient_profile_url": recipient_url,
             "_application_id": app["id"],
         })
         if row:

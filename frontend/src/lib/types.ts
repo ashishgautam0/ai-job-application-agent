@@ -41,6 +41,8 @@ export interface DashboardStats {
   daily_target: number;
   dms_today: number;
   dm_target: number;
+  follow_ups_today: number;
+  follow_up_target: number;
   [key: string]: number;
 }
 

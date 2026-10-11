@@ -29,7 +29,9 @@ These connection-note, daily-cap, fixed-batch and due-date rules override older 
 FOLLOW_UP_AFTER_CONNECTION_RULES = """FOLLOW-UP CARD TIMING (authoritative):
 THE CADENCE: day 1 the job enters the Tracker. Day 8 is the first outreach — the LinkedIn connection note carrying that job's demo. Day 16 is the single follow-up round, and the last: after it is recorded the record is marked Ghosted. Only use a Follow-ups Due card when its saved follow_up_date is actually due in Asia/Kolkata. Never change a date to make a card due, and never send a round early because a draft exists.
 
-THE FOLLOW-UP IS A LINKEDIN MESSAGE AND IT IS CONDITIONAL. LinkedIn only carries a direct message once the invitation has been ACCEPTED. Before writing one, open the recipient's profile and confirm you are connected. If the invitation is still Pending, was withdrawn, was ignored, or no invitation was recorded at all, there is nothing to send: skip it, say so in your report, and leave it — do not send a second invitation, do not withdraw and reinvite, and do not treat a pending invitation as a delivered message. There is no fallback channel: an invitation that was never accepted simply means this round does not happen.
+THE FOLLOW-UP IS A LINKEDIN MESSAGE AND IT IS CONDITIONAL. LinkedIn only carries a direct message once the invitation has been ACCEPTED. Each batch item carries the recipient's recorded profile URL. For every job, in this order: (1) open that exact URL first — not a search, not a guess; (2) read the connection state there; (3) only if it shows you are connected, meaning they accepted the Cold DM invitation, write and send the follow-up. If it shows Pending, Connect, Withdrawn, or the invitation was ignored, STOP on that job: write nothing, send nothing, record nothing, and do not advance its date. Leave it exactly as it is — it stays in the due queue and a later run picks it up once they have accepted, so an unaccepted invitation costs this job nothing. Report it as 'not accepted yet — left queued'. Never send a second invitation, never withdraw and reinvite, and never treat a pending invitation as a delivered message. A job with no recorded profile URL cannot be confirmed either way, so it is left queued the same way. There is no fallback channel.
+
+MY DAILY FOLLOW-UP TARGET: 10 follow-ups per Asia/Kolkata calendar day. Work down the due queue, oldest first, until 10 are sent and recorded, then STOP for the day and report the rest as deferred — do not keep going past the target. Jobs you leave queued because the invitation was not accepted do NOT count toward the 10, since nothing was sent; only a confirmed, recorded send counts. If the queue runs out before 10, that is finished, not a shortfall. Check the Dashboard's 'Daily Target — Follow-ups' card for the count already sent today and subtract it from 10 before you start, so another run's sends are not repeated.
 
 Record each confirmed send on that Tracker job. One recorded follow-up completes the day-16 slot; do not record twice for one slot. Older wording about seven-day spacing does not override this timing."""
 
@@ -55,21 +57,29 @@ OUTREACH_DEFAULTS = {
                       'number. If queued, missing, stale or inconsistent with history, report '
                       'pending draft and continue. Do not invent previous contact, replies or '
                       'facts. Keep the message brief, polite and professional.\n'
-                      '4. THIS IS A LINKEDIN DIRECT MESSAGE, NOT A NEW INVITATION. Send it as a '
-                      'direct message '
-                      'to the person who accepted this job\'s connection request, in the '
-                      'existing conversation. Confirm on their profile that you are connected '
-                      'first: a pending, withdrawn or ignored invitation carries no message, so '
-                      'skip that job and say so. Never send a second invitation, never switch '
-                      'to InMail, and never claim a resume is attached — nothing can be '
-                      'attached to a LinkedIn message. Keep it to the greeting, the one-line '
-                      'reminder, the question and the sign-off: this person already read the '
-                      'connection note, so do not restate the pitch, add a new fact, or send '
-                      'the demo link again.\n'
-                      '5. Read the conversation before sending so the same round does not go '
+                      '4. OPEN THE RECORDED PROFILE URL FIRST, before writing anything. '
+                      'Each item carries the profile the Cold DM invitation went to. Open that '
+                      'exact URL and read the connection state. Connected means they accepted '
+                      'it: go on to step 5. Pending, Connect, Withdrawn, ignored, or no '
+                      'recorded URL means STOP on that job — write nothing, send nothing, '
+                      'record nothing, leave its date alone. It stays in the due queue for a '
+                      'later run once they accept. Report it as not accepted yet, left '
+                      'queued.\n'
+                      '5. THIS IS A LINKEDIN DIRECT MESSAGE, NOT A NEW INVITATION. Send it in '
+                      'the existing conversation with that same person. Never send a second '
+                      'invitation, never switch to InMail, and never claim a resume is '
+                      'attached — nothing can be attached to a LinkedIn message. Keep it to the '
+                      'greeting, the one-line reminder, the question and the sign-off: this '
+                      'person already read the connection note, so do not restate the pitch, '
+                      'add a new fact, or send the demo link again.\n'
+                      '6. STOP AT 10 SENT for the Asia/Kolkata day. Read the Dashboard\'s '
+                      '\'Daily Target — Follow-ups\' card first and subtract what is already '
+                      'sent today. Jobs left queued for an unaccepted invitation do not count. '
+                      'Once 10 are sent and recorded, stop and report the rest as deferred.\n'
+                      '7. Read the conversation before sending so the same round does not go '
                       'twice, and obtain explicit confirmation immediately before Send. After '
                       'an uncertain send, check the conversation; never blindly resend.\n'
-                      '6. Only after verified sending, fill \'Sent follow-up message\' with the '
+                      '8. Only after verified sending, fill \'Sent follow-up message\' with the '
                       'exact sent text, select \'Sent via\', and click \'Record sent follow-up\' '
                       'on the same Tracker detail. Verify the new history row, number, channel, '
                       'message and timestamp, then return to Dashboard and check the updated '

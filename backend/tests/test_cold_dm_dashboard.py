@@ -123,7 +123,9 @@ class ColdDmDashboardTests(unittest.TestCase):
                  "status": "Follow-up Sent", "platform": "LinkedIn", "date_applied": "2026-08-01",
                  "follow_up_date": "2026-09-20"}]
         history = [{"id": 1, "entity_type": "application", "entity_id": 8,
-                    "channel": "LinkedIn connection", "sent_at": "2026-09-21T00:00:00Z"}]
+                    "channel": "LinkedIn connection", "sent_at": "2026-09-21T00:00:00Z",
+                    "recipient_name": "Viren Khatri", "message_content": "note",
+                    "recipient_profile_url": "https://www.linkedin.com/in/viren/"}]
         db = Database(apps, [], [], history)
         with patch.object(tracker, "_get_client", return_value=db), patch.object(
             tracker, "_user_now", return_value=datetime.fromisoformat("2026-09-27T12:00:00+05:30")
@@ -144,7 +146,13 @@ class ColdDmDashboardTests(unittest.TestCase):
             with redirect_stdout(output):
                 pending_messages.cmd_followups(None)
             self.assertEqual(json.loads(output.getvalue())["queued"][0]["application_id"], 8)
-            self.assertEqual(create.call_args.args[1]["follow_up_number"], 2)
+            params = create.call_args.args[1]
+            self.assertEqual(params["follow_up_number"], 2)
+            # Both halves of the recorded connection reach the writer: the name
+            # to greet them, and the URL to open and confirm they accepted.
+            self.assertEqual(params["recipient_name"], "Viren Khatri")
+            self.assertEqual(params["recipient_profile_url"],
+                             "https://www.linkedin.com/in/viren/")
 
     def test_dashboard_endpoint_uses_same_pdf_version_as_settings_prompt(self):
         captured = []
