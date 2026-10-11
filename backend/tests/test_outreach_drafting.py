@@ -293,3 +293,53 @@ class PriorRoundContextTests(unittest.TestCase):
         self.assertIn('- Follow-up #2: "Following up on the GenAI role."', prompt)
         self.assertNotIn("Follow-up #1:", prompt)
         self.assertNotIn("Follow-up #3:", prompt)
+
+
+class LinkedInShapeTests(unittest.TestCase):
+    """The shape rules have to cover the follow-up, not just the Cold DM.
+
+    They were gated behind `kind in {"cold_dm", "cold-dm"}`, so fifteen
+    follow-up drafts written before email was removed reached status "ready"
+    carrying a To: line, a Subject:, and "My resume is attached again" — a
+    promise a LinkedIn message cannot keep — and five printed a real address.
+    Validation returned None for every one of them.
+    """
+
+    EMAIL_SHAPED = ("To: hr@caliberfocus.com\n"
+                    "Subject: Re: Junior AI Engineer\n\n"
+                    "Hello,\n\nFollowing up on my application, submitted 15 days ago. "
+                    "My resume is attached again. Could you share where the role stands?")
+    GOOD = ("Hi Viren,\n\nFollowing up on my application for the GenAI Engineer role, "
+            "sent 11 days ago. In case it's useful, the short demo I built for this "
+            "role is here: https://uav-6qe7.vercel.app/api/demo/1.\n\n"
+            "Any update on where the role stands?\n\nSubidh Khanal")
+
+    def test_an_email_shaped_follow_up_is_rejected(self):
+        self.assertIsNotNone(validate_outreach_draft("follow-up", self.EMAIL_SHAPED))
+
+    def test_a_real_linkedin_follow_up_passes(self):
+        self.assertIsNone(validate_outreach_draft("follow-up", self.GOOD))
+
+    def test_each_letter_artefact_is_caught_on_its_own(self):
+        for artefact, draft in (
+            ("To: line", "To: hr@acme.com\n\nHi Viren, following up."),
+            ("subject", "Subject: Re: the role\n\nHi Viren, following up."),
+            ("attachment claim", "Hi Viren, following up. My resume is attached again."),
+            ("bare address", "Hi Viren, following up — reach me at hr@acme.com."),
+        ):
+            with self.subTest(artefact=artefact):
+                self.assertIsNotNone(validate_outreach_draft("follow-up", draft))
+
+    def test_the_underscore_spelling_is_covered_too(self):
+        """create_message_request uses "follow-up"; stored rows elsewhere use
+        "follow_up". A rule that only matched one spelling would be a gap."""
+        for kind in ("follow-up", "follow_up"):
+            with self.subTest(kind=kind):
+                self.assertIsNotNone(validate_outreach_draft(kind, self.EMAIL_SHAPED))
+
+    def test_the_cold_dm_keeps_its_own_extra_rules(self):
+        """Length and the [FIRST NAME] token are the Cold DM's alone — a
+        follow-up greets by real name and is longer than a connection note."""
+        self.assertIsNone(validate_outreach_draft("follow-up", self.GOOD))
+        self.assertIn("[FIRST NAME]", validate_outreach_draft("cold_dm", "Hi Viren, glad to connect."))
+        self.assertIn("300 characters", validate_outreach_draft("cold_dm", "Hi [FIRST NAME], " + "x" * 320))
