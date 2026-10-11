@@ -18,6 +18,7 @@ import json
 import math
 import pathlib
 import sys
+import re
 import unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -197,6 +198,41 @@ ENDPOINTS = (
     "/api/scraped-jobs",
     "/api/notifications",
 )
+
+
+class DeployedDependencyTests(unittest.TestCase):
+    """The deployed API installs the ROOT requirements.txt, not backend's.
+
+    vercel.json rewrites /api/(.*) to /api/index.py, which imports
+    backend.app.main, but the Vercel project builds from the repository root —
+    so a package added only to backend/requirements.txt is simply absent in
+    production. That is not a build error: the import fails at request time,
+    inside whichever handler needs it. It is how `anthropic` shipped missing
+    and every mini demo's model call answered 502, and how pywebpush went
+    missing and push notifications turned themselves off in silence.
+    """
+
+    @staticmethod
+    def _packages(path):
+        names = {}
+        for line in (ROOT.parent / path).read_text().splitlines():
+            line = line.split("#")[0].strip()
+            if line:
+                names[re.split(r"[<>=!\[]", line)[0].strip().lower()] = line
+        return names
+
+    def test_every_backend_package_is_installed_where_the_api_runs(self):
+        root = self._packages("requirements.txt")
+        backend = self._packages("backend/requirements.txt")
+        missing = sorted(set(backend) - set(root))
+        self.assertEqual(missing, [], "add to the ROOT requirements.txt, which is "
+                         "what the deployed API installs: " + ", ".join(missing))
+
+    def test_the_model_client_the_demo_route_needs_is_declared(self):
+        # main.py imports anthropic inside the request handler, so nothing
+        # fails until an employer opens a demo and types into it.
+        self.assertIn("import anthropic", (ROOT / "app/main.py").read_text())
+        self.assertIn("anthropic", self._packages("requirements.txt"))
 
 
 class ApiSmokeTests(unittest.TestCase):
