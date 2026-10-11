@@ -194,6 +194,13 @@ class LogFollowUpRequest(BaseModel):
     entity_id: int
     message_content: str = ""
     channel: str = ""
+    # Optional because WhatsApp and Other are valid channels with no profile
+    # behind them. Validated with the same pattern the desktop agent uses, so a
+    # non-LinkedIn URL is refused rather than stored.
+    recipient_name: str = Field(default="", max_length=200)
+    recipient_profile_url: str = Field(
+        default="", max_length=500,
+        pattern=r"^$|^https://([a-z]+\.)?linkedin\.com/")
 
 
 class UpdateFollowUpOutcomeRequest(BaseModel):

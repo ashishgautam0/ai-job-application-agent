@@ -21,6 +21,8 @@ def log_follow_up_sent(body: LogFollowUpRequest):
         entity_id=body.entity_id,
         message_content=body.message_content,
         channel=body.channel,
+        recipient_name=body.recipient_name,
+        recipient_profile_url=body.recipient_profile_url,
     )
     if body.entity_type == "application":
         update_status(body.entity_id, "Follow-up Sent")

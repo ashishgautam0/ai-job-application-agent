@@ -80,7 +80,12 @@ class OutreachSettingsTests(unittest.TestCase):
         for required in ("USE THE FIXED COLD DM JOBS SNAPSHOT", "Asia/Kolkata", "Missing/future dates",
                          "already tracked follow-up", "stored cold_dm", "direct tracker_url",
                          "Record completed outreach", "choose 'LinkedIn connection' in 'Sent via'",
-                         "exact sent note and recipient profile URL", "Do this separately for each job",
+                         # The recipient now has its own fields, so the URL no longer goes in
+                         # the message box.
+                         "enter the exact sent note in 'Sent follow-up message'",
+                         "their profile URL in 'Recipient LinkedIn profile URL'",
+                         "do not paste the URL into the message",
+                         "Do this separately for each job",
                          "Do not record anything for an unconfirmed send", "advance the schedule",
                          "retry only missing logging", "seven Asia/Kolkata calendar days",
                          "Follow-ups Due card must appear only after", "at most one outreach action"):
@@ -120,6 +125,32 @@ class OutreachSettingsTests(unittest.TestCase):
         self.assertEqual(log.call_args.kwargs["entity_id"], 42)
         self.assertEqual(log.call_args.kwargs["channel"], "LinkedIn connection")
         advance.assert_called_once_with(42, "Follow-up Sent")
+
+    def test_the_manual_form_records_the_recipient_as_data(self):
+        """The Tracker form had no recipient field, so a hand-recorded note left
+        nothing for the follow-up to address: 9 of 62 rows arrived that way."""
+        from unittest.mock import MagicMock
+        from pydantic import ValidationError
+        from app.models.schemas import LogFollowUpRequest
+        log, advance = MagicMock(return_value=1), MagicMock()
+        endpoint = function(ROOT / "app/routers/follow_ups.py", "log_follow_up_sent", {
+            "LogFollowUpRequest": LogFollowUpRequest, "log_follow_up": log, "update_status": advance})
+        endpoint(LogFollowUpRequest(
+            entity_type="application", entity_id=42, message_content="Exact sent note",
+            channel="LinkedIn connection", recipient_name="Viren Khatri",
+            recipient_profile_url="https://www.linkedin.com/in/viren"))
+        self.assertEqual(log.call_args.kwargs["recipient_name"], "Viren Khatri")
+        self.assertEqual(log.call_args.kwargs["recipient_profile_url"],
+                         "https://www.linkedin.com/in/viren")
+        # Optional, because WhatsApp and Other have no profile behind them.
+        bare = LogFollowUpRequest(entity_type="application", entity_id=42)
+        self.assertEqual((bare.recipient_name, bare.recipient_profile_url), ("", ""))
+        # But a URL that is not a LinkedIn profile is refused, not stored.
+        for bad in ("https://example.com/in/x", "notaurl", "http://linkedin.com/in/x"):
+            with self.subTest(bad=bad):
+                with self.assertRaises(ValidationError):
+                    LogFollowUpRequest(entity_type="application", entity_id=42,
+                                       recipient_profile_url=bad)
 
     def test_custom_outreach_retains_send_guards_and_reports_unknown_placeholders(self):
         prompt, unknown = self.renderer()("My brief {{unsupported}}", {}, "https://app", "https://pdf")

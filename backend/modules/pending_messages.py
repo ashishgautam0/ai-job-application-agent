@@ -111,17 +111,22 @@ def _tracked_jobs_missing(message_type, limit):
 
 
 def _connection_recipient(application_id):
-    """First name of whoever the Cold DM went to for this application.
+    """The name the Cold DM went to for this application, as recorded.
 
     The follow-up is a LinkedIn message to that same person, so it needs their
-    name. The Cold DM record stores it as "Sent to <name>: <profile url>" on
-    the connection history row; an empty string leaves the draft's placeholder
-    in place rather than inventing someone.
+    name. Newer records carry it in `recipient_name`; older ones only have the
+    "Sent to <name>: <profile url>" trailer the desktop agent appends to
+    message_content, and a record made by hand before the form had a recipient
+    field has neither. The column is preferred and the trailer is the fallback,
+    so both keep working. An empty string leaves the draft's placeholder in
+    place rather than inventing someone.
+
+    Returns the whole recorded name; the prompt greets by first name.
     """
     try:
         from tracker import DM_CHANNEL, _get_client
         rows = (_get_client().table("follow_up_history")
-                .select("message_content")
+                .select("recipient_name,message_content")
                 .eq("entity_type", "application").eq("entity_id", int(application_id))
                 .eq("channel", DM_CHANNEL).order("id").execute()).data or []
     except Exception as exc:
@@ -129,6 +134,9 @@ def _connection_recipient(application_id):
               file=sys.stderr)
         return ""
     for row in reversed(rows):
+        stored = (row.get("recipient_name") or "").strip()
+        if stored:
+            return stored
         _, marker, rest = (row.get("message_content") or "").partition("Sent to ")
         if marker and rest.strip():
             return rest.split(":")[0].strip()
