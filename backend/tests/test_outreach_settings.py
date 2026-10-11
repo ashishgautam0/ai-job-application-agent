@@ -98,10 +98,10 @@ class OutreachSettingsTests(unittest.TestCase):
             "Day 8 is the first outreach",
             "Day 16 is the single follow-up round",
             "saved follow_up_date is actually due",
-            # The follow-up is a LinkedIn DM and it is conditional, with no
-            # email left to fall back on.
+            # The follow-up is a LinkedIn DM and it is conditional, with
+            # nothing left to fall back on.
             "THE FOLLOW-UP IS A LINKEDIN MESSAGE AND IT IS CONDITIONAL",
-            "email was removed from this pipeline",
+            "There is no fallback channel",
             # And the superseded wording is named so it cannot win.
             "does not override this timing",
         ):

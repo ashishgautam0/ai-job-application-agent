@@ -31,7 +31,6 @@ create table if not exists applications (
     date_applied          date        not null default current_date,
     follow_up_date        date,                                    -- null once terminal
     follow_up_count       integer     not null default 0,
-    hr_email_sent_at      timestamptz,
     status                text        not null default 'Applied',
     noc_compatible        text        not null default 'Unknown',
     conversion_potential  text        not null default 'N/A',
@@ -43,7 +42,6 @@ create table if not exists applications (
 create index if not exists idx_applications_status         on applications (status);
 create index if not exists idx_applications_follow_up_date on applications (follow_up_date);
 create index if not exists idx_applications_date_applied   on applications (date_applied desc);
-create index if not exists idx_applications_hr_email_todo   on applications (created_at) where hr_email_sent_at is null;
 
 
 -- ---------------------------------------------------------------------------
@@ -125,11 +123,6 @@ create table if not exists company_research_cache (
     hiring_contact_name      text        not null default '',
     hiring_contact_title     text        not null default '',
     hiring_contact_linkedin  text        not null default '',
-    -- A hiring address the research agent found explicitly published, with the
-    -- page it came from as evidence. Cached per company so every job at that
-    -- employer reuses one search instead of repeating it per posting.
-    hiring_email             text        not null default '',
-    hiring_email_source      text        not null default '',
     product_url              text        not null default '',
     researched_at            timestamptz not null default now()
 );
@@ -172,23 +165,6 @@ create table if not exists mini_demos (
 
 create index if not exists idx_mini_demos_status     on mini_demos (status);
 create index if not exists idx_mini_demos_created_at on mini_demos (created_at desc);
-
-
--- ---------------------------------------------------------------------------
--- email_logs — rendered job-alert emails, for replay in the UI
--- ---------------------------------------------------------------------------
-create table if not exists email_logs (
-    id                bigserial primary key,
-    subject           text        not null,
-    markdown_content  text        not null default '',
-    html_content      text        not null default '',
-    jobs_count        integer     not null default 0,
-    sources_summary   jsonb       not null default '{}'::jsonb,
-    email_sent        boolean     not null default false,
-    created_at        timestamptz not null default now()
-);
-
-create index if not exists idx_email_logs_created_at on email_logs (created_at desc);
 
 
 -- ---------------------------------------------------------------------------
@@ -291,7 +267,7 @@ create table if not exists job_messages (
     id              bigserial primary key,
     scraped_job_id  bigint      not null references scraped_jobs(id) on delete cascade,
     message_type    text        not null default 'cold_dm'
-                                check (message_type in ('screen', 'cold_dm', 'hr_email', 'resume_points', 'demo_html')),
+                                check (message_type in ('screen', 'cold_dm', 'resume_points', 'demo_html')),
     content         text        not null,
     generated_by    text        not null default 'claude-routine',
     generated_at    timestamptz not null default now(),
@@ -372,7 +348,7 @@ begin
 
     update job_messages
        set is_stale = true
-     where message_type in ('screen', 'cold_dm', 'hr_email', 'resume_points')
+     where message_type in ('screen', 'cold_dm', 'resume_points')
        and profile_version is distinct from target_version;
 
     update cover_letter_drafts
@@ -421,7 +397,6 @@ alter table scraped_jobs           enable row level security;
 alter table follow_up_history      enable row level security;
 alter table company_research_cache enable row level security;
 alter table mini_demos             enable row level security;
-alter table email_logs             enable row level security;
 alter table notifications          enable row level security;
 alter table push_subscriptions     enable row level security;
 alter table user_profile           enable row level security;

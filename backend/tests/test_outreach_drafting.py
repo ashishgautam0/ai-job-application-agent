@@ -6,9 +6,7 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 from test_settings_profile import ROOT, function
-from outreach_quality import draft_recipient, unsourced_recipient
 from message_generator import build_cold_dm_prompt, build_follow_up_prompt
-from outreach_quality import UNKNOWN_RECIPIENT
 from outreach_quality import validate_outreach_draft, wrong_demo_links
 
 
@@ -94,10 +92,9 @@ class OutreachDraftingTests(unittest.TestCase):
 
 
     def test_the_follow_up_is_a_linkedin_message_carrying_the_demo(self):
-        """It was a Gmail email. Email is gone from the pipeline, so it goes
-        where the first message went — a DM to the person who accepted the
-        connection. Nothing can be attached there, so the demo link is what
-        carries the evidence."""
+        """The follow-up goes where the first message went — a DM to the person
+        who accepted the connection. Nothing can be attached there, so the demo
+        link is what carries the evidence."""
         spec = build_follow_up_prompt("Acme", "ML Engineer", 7, original_platform="LinkedIn",
                                       profile_text="Fine-tuned an STT model",
                                       demo_url="https://demo/1",
@@ -111,7 +108,7 @@ class OutreachDraftingTests(unittest.TestCase):
                          "50–80 words"):
             with self.subTest(required=required):
                 self.assertIn(required, prompt)
-        # No email shape survives, and nothing may claim an attachment.
+        # No letter shape survives, and nothing may claim an attachment.
         for banned in ("Subject:", "To: <the evidenced recipient",
                        "My resume is attached again."):
             with self.subTest(banned=banned):
@@ -124,18 +121,7 @@ class OutreachDraftingTests(unittest.TestCase):
         prompt = build_follow_up_prompt("Acme", "ML Engineer", 7, profile_text="P")["prompt"]
         self.assertIn("RECIPIENT: none on record", prompt)
         self.assertIn("No demo exists for this job", prompt)
-        self.assertNotIn("https://", prompt.split("Greeting:", 1)[0].replace(
-            "r.neelam@company.com", ""))
-
-
-    def test_recipient_parsing_survives_real_draft_shapes(self):
-        self.assertEqual(draft_recipient("To:   Careers@ACME.com  \nSubject: x"),
-                         "careers@acme.com")
-        self.assertEqual(draft_recipient(f"To: {UNKNOWN_RECIPIENT}"), "")
-        self.assertEqual(draft_recipient("no to line here"), "")
-        # Case and surrounding whitespace must not defeat the match.
-        self.assertEqual(unsourced_recipient("To: HR@Acme.com", ["hr@acme.com"]), "")
-        self.assertEqual(unsourced_recipient("To: hr@acme.com", []), "hr@acme.com")
+        self.assertNotIn("https://", prompt.split("Greeting:", 1)[0])
 
 
     def test_list_emits_exact_job_and_single_profile_snapshot(self):

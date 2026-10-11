@@ -16,8 +16,8 @@ instruction, and a `char_limit`.
 - Grounding: only real items from the candidate's profile and this
   application's real details; never invent anything. Avoid "just circling
   back", "touching base", "I hope this finds you well".
-- **The follow-up is a LinkedIn message, not an email.** No `To:` line, no
-  subject, no attachment: just the greeting, a short body and a sign-off, in
+- **The follow-up is a LinkedIn message.** No `To:` line, no subject, no
+  attachment: just the greeting, a short body and a sign-off, in
   the shape the request's `prompt` spells out. It carries this job's own demo
   link, which is what stands in for the resume — never claim a resume is
   attached, because nothing can be attached to a LinkedIn message, and never
@@ -29,8 +29,8 @@ instruction, and a `char_limit`.
   message to someone who has not accepted the invitation, so confirm you are
   connected before writing one. Pending, withdrawn, ignored, or no invitation
   recorded — all mean there is nothing to write: skip it and say so. Never
-  send another invitation in its place. Email is gone from this pipeline, so
-  there is no fallback channel.
+  send another invitation in its place. There is no fallback channel: an
+  invitation that was never accepted means this round does not happen.
 
 ## Two-pass drafting (required)
 Draft it, then re-read as the busy recipient and cut anything that reads as

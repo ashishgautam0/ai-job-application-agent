@@ -4,7 +4,7 @@ Other modules import from here to get dynamic profile/skills/projects instead
 of using hardcoded values.
 """
 
-from outreach_prompts import OUTREACH_DEFAULTS, remove_legacy_cold_dm_navigation
+from outreach_prompts import OUTREACH_DEFAULTS
 
 import hashlib
 import os
@@ -120,7 +120,7 @@ DEFAULT_AUTOMATION_RULES = (
     "For a temporary page error, login, unsolved CAPTCHA, or uncertain availability, leave its card "
     "in place and report the blocker.\n"
     "- Never invent an answer, bypass a control, pay a fee, or apply outside this batch. "
-    "Do not send HR emails, cold DMs or follow-ups in this application task; use their separate Settings prompts.\n\n"
+    "Do not send cold DMs or follow-ups in this application task; use their separate Settings prompts.\n\n"
 )
 
 _OLD_APPLICATION_TEMPLATE_SCREENING = (
@@ -199,7 +199,6 @@ def get_application_prompt_settings(username="subidh"):
     # is left in place rather than deleted, so it can be read back if needed.
     for key, default in OUTREACH_DEFAULTS.items():
         result[key] = default
-    result["cold_dm_template"] = remove_legacy_cold_dm_navigation(result["cold_dm_template"])
     return result
 
 
@@ -236,7 +235,6 @@ def save_application_prompt_settings(username="subidh", data=None):
     served = dict(cleaned)
     for key, default in OUTREACH_DEFAULTS.items():
         served[key] = default
-    served["cold_dm_template"] = remove_legacy_cold_dm_navigation(served["cold_dm_template"])
     return served
 
 

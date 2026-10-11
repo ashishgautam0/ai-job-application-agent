@@ -27,7 +27,7 @@ Granular log of every follow-up message ever sent:
 - `entity_type` — `"application"`
 - `entity_id` — The ID of the application this follow-up belongs to
 - `message_content` — The actual text of the message that was sent
-- `channel` — Where it was sent: `"LinkedIn"`, `"Email"`, `"Twitter"`, etc.
+- `channel` — Where it was sent: `"LinkedIn connection"` for the invitation that opens the thread, `"LinkedIn"` for the later direct message.
 - `follow_up_number` — Sequential counter: 1, 2, 3...
 - `follow_up_outcome` — `"pending"`, `"responded"`, or `"no_response"`
 - `sent_at` — Timestamp (auto-set by Supabase)
@@ -85,7 +85,7 @@ The user goes to the Messages page, selects "Follow-up" type, and fills in:
   - `#1 — Polite check-in`
   - `#2 — With value-add`
   - `#3 — Final follow-up`
-- Platform (LinkedIn, Twitter, Email, Wellfound)
+- Platform (LinkedIn, Twitter, Wellfound)
 
 These fields can also be **pre-filled via URL query params** (e.g., when navigating from the Tonight's Plan page with `?type=follow-up&company=Stripe&role=AI+Engineer&days=7&follow_up_number=2`).
 
@@ -325,11 +325,11 @@ Total follow-ups sent, how many got a response, and the percentage.
 ### 7b. By Channel
 ```json
 [
-  {"channel": "LinkedIn", "total": 20, "responded": 3, "rate": 15.0},
-  {"channel": "Email", "total": 5, "responded": 1, "rate": 20.0}
+  {"channel": "LinkedIn connection", "total": 20, "responded": 3, "rate": 15.0},
+  {"channel": "LinkedIn", "total": 5, "responded": 1, "rate": 20.0}
 ]
 ```
-Shows which communication channel gets the best response rates. This lets you learn over time whether LinkedIn connection requests or emails work better.
+Shows which communication channel gets the best response rates. This lets you learn over time whether the connection invitation or the later direct message does more of the work.
 
 ### 7c. By Attempt Number
 ```json

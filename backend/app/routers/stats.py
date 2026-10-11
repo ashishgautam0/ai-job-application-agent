@@ -24,8 +24,8 @@ def follow_ups():
     """Due follow-ups, each marked with whether it is actually sendable.
 
     A follow-up needs both halves: a written draft, and the person it goes to.
-    It is a LinkedIn message now rather than an email, so the recipient is
-    whoever accepted this job's connection request. Dashboard hides the ones
+    The follow-up is a LinkedIn message, so the recipient is whoever accepted
+    this job's connection request. Dashboard hides the ones
     missing either rather than offering a card that cannot be acted on.
     """
     from pending_messages import _connection_recipient

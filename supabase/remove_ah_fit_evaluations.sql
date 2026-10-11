@@ -6,7 +6,7 @@ alter table public.job_messages
 
 alter table public.job_messages
     add constraint job_messages_message_type_check
-    check (message_type in ('screen', 'cold_dm', 'hr_email', 'resume_points', 'demo_html'));
+    check (message_type in ('screen', 'cold_dm', 'resume_points', 'demo_html'));
 
 create or replace function public.activate_resume_profile(
     p_profile_id bigint,
@@ -46,7 +46,7 @@ begin
 
     update public.job_messages
        set is_stale = true
-     where message_type in ('screen', 'cold_dm', 'hr_email', 'resume_points')
+     where message_type in ('screen', 'cold_dm', 'resume_points')
        and profile_version is distinct from target_version;
 
     update public.cover_letter_drafts

@@ -7,7 +7,6 @@ import {
   getScrapedJob,
   getJobMessage,
   getCachedCompanyIntel,
-  findRecruiterEmails,
   lookupApplication,
   snoozeFollowUp,
   getFollowUpHistory,
@@ -25,7 +24,6 @@ import type {
   FollowUpDraft,
   FollowUpHistory,
   JobMessage,
-  RecruiterEmailReport,
   ScrapedJob,
 } from "@/lib/types";
 
@@ -74,7 +72,6 @@ import {
   FileText,
   Loader2,
   MessageSquareText,
-  Mail,
   Pencil,
   Trash2,
   X as XIcon,
@@ -146,15 +143,10 @@ export default function JobDetailPage() {
   const [notesSaving, setNotesSaving] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [emailReport, setEmailReport] = useState<RecruiterEmailReport | null>(
-    null
-  );
-  const [emailLoading, setEmailLoading] = useState(false);
   const [followUpSaving, setFollowUpSaving] = useState(false);
   const [followUpRecordLocked, setFollowUpRecordLocked] = useState(false);
   const [sentFollowUp, setSentFollowUp] = useState("");
-  const [sentChannel, setSentChannel] = useState("Email");
-  const [extraName, setExtraName] = useState("");
+  const [sentChannel, setSentChannel] = useState("LinkedIn connection");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -233,22 +225,6 @@ export default function JobDetailPage() {
     link.download = `${job?.company || "company"}-${job?.title || "role"}-cover-letter.txt`.replace(/[^a-z0-9.-]+/gi, "-");
     link.click();
     URL.revokeObjectURL(url);
-  }
-
-  async function handleFindEmails() {
-    if (!job?.company) return;
-    setEmailLoading(true);
-    try {
-      const report = await findRecruiterEmails(job.company, extraName.trim());
-      setEmailReport(report);
-      if (!report.ok) {
-        toast.message(report.message || "Nothing to search yet.");
-      }
-    } catch {
-      toast.error("Email lookup failed");
-    } finally {
-      setEmailLoading(false);
-    }
   }
 
   function handleCopyText(text: string, key: string) {
@@ -533,7 +509,7 @@ export default function JobDetailPage() {
                       <Textarea id="sent-follow-up" value={sentFollowUp} onChange={(event) => setSentFollowUp(event.target.value)} disabled={followUpSaving || followUpRecordLocked} placeholder="Paste the exact message you sent" />
                       <label htmlFor="sent-follow-up-channel" className="block text-sm font-medium">Sent via</label>
                       <select id="sent-follow-up-channel" className="rounded border bg-background p-2 text-sm" value={sentChannel} onChange={(event) => setSentChannel(event.target.value)} disabled={followUpSaving || followUpRecordLocked}>
-                        <option>Email</option><option>LinkedIn</option><option>LinkedIn connection</option><option>WhatsApp</option><option>Other</option>
+                        <option>LinkedIn</option><option>LinkedIn connection</option><option>WhatsApp</option><option>Other</option>
                       </select>
                       <Button className="ml-2" size="sm" disabled={!sentFollowUp.trim() || (sentChannel === "LinkedIn connection" ? !connectionDue : !followUpDue || !followUpDraft?.follow_up_number) || followUpSaving || followUpRecordLocked} onClick={recordSentFollowUp}>
                         {followUpSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Record sent follow-up
@@ -716,7 +692,7 @@ export default function JobDetailPage() {
             </CardTitle>
             <CardDescription>
               A small live demo built for this job&apos;s requirements —
-              link it in your DM or email.
+              link it in your DM.
             </CardDescription>
           </div>
           {demoReady && (
@@ -765,12 +741,12 @@ export default function JobDetailPage() {
         </CardContent>
       </Card>
 
-      {/* Recipient links + email finder */}
+      {/* Recipient links */}
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Send it to</CardTitle>
           <CardDescription>
-            For a cold DM, find a relevant recruiter or hiring manager using these LinkedIn searches, verify their current company, then send a connection request with a short note. Email suggestions below are unverified and are not used for connection notes.
+            For a cold DM, find a relevant recruiter or hiring manager using these LinkedIn searches, verify their current company, then send a connection request with a short note.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -793,123 +769,6 @@ export default function JobDetailPage() {
               <ExternalLink className="h-3.5 w-3.5" />
               Hiring managers at {job.company}
             </a>
-          </div>
-
-          <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
-            <div className="flex items-center gap-2 text-sm font-medium">
-              <Mail className="h-4 w-4" />
-              Recruiter email finder
-            </div>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <input
-                value={extraName}
-                onChange={(e) => setExtraName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleFindEmails();
-                }}
-                placeholder="Recruiter name (optional — e.g. Priya Sharma)"
-                className="flex-1 rounded-md border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
-              />
-              <Button
-                onClick={handleFindEmails}
-                disabled={emailLoading}
-                className="shrink-0"
-              >
-                {emailLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Mail className="h-4 w-4" />
-                )}
-                Find emails
-              </Button>
-            </div>
-
-            {emailReport?.ok === false && (
-              <p className="text-xs italic text-muted-foreground">
-                {emailReport.reason === "no_domain"
-                  ? "No company website known yet — the hourly routine adds it with company intel, or type a name and it will still guess once a domain is known."
-                  : "Add a recruiter name above to search."}
-              </p>
-            )}
-
-            {emailReport?.ok && (
-              <div className="space-y-3">
-                <p className="text-xs text-muted-foreground">
-                  Domain{" "}
-                  <span className="font-mono">{emailReport.domain}</span>
-                  {emailReport.mx_ok
-                    ? " receives mail"
-                    : " has no mail server"}
-                  {emailReport.smtp_checked
-                    ? emailReport.catch_all
-                      ? " · accepts every address (can't confirm a single mailbox)"
-                      : " · mailboxes verified live"
-                    : " · guessed from the usual patterns (live verify unavailable here)"}
-                  .
-                </p>
-                {(emailReport.contacts || []).map((c) => (
-                  <div key={c.name} className="space-y-1.5">
-                    <p className="text-sm font-medium">{c.name}</p>
-                    <div className="space-y-1">
-                      {c.candidates.map((cand) => (
-                        <div
-                          key={cand.email}
-                          className="flex items-center justify-between gap-2 rounded-md border bg-background px-2.5 py-1.5"
-                        >
-                          <span className="truncate font-mono text-xs">
-                            {cand.email}
-                          </span>
-                          <div className="flex shrink-0 items-center gap-1.5">
-                            <Badge
-                              variant={
-                                cand.status === "valid"
-                                  ? "default"
-                                  : "outline"
-                              }
-                              className="text-[10px]"
-                            >
-                              {cand.status === "valid"
-                                ? "verified"
-                                : cand.status === "catch_all"
-                                  ? "catch-all"
-                                  : cand.status === "invalid"
-                                    ? "invalid"
-                                    : cand.status === "no_mx"
-                                      ? "no mail"
-                                      : "guess"}
-                            </Badge>
-                            <button
-                              onClick={() =>
-                                handleCopyText(cand.email, cand.email)
-                              }
-                              className="text-muted-foreground hover:text-foreground"
-                              title="Copy"
-                            >
-                              {copied === cand.email ? (
-                                <Check className="h-3.5 w-3.5" />
-                              ) : (
-                                <Copy className="h-3.5 w-3.5" />
-                              )}
-                            </button>
-                            <a
-                              href={`mailto:${cand.email}`}
-                              className="text-sky-400 hover:text-sky-300"
-                              title="Compose"
-                            >
-                              <Mail className="h-3.5 w-3.5" />
-                            </a>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-                <p className="text-[11px] italic text-muted-foreground">
-                  Guesses are the standard corporate patterns; confirm before
-                  sending anything important.
-                </p>
-              </div>
-            )}
           </div>
         </CardContent>
       </Card>

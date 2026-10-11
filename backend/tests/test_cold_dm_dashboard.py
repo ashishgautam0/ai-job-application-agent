@@ -80,8 +80,10 @@ class ColdDmDashboardTests(unittest.TestCase):
              "channel": "LinkedIn connection", "sent_at": "2026-09-20T18:29:00Z"},  # 23:59 Kolkata
             {"id": 2, "entity_type": "application", "entity_id": 3,
              "channel": "LinkedIn connection", "sent_at": "2026-09-20T18:31:00Z"},  # 00:01 Sep 21
+            # The generic "LinkedIn" channel is NOT a recorded connection, so
+            # job 4 stays a Cold DM however old this row is.
             {"id": 3, "entity_type": "application", "entity_id": 4,
-             "channel": "Email", "sent_at": "2026-09-19T12:00:00Z"},
+             "channel": "LinkedIn", "sent_at": "2026-09-19T12:00:00Z"},
         ]
         db = Database(apps, jobs, notes, history)
         with patch.object(tracker, "_get_client", return_value=db), patch.object(
