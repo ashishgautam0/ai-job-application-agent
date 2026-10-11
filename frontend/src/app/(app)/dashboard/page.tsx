@@ -6,8 +6,6 @@ import {
   getDueQueues,
   getFollowUpDraft,
   getWeeklyTrend,
-  getPlatformEffectiveness,
-  getStatusFunnel,
   getRoleAnalysis,
   getFollowUpEffectiveness,
 } from "@/lib/api";
@@ -18,8 +16,6 @@ import type {
   FollowUpDraft,
   FollowUpEffectiveness,
   WeeklyTrend,
-  PlatformEffectiveness,
-  StatusFunnel,
   RoleAnalysis,
 } from "@/lib/types";
 
@@ -57,7 +53,6 @@ import {
   Moon,
   BarChart3,
   CheckCircle2,
-  Mail,
   Send,
 } from "lucide-react";
 import Link from "next/link";
@@ -122,8 +117,6 @@ export default function DashboardPage() {
     }
   };
   const [weeklyTrend, setWeeklyTrend] = useState<WeeklyTrend[]>([]);
-  const [platformData, setPlatformData] = useState<PlatformEffectiveness[]>([]);
-  const [statusFunnel, setStatusFunnel] = useState<StatusFunnel | null>(null);
   const [roleAnalysis, setRoleAnalysis] = useState<RoleAnalysis[]>([]);
   const [effectiveness, setEffectiveness] = useState<FollowUpEffectiveness | null>(null);
   const [dataErrors, setDataErrors] = useState<Set<string>>(new Set());
@@ -156,17 +149,13 @@ export default function DashboardPage() {
 
     Promise.allSettled([
       getWeeklyTrend(),
-      getPlatformEffectiveness(),
-      getStatusFunnel(),
       getRoleAnalysis(),
       getFollowUpEffectiveness(),
-    ]).then(([weeklyTrendRes, platformRes, statusFunnelRes, roleAnalysisRes, effectivenessRes]) => {
+    ]).then(([weeklyTrendRes, roleAnalysisRes, effectivenessRes]) => {
       if (weeklyTrendRes.status === "fulfilled") setWeeklyTrend(Array.isArray(weeklyTrendRes.value) ? weeklyTrendRes.value : []);
-      if (platformRes.status === "fulfilled") setPlatformData(Array.isArray(platformRes.value) ? platformRes.value : []);
-      if (statusFunnelRes.status === "fulfilled" && statusFunnelRes.value && typeof statusFunnelRes.value === "object") setStatusFunnel(statusFunnelRes.value);
       if (roleAnalysisRes.status === "fulfilled") setRoleAnalysis(Array.isArray(roleAnalysisRes.value) ? roleAnalysisRes.value : []);
       if (effectivenessRes.status === "fulfilled") setEffectiveness(effectivenessRes.value);
-      const named = [["weekly trend", weeklyTrendRes], ["platform effectiveness", platformRes], ["status breakdown", statusFunnelRes], ["role analysis", roleAnalysisRes]] as const;
+      const named = [["weekly trend", weeklyTrendRes], ["role analysis", roleAnalysisRes]] as const;
       setDataErrors(new Set(named.filter(([, result]) => result.status === "rejected").map(([name]) => name)));
     }).finally(() => setAnalyticsPending(false));
   }, []);
@@ -614,92 +603,6 @@ export default function DashboardPage() {
 
       <Separator />
 
-      {/* ---- Platform Effectiveness ---- */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Platform Effectiveness</CardTitle>
-          <CardDescription>
-            Positive response rate = Interview or Offer ÷ all persisted applications on each platform.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {analyticsPending ? <p className="text-sm text-muted-foreground">Loading…</p> : dataErrors.has("platform effectiveness") ? <p className="text-sm text-red-400">Platform data could not be loaded.</p> : platformData.length === 0 ? (
-            <p className="text-muted-foreground text-sm">
-              No platform data available yet.
-            </p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Platform</TableHead>
-                  <TableHead className="text-right">Applications</TableHead>
-                  <TableHead className="text-right">Responses</TableHead>
-                  <TableHead className="w-[200px]">Rate</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {platformData.map((p) => (
-                  <TableRow key={p.platform}>
-                    <TableCell className="font-medium">{p.platform}</TableCell>
-                    <TableCell className="text-right">
-                      {p.applications}
-                    </TableCell>
-                    <TableCell className="text-right">{p.responses}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Progress
-                          value={p.response_rate ?? 0}
-                          className="h-2 flex-1"
-                        />
-                        <span className="text-muted-foreground w-12 text-right text-xs">
-                          {(p.response_rate ?? 0).toFixed(1)}%
-                        </span>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* ---- Status Funnel ---- */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Status Funnel</CardTitle>
-          <CardDescription>
-            Breakdown of applications by current status.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {analyticsPending ? <p className="text-sm text-muted-foreground">Loading…</p> : dataErrors.has("status breakdown") ? <p className="text-sm text-red-400">Status data could not be loaded.</p> : !statusFunnel || Object.keys(statusFunnel).length === 0 ? (
-            <p className="text-muted-foreground text-sm">
-              No status data available yet.
-            </p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Count</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {Object.entries(statusFunnel).map(([status, count]) => (
-                  <TableRow key={status}>
-                    <TableCell className="font-medium capitalize">
-                      {status}
-                    </TableCell>
-                    <TableCell className="text-right">{count}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-
       {/* ---- Weekly Trend ---- */}
       <Card>
         <CardHeader>
@@ -735,7 +638,8 @@ export default function DashboardPage() {
         <CardHeader>
           <CardTitle>Role Analysis</CardTitle>
           <CardDescription>
-            Mutually exclusive role families from persisted job titles, with observed positive responses.
+            Groups learned from your own job titles, not a fixed list — each title is filed
+            under the most specific thing it says, so new kinds of role appear on their own.
           </CardDescription>
         </CardHeader>
         <CardContent>
