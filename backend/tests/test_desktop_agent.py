@@ -734,8 +734,15 @@ class DesktopPromptTests(unittest.TestCase):
                          "Drop anything on the STEP 0 skip list",
                          # The connector takes no date filter, so staleness is
                          # the agent's to enforce or months-old jobs get listed.
-                         "`Posted on` date is more than 14 days old",
-                         "the connector has\n   no date filter"):
+                         # It matches the browser portals at 24 hours, which on
+                         # live data passes almost nothing — so the prompt has
+                         # to say an empty list is the expected result, or the
+                         # agent will widen the window to produce something.
+                         "within the last 24 hours**",
+                         "it is a hard cut, not a preference",
+                         "Most runs will pass nothing",
+                         "no Indeed jobs posted in the last 24 hours",
+                         "never stretch the window"):
             with self.subTest(required=required):
                 self.assertIn(required, indeed)
         # No browser verbs anywhere in the section.

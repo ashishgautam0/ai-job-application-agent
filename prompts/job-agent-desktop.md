@@ -606,9 +606,14 @@ connector** — a read-only API, so no browser, no login, no CAPTCHA.
    EXPERIENCE RULES, RED FLAGS and the MNC rule apply unchanged.
    `get_job_details` gives the full JD, `get_company_data` the company size.
 3. Drop anything on the STEP 0 skip list — I have already handled it. Drop
-   anything whose `Posted on` date is more than 14 days old: the connector has
-   no date filter, so unlike the browser portals this one is yours to apply,
-   and its results do reach back months.
+   anything whose `Posted on` date is not **within the last 24 hours**, the
+   same freshness bar as the browser portals. The connector has no date
+   filter and its results reach back months, so this one is yours to apply —
+   and it is a hard cut, not a preference: never widen it to fill the list.
+   Most runs will pass nothing, which is the expected result and not a
+   failure. Say "no Indeed jobs posted in the last 24 hours" in the summary
+   and move on; never stretch the window, and never list an older job with a
+   note about its age.
 4. **Record nothing**: no `applied`, no `skipped`. A `skipped` would hide a
    good job from me for good, and none of these are mine until I apply.
 5. List the ones that pass under **"Indeed — apply to these yourself"** in the
