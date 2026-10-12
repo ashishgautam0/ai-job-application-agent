@@ -142,8 +142,11 @@ def _settings_field_limit(key):
         # The desktop prompt carries the portal playbooks and the shared
         # apply rules, and it grows every time a portal changes. The store is
         # a text column, so this ceiling only exists to reject a runaway paste
-        # — keep enough headroom that a normal edit never trips it.
-        return 60_000
+        # — keep enough headroom that a normal edit never trips it. Raised
+        # from 60,000 when Indeed became a find-only connector pass: the
+        # default had grown into the old line, and the guard is a tripwire
+        # against runaway growth, not a budget to cut real guidance to fit.
+        return 65_000
     if key.endswith("template") or key == "automation_rules":
         return 12_000
     return 500
