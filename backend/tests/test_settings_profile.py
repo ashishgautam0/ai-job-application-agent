@@ -347,7 +347,6 @@ class SettingsProfileTests(unittest.TestCase):
         page = (ROOT.parent / "frontend/src/app/(app)/settings/page.tsx").read_text()
         order = [
             "<DesktopPrompt />",
-            'kind="followup"',
             "Exclude companies from scraped jobs",
             '<h1 className="text-2xl font-bold">Resume profile</h1>',
             "Active backend resume",
@@ -355,11 +354,19 @@ class SettingsProfileTests(unittest.TestCase):
         found = [page.index(marker) for marker in order]
         self.assertEqual(found, sorted(found),
                          "Settings sections are out of order: " + ", ".join(order))
-        # The Cold DM prompt card is retired: the desktop prompt sends cold DMs
-        # end to end, so a second place to generate them is only a way to send
-        # the same note twice.
-        self.assertNotIn('kind="cold_dm"', page)
-        self.assertNotIn("Cold DM prompt", page)
+        # Both outreach cards are retired for the same reason: the desktop
+        # prompt now runs applications, cold DMs and follow-ups end to end, so
+        # a second place to generate either one is only a way to send the same
+        # message twice. One card, one prompt, one paste.
+        for retired in ('kind="cold_dm"', "Cold DM prompt",
+                        'kind="followup"', "LinkedIn follow-up prompt",
+                        "OutreachPrompt"):
+            with self.subTest(retired=retired):
+                self.assertNotIn(retired, page)
+        self.assertFalse(
+            (ROOT.parent / "frontend/src/app/(app)/settings/outreach-prompt.tsx").exists(),
+            "the outreach prompt card has no caller left; delete it rather than "
+            "leaving a second way to send the same message")
 
     def test_resume_upload_sits_in_the_page_header(self):
         page = (ROOT.parent / "frontend/src/app/(app)/settings/page.tsx").read_text()
