@@ -287,8 +287,10 @@ export async function getRenderedOutreachPrompt(pageUrl: string, kind: "followup
   );
 }
 
-export async function getDesktopPrompt(): Promise<DesktopPromptResponse> {
-  return apiFetch<DesktopPromptResponse>("/api/profile/desktop-prompt");
+export async function getDesktopPrompt(pageUrl: string): Promise<DesktopPromptResponse> {
+  return apiFetch<DesktopPromptResponse>(
+    `/api/profile/desktop-prompt?page_url=${encodeURIComponent(pageUrl)}`,
+  );
 }
 
 export async function uploadResumePdf(file: File): Promise<ResumeProfile> {

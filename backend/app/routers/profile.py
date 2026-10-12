@@ -142,11 +142,12 @@ def _settings_field_limit(key):
         # The desktop prompt carries the portal playbooks and the shared
         # apply rules, and it grows every time a portal changes. The store is
         # a text column, so this ceiling only exists to reject a runaway paste
-        # — keep enough headroom that a normal edit never trips it. Raised
-        # from 60,000 when Indeed became a find-only connector pass: the
-        # default had grown into the old line, and the guard is a tripwire
-        # against runaway growth, not a budget to cut real guidance to fit.
-        return 65_000
+        # — keep enough headroom that a normal edit never trips it. This is
+        # now one prompt for the whole pipeline: applications, cold DMs and
+        # follow-ups, the last folded in when the separate follow-up prompt
+        # left Settings. Raised to fit that with room, since the guard is a
+        # tripwire against runaway growth, not a budget to cut guidance to.
+        return 80_000
     if key.endswith("template") or key == "automation_rules":
         return 12_000
     return 500
@@ -608,7 +609,7 @@ def _excluded_company_lines():
 
 
 @router.get("/desktop-prompt")
-def read_desktop_prompt(request: Request):
+def read_desktop_prompt(request: Request, page_url: str):
     """Return the shipped Claude Desktop prompt plus its rendered copy.
 
     `template` is the shipped text; `content` is the same text with the live API
@@ -625,6 +626,13 @@ def read_desktop_prompt(request: Request):
             status_code=404, detail="Desktop prompt default is unavailable.",
         ) from exc
 
+    # Phase 3 works the Dashboard's Follow-ups Due queue in the browser rather
+    # than through an API, so it needs the app's own origin. Only the browser
+    # knows it; left out, the placeholder is reported unresolved like any other.
+    page_url = _clean_text(page_url, 1_000)
+    if not page_url.startswith(("https://", "http://localhost")):
+        raise HTTPException(status_code=422, detail="page_url must be an https URL.")
+
     resume = _application_pdf_metadata()
     values = {
         "seen_urls_url": str(request.url_for("desktop_agent_seen_urls")),
@@ -635,6 +643,7 @@ def read_desktop_prompt(request: Request):
         "resume_filename": (resume or {}).get("filename") or "Resume.pdf",
         "resume_sha256": (resume or {}).get("sha256") or "unavailable",
         "excluded_companies": _excluded_company_lines(),
+        "page_url": page_url,
     }
     content = _PROMPT_PLACEHOLDER.sub(
         lambda match: values.get(match.group(1), match.group(0)), template,

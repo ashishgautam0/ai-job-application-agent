@@ -20,7 +20,9 @@ const STARTER_MESSAGE =
   "employer you apply to in this run. Submit each one yourself without asking me first. Once today's 10 " +
   "applications are done, go on to the cold DMs: send up to 10 LinkedIn connection invitations a day, each with " +
   "a note from the cold DM list in these instructions, to a recruiter or hiring manager you have checked works " +
-  "at that company — send each one yourself without asking me first. Don't check with me job by job — just keep " +
+  "at that company — send each one yourself without asking me first. Then go on to the follow-ups: send up to 10 " +
+  "LinkedIn messages a day from my Follow-ups Due queue, to people who already accepted one of those " +
+  "invitations — send each one yourself without asking me first. Don't check with me job by job — just keep " +
   "going.";
 
 export function DesktopPrompt() {
@@ -32,7 +34,7 @@ export function DesktopPrompt() {
   async function load() {
     setBusy(true);
     try {
-      const data = await getDesktopPrompt();
+      const data = await getDesktopPrompt(`${window.location.origin}/dashboard`);
       setText(data.template);
       setGenerated(data);
       setLoadError(false);
@@ -70,9 +72,9 @@ export function DesktopPrompt() {
 
   return <Card>
     <CardHeader>
-      <CardTitle>Claude Desktop job search + cold DM prompt</CardTitle>
+      <CardTitle>Claude Desktop prompt — applications, cold DMs and follow-ups</CardTitle>
       <p className="text-sm text-muted-foreground">
-        Paste into Claude Desktop (Cowork) to browse LinkedIn, Indeed and Wellfound using Computer Use — the other portals are paused while these three are tuned. On each it skips jobs you already applied to or dismissed, applies to matching entry-level AI/ML roles, and records each one in your tracker. Once today's 10 applications are in, the same run goes on to send today's 10 cold DMs — LinkedIn connection notes from your due Cold DM list. This agent is the only thing that finds jobs — nothing scrapes on your behalf.
+        One prompt, three phases, from a single paste into Claude Desktop (Cowork). <strong>Phase 1</strong> browses LinkedIn and Wellfound with Computer Use, skipping jobs you already handled, applying to matching entry-level AI/ML roles and recording each in your tracker; Indeed is searched through its connector and listed for you to apply to yourself. <strong>Phase 2</strong> sends today's cold DMs — LinkedIn connection notes from your due list. <strong>Phase 3</strong> sends today's follow-ups — LinkedIn messages to the people who accepted one of those invitations. The run moves between them on its own and reports once at the end. This agent is the only thing that finds jobs — nothing scrapes on your behalf.
       </p>
     </CardHeader>
     <CardContent className="space-y-3">
@@ -81,7 +83,7 @@ export function DesktopPrompt() {
           <Button disabled={busy} onClick={() => void load()}>{busy ? "Working…" : "Generate prompt"}</Button>
           <Button variant="outline" disabled={busy || !generated?.content} onClick={copy}>Copy prompt</Button>
         </div>
-        <label htmlFor="prompt-desktop" className="text-sm font-medium">Desktop prompt</label>
+        <label htmlFor="prompt-desktop" className="text-sm font-medium">Desktop prompt (all three phases)</label>
         <Textarea id="prompt-desktop" readOnly value={text} rows={16} />
       </div>
       <div className="rounded-lg border border-amber-600/30 bg-amber-600/5 p-3 text-sm">
@@ -100,7 +102,7 @@ export function DesktopPrompt() {
         }}>Copy starter message</Button>
       </div>
       <p className="text-xs text-muted-foreground">
-        Log into LinkedIn, Indeed and Wellfound in your browser before starting. Generate resolves the live tracker API and resume links. It applies until today's target of 10 applications across LinkedIn, Indeed and Wellfound is met — counting any earlier runs that day — then sends cold DMs until today's 10 are sent, and stops. Only due jobs with a written Cold DM are messaged. Placeholders: {"{{seen_urls_url}}"}, {"{{record_url}}"}, {"{{cold_dms_url}}"}, {"{{cold_dm_record_url}}"}, {"{{resume_url}}"}, {"{{resume_filename}}"}, {"{{resume_sha256}}"}.
+        Log into LinkedIn and Wellfound in your browser before starting, and enable the Indeed connector in Claude Desktop. Generate resolves the live tracker API, Dashboard and resume links. It applies until today's 10 applications are met — counting earlier runs that day — then sends cold DMs until today's 10 are sent, then follow-ups until today's 10 are sent, and stops. Only due jobs with a written Cold DM are messaged, and only people who accepted an invitation are followed up. Placeholders: {"{{page_url}}"}, {"{{seen_urls_url}}"}, {"{{record_url}}"}, {"{{cold_dms_url}}"}, {"{{cold_dm_record_url}}"}, {"{{resume_url}}"}, {"{{resume_filename}}"}, {"{{resume_sha256}}"}.
       </p>
       <p className="text-xs text-muted-foreground">
         This prompt ships with the app and is not editable here, so improvements reach the agent on the next Generate. The answers it fills into forms — notice period, compensation, location, education — live in the prompt text itself.

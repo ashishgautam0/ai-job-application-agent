@@ -388,7 +388,7 @@ class DesktopPromptTests(unittest.TestCase):
         # Unrelated settings are still persisted.
         self.assertIn("Mine.", saved["automation_rules"])
 
-    def render(self, resume=None, excluded=()):
+    def render(self, resume=None, excluded=(), page_url="https://app.test/dashboard"):
         """Call the endpoint with the data layer stubbed, as the CI lane has no DB."""
         module, _ = stub_tracker()
         lines = function(ROOT / "app/routers/profile.py", "_excluded_company_lines", {
@@ -399,12 +399,14 @@ class DesktopPromptTests(unittest.TestCase):
                 "_PROMPT_PLACEHOLDER": re.compile(r"{{([a-z_][a-z0-9_]*)}}"),
                 "_DEFAULT_USERNAME": "subidh",
                 "_application_pdf_metadata": lambda: resume,
+                "_clean_text": function(ROOT / "app/routers/profile.py", "_clean_text",
+                                        {"HTTPException": RuntimeError}),
                 "_excluded_company_lines": lines,
                 "HTTPException": RuntimeError,
                 "Request": SimpleNamespace,
             })
             request = SimpleNamespace(url_for=lambda name: f"https://api.test/{name}")
-            return endpoint(request)
+            return endpoint(request, page_url)
 
     def test_rendering_leaves_no_unresolved_placeholder(self):
         self.assertIn("{{seen_urls_url}}", self.prompt)
@@ -418,6 +420,10 @@ class DesktopPromptTests(unittest.TestCase):
         self.assertIn("https://api.test/desktop_agent_record_job", result["content"])
         self.assertIn("https://api.test/desktop_agent_cold_dms", result["content"])
         self.assertIn("https://api.test/desktop_agent_record_cold_dm", result["content"])
+        # Phase 3 works the Dashboard in the browser, so it needs the app's
+        # own origin rather than an API route.
+        self.assertIn("{{page_url}}", self.prompt)
+        self.assertIn("https://app.test/dashboard", result["content"])
         self.assertIn("résumé.pdf", result["content"])
         self.assertFalse(result["customized"])
         self.assertEqual(result["issues"], [])
@@ -773,6 +779,46 @@ class DesktopPromptTests(unittest.TestCase):
         headings = re.findall(r"^### (\d)\. (\w+)", self.prompt, flags=re.MULTILINE)
         self.assertEqual(headings, [("1", "LINKEDIN"), ("2", "WELLFOUND"), ("3", "INDEED")])
 
+    def test_one_prompt_runs_all_three_phases_end_to_end(self):
+        """The follow-up used to be a second prompt in Settings, pasted into a
+        separate conversation. It is Phase 3 of this one now, so the handoffs
+        have to carry through or the run stops after the cold DMs."""
+        opening = self.prompt.split("## WHO YOU ARE", 1)[1].split("## MY PROFILE", 1)[0]
+        self.assertIn("**The run has three phases, back to back, from this one message.**",
+                      opening)
+        keep_going = self.prompt.split("## KEEP GOING UNTIL I SAY STOP", 1)[1] \
+                                .split("## PHASE 2", 1)[0]
+        self.assertIn("1. PHASE 3 is finished", keep_going)
+        self.assertIn("Phase 2 ending is not a stopping point", keep_going)
+        summary = self.prompt.split("## SUMMARY — WHEN I STOP YOU", 1)[1]
+        self.assertIn("The run ends when PHASE 3 ends", summary)
+
+    def test_phase_three_only_messages_people_who_accepted(self):
+        """A follow-up is a LinkedIn message, which only reaches someone who
+        accepted the invitation — the same gate the separate prompt enforced."""
+        phase3 = self.prompt.split("## PHASE 3 — FOLLOW-UPS", 1)[1].split("## SAFETY RULES", 1)[0]
+        for required in ("Open the recorded profile URL first",
+                         "Only if it shows you are connected",
+                         "stop on that job.",
+                         "not accepted yet, left\nqueued",
+                         "Never send a second invitation",
+                         "Stop at 10 sent",
+                         "Daily\n   Target — Follow-ups"):
+            with self.subTest(required=required):
+                self.assertIn(required, phase3)
+
+    def test_phase_three_does_not_stop_to_ask(self):
+        """The separate prompt said to confirm immediately before each send,
+        which was right for a standalone task and fatal inside a run: every
+        question ends the turn, and an ended turn is a stopped run."""
+        phase3 = self.prompt.split("## PHASE 3 — FOLLOW-UPS", 1)[1].split("## SAFETY RULES", 1)[0]
+        self.assertIn("do not ask me\n   before sending", phase3)
+        self.assertIn("a question here ends the run", phase3)
+        self.assertNotIn("obtain explicit confirmation", phase3)
+        # ...and it is not described as a standalone task any more.
+        self.assertNotIn("standalone task", self.prompt)
+        self.assertNotIn("This task does not submit job applications", self.prompt)
+
     def test_the_browser_portals_search_the_last_24_hours(self):
         linkedin = self.prompt.split("### 1. LINKEDIN", 1)[1].split("### 2.", 1)[0]
         self.assertIn("Past 24 hours", linkedin)
@@ -858,8 +904,10 @@ class DesktopPromptTests(unittest.TestCase):
 
     def test_prompt_does_not_carry_today_todo_ui_steps(self):
         """Those steps drive the Today Todo page; this agent uses the API."""
+        # {{page_url}} is no longer a leak: Phase 3 works the Dashboard's
+        # Follow-ups Due queue, so the prompt needs the app's own origin.
         for leaked in ("swipe left to Remove", "Applied — move to Tracker",
-                       "Best Matches", "{{batch_jobs}}", "{{page_url}}"):
+                       "Best Matches", "{{batch_jobs}}"):
             with self.subTest(leaked=leaked):
                 self.assertNotIn(leaked, self.prompt)
 
@@ -1019,7 +1067,7 @@ class DesktopPromptTests(unittest.TestCase):
         # A met application target no longer ends the run: it starts Phase 2.
         self.assertIn("today's application target is met: do\nnot search or apply — go straight to PHASE 2.",
                       step0)
-        self.assertIn("If `dms_today` is also 10 or\nmore, both targets are met", step0)
+        self.assertIn("If `dms_today` is also 10\nor more, skip to PHASE 3", step0)
         self.assertNotIn("There is no application cap", self.prompt)
 
     def test_the_prompt_target_matches_the_backend_constant(self):
@@ -1666,7 +1714,8 @@ class ColdDmTests(unittest.TestCase):
 class ColdDmPromptTests(unittest.TestCase):
     def setUp(self):
         prompt = profile_data.default_desktop_prompt()
-        self.phase2 = prompt.split("## PHASE 2 — COLD DMs", 1)[1].split("## SAFETY RULES", 1)[0]
+        self.phase2 = prompt.split("## PHASE 2 — COLD DMs", 1)[1].split("## PHASE 3", 1)[0]
+        self.phase3 = prompt.split("## PHASE 3 — FOLLOW-UPS", 1)[1].split("## SAFETY RULES", 1)[0]
 
     def test_phase_two_sends_without_asking_and_records_each_send(self):
         for required in ("GET {{cold_dms_url}}", "POST {{cold_dm_record_url}}",
@@ -1793,6 +1842,9 @@ class ColdDmPromptTests(unittest.TestCase):
         self.assertIn("**LinkedIn pushes back**", self.phase2)
         self.assertIn("Stop sending at once, for the day", self.phase2)
 
-    def test_phase_two_sends_nothing_to_me_until_the_summary(self):
-        self.assertIn("Then give me the summary. Until then, as in Phase 1, send me nothing.",
-                      self.phase2)
+    def test_phase_two_hands_off_to_phase_three_and_still_says_nothing(self):
+        """Phase 2 used to end the run. It now hands straight to Phase 3, and
+        a summary written here would stop the run before the follow-ups."""
+        self.assertIn("Then go straight on to PHASE 3. Until the run ends, as in Phase 1, "
+                      "send me\nnothing.", self.phase2)
+        self.assertNotIn("Then give me the summary", self.phase2)

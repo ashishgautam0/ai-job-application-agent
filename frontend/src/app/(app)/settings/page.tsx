@@ -3,13 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import {
   activateResumeProfile,
-  getApplicationPromptSettings,
   getCompanyExclusions,
   getResumeProfileStatus,
   updateCompanyExclusions,
   uploadResumePdf,
 } from "@/lib/api";
-import type { ApplicationPromptSettings, ResumeFact, ResumeProfile, ResumeProfileReview } from "@/lib/types";
+import type { ResumeFact, ResumeProfile, ResumeProfileReview } from "@/lib/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -17,17 +16,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { CheckCircle2, Loader2, Plus, Trash2, Upload } from "lucide-react";
 import styles from "./settings.module.css";
-import { OutreachPrompt } from "./outreach-prompt";
 import { DesktopPrompt } from "./desktop-prompt";
 
 const MAX_BYTES = 10 * 1024 * 1024;
-const EMPTY_APPLICATION_SETTINGS: ApplicationPromptSettings = {
-  followup_template: "",
-  cold_dm_template: "",
-  prompt_template: "",
-  automation_rules: "",
-  desktop_prompt_template: "",
-};
 const evidence = (item: ResumeFact) => item.evidence?.map((e) => e.excerpt).filter(Boolean).join(" · ") || "User review required";
 
 function toReview(profile: ResumeProfile): ResumeProfileReview {
@@ -54,7 +45,6 @@ export default function SettingsPage() {
   const [active, setActive] = useState<ResumeProfile | null>(null);
   const [candidate, setCandidate] = useState<ResumeProfile | null>(null);
   const [review, setReview] = useState<ResumeProfileReview | null>(null);
-  const [applicationSettings, setApplicationSettings] = useState<ApplicationPromptSettings>(EMPTY_APPLICATION_SETTINGS);
 
   useEffect(() => {
     getCompanyExclusions().then(({ companies }) => {
@@ -64,16 +54,14 @@ export default function SettingsPage() {
   }, []);
 
   useEffect(() => {
-    Promise.all([
-      getResumeProfileStatus(),
-      getApplicationPromptSettings(),
-    ]).then(([s, settings]) => {
+    // The prompt templates were only read by the follow-up card, which the
+    // one combined prompt replaced — so this page no longer fetches them.
+    getResumeProfileStatus().then((s) => {
       setActive(s.active);
       const latest = s.latest?.status === "pending_review" ? s.latest : null;
       setPending(latest);
       setCandidate(latest);
       if (latest) setReview(toReview(latest));
-      setApplicationSettings(settings);
     }).catch(() => { setLoadError(true); toast.error("Failed to load resume status"); }).finally(() => setLoading(false));
   }, []);
 
@@ -128,9 +116,6 @@ export default function SettingsPage() {
       <p className="mt-1 text-sm text-muted-foreground">Generate a prompt, copy it, and paste it into Claude. Each one ships with the app and is not editable here.</p>
     </div>
     <DesktopPrompt />
-    {!loadError && <>
-      <OutreachPrompt kind="followup" title="LinkedIn follow-up prompt" description="Use Dashboard’s Follow-ups Due queue. The follow-up is a LinkedIn message to whoever accepted the connection — check the dates and the conversation before sending." initialValue={applicationSettings.followup_template} />
-    </>}
     <Card>
       <CardHeader><CardTitle>Exclude companies from scraped jobs</CardTitle><p className="text-sm text-muted-foreground">This list is written into the Claude Desktop prompt above, so the agent never applies to these companies. Add one employer per line. Only the companies you name here are skipped — applying to a company does not exclude it, so the agent is free to apply to a second role at a company already in your Tracker.</p></CardHeader>
       <CardContent className="space-y-3">
