@@ -561,18 +561,38 @@ LinkedIn is a skip here.
    city. Do not type Noida or any other city here: that is where I live, not
    the search area, and a city narrows the results to almost nothing. Add
    Remote alongside India where the filter allows both. Then set the most
-   recent date filter available. Wellfound's filter set differs from
-   LinkedIn's — use whichever of role, location, remote and experience are
-   shown, and do not hunt for ones that are not there.
+   recent date filter available.
+   **Set the experience filter to its lowest band** — whatever Wellfound
+   offers for 0-1 years, entry level or new grad. This is the one filter not
+   to skip: it keeps roles I am not eligible for out of the results instead of
+   leaving every one of them to be caught by hand. Wellfound's filter set
+   differs from LinkedIn's, so use whichever of role, location, remote and
+   experience are shown and do not hunt for ones that are not there — but if
+   an experience filter exists, it is set.
 3. For each result:
    a. Check the posting URL against the skip list — skip immediately if
       present. Wellfound job URLs look like `wellfound.com/jobs/<id>-<slug>`;
       strip query parameters and keep that canonical form when recording.
    b. Open the listing
    c. Read the title — check against TITLE RULES above
-   d. Read the JD — check experience requirement and RED FLAGS. **The pay floor
-      applies here as much as anywhere**: startup listings often quote equity
-      alongside a low cash figure, and equity does not count toward the floor.
+   d. **Read the experience requirement off the listing itself, not just the
+      prose.** Wellfound puts it in the listing's own meta line — "Experience:
+      3+ years", "5+ years exp", or an experience row beside job type and
+      salary — and that line is the requirement even when the description
+      below never repeats it. Reading only the paragraphs is how a 3+ years
+      role gets applied to.
+
+      **More than 1 mandatory year is a skip, with no exceptions here.** 2+,
+      3+, 5+ in that field: skip it and record it as `skipped` with the reason
+      ("Requires 3+ years"). A startup listing that sounds welcoming, a
+      founder-written post, or a stack I happen to know does not lower the
+      ceiling — EXPERIENCE RULES apply unchanged, and only the KEEP cases
+      there (0-1 years, "1+ year", a range whose bottom is 0 or 1, or a number
+      marked preferred rather than required) survive it.
+
+      Then check RED FLAGS. **The pay floor applies here as much as
+      anywhere**: startup listings often quote equity alongside a low cash
+      figure, and equity does not count toward the floor.
    e. If it passes all checks, use whatever apply control the listing offers:
       - A Wellfound-hosted apply opens a form in place. Complete it with the
         FORM FILLING RULES and submit.
@@ -587,7 +607,13 @@ LinkedIn is a skip here.
       - If Wellfound shows the job as already applied, treat it as already
         handled and skip it.
    f. Record the job through the API (see STEP 2 below) with
-      `"source": "Wellfound"`
+      `"source": "Wellfound"`, and **copy the listing's description text into
+      `description`** — including that meta line with the experience
+      requirement. Most Wellfound records so far have arrived with it empty,
+      which leaves nothing to show the experience bar was ever read, and
+      leaves the cold DM and demo agents with nothing to write from. If the
+      listing genuinely shows no description, send it empty rather than
+      writing a summary.
    g. Wait 20-30 seconds before the next application (avoid detection)
 4. When the page is done, go to the next page of results and repeat step 3.
    Keep paging until there is none, then repeat for each search query.
