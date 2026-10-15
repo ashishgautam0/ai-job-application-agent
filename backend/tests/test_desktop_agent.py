@@ -1054,7 +1054,7 @@ class DesktopPromptTests(unittest.TestCase):
                       terms)
 
     def test_jobs_paying_below_the_floor_are_skipped(self):
-        """The user's pay floor: under ₹4 LPA a year or ₹30,000 a month is
+        """The user's pay floor: under ₹5 LPA a year or ₹35,000 a month is
         not worth applying to. It compares the top of the stated range, so a
         range that reaches the floor is kept, and an unstated figure never
         triggers it."""
@@ -1063,12 +1063,18 @@ class DesktopPromptTests(unittest.TestCase):
         skip_list = red_flags.split("**SKIP immediately if any of these appear:**", 1)[1] \
                              .split("**Flag but still apply", 1)[0]
         self.assertIn("**Pay below my floor**", skip_list)
-        self.assertIn("**₹4 LPA**", skip_list)
-        self.assertIn("**₹30,000 a month**", skip_list)
+        self.assertIn("**₹5 LPA**", skip_list)
+        self.assertIn("**₹35,000 a month**", skip_list)
         floor = red_flags.split("### PAY FLOOR — HOW TO READ THE FIGURE", 1)[1]
         for required in ("**Compare the top of the stated range**",
                          'Keep "3–5 LPA"',
-                         "Exactly ₹4 LPA or exactly ₹30,000 a month is at the\n  floor",
+                         "Exactly ₹5 LPA or exactly ₹35,000 a month is at the\n  floor",
+                         # The old floor's figures are now skips, and they are
+                         # the ones most likely to be waved through.
+                         '"4 LPA"',
+                         '"₹30,000 per month" are all **below** the floor',
+                         "compared with ₹5 LPA",
+                         "₹35,000 — \"per month\"",
                          "**No figure stated",
                          "**Open-ended upward**",
                          "Pay below floor:"):
