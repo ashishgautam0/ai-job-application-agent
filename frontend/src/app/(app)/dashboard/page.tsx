@@ -56,19 +56,31 @@ import {
   Send,
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 // Fallback only — the backend sends the real target with the stats.
 const DEFAULT_DAILY_TARGET = 10;
 // The backend's wording for a tracker row with no scraped job behind it.
 const NO_SCRAPED_JOB = "No matching scraped job";
+// How the stored follow_up_outcome of the connection request reads on a card.
+// "pending" means sent with nothing recorded back — not that it was accepted,
+// which nothing records, so the wording never claims it.
+const CONNECTION_OUTCOME: Record<string, { label: string; className: string }> = {
+  responded: { label: "They replied", className: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30" },
+  no_response: { label: "No reply", className: "bg-muted text-muted-foreground border-border" },
+  pending: { label: "No reply yet", className: "bg-amber-500/10 text-amber-400 border-amber-500/30" },
+};
+const daysAgo = (iso: string) => {
+  const then = new Date(iso);
+  if (Number.isNaN(then.getTime())) return null;
+  const days = Math.floor((Date.now() - then.getTime()) / 86_400_000);
+  return days < 0 ? null : days;
+};
 const indiaToday = () => new Intl.DateTimeFormat("en-CA", {
   timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit",
 }).format(new Date());
 
 export default function DashboardPage() {
-  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [followUps, setFollowUps] = useState<FollowUp[]>([]);
@@ -81,8 +93,12 @@ export default function DashboardPage() {
   // Open the job's Tracker record — the section that holds this follow-up's
   // draft and its "Record completed outreach" form — not the top of the page.
   const openFollowUpJob = (fu: FollowUp) => {
-    if (fu.scraped_job_id) router.push(`/jobs/${fu.scraped_job_id}#follow-up`);
-    else toast.info("This tracker record has no matching scraped-job detail page.");
+    // A new tab, so the queue you are working through stays where it was.
+    if (fu.scraped_job_id) {
+      window.open(`/jobs/${fu.scraped_job_id}#follow-up`, "_blank", "noopener,noreferrer");
+    } else {
+      toast.info("This tracker record has no matching scraped-job detail page.");
+    }
   };
 
   const toggleFuDraft = async (fu: FollowUp) => {
@@ -461,7 +477,7 @@ export default function DashboardPage() {
                     key={fu.id}
                     role="link"
                     tabIndex={0}
-                    aria-label={`Open the Tracker record for ${fu.role} at ${fu.company}`}
+                    aria-label={`Open the job details for ${fu.role} at ${fu.company} in a new tab`}
                     onClick={() => openFollowUpJob(fu)}
                     onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); openFollowUpJob(fu); } }}
                     className={`rounded-lg border p-4 space-y-1 ${borderClass} cursor-pointer hover:border-primary/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary`}
@@ -487,6 +503,44 @@ export default function DashboardPage() {
                       </div>
                     </div>
                     <p className="text-muted-foreground text-sm">{fu.role}</p>
+                    {/* What became of the connection request this follow-up is
+                        answering. Without it the card named a person with no
+                        history behind them, so there was no way to tell a
+                        first silence from someone who already wrote back. */}
+                    {(() => {
+                      const outcome = fu.connection_outcome
+                        ? CONNECTION_OUTCOME[fu.connection_outcome]
+                        : undefined;
+                      const since = fu.connection_sent_at ? daysAgo(fu.connection_sent_at) : null;
+                      if (!outcome && since === null) return null;
+                      return (
+                        <div className="flex flex-wrap items-center gap-1.5 pt-1 text-xs">
+                          {outcome && (
+                            <Badge variant="outline" className={`text-[10px] h-5 ${outcome.className}`}>
+                              {outcome.label}
+                            </Badge>
+                          )}
+                          <span className="text-muted-foreground">
+                            Connection
+                            {since !== null && (since === 0 ? " sent today" : ` sent ${since}d ago`)}
+                            {fu.recipient && " to "}
+                            {fu.recipient && (fu.recipient_profile_url ? (
+                              <a
+                                href={fu.recipient_profile_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                onClick={(e) => e.stopPropagation()}
+                                className="underline hover:text-primary"
+                              >
+                                {fu.recipient}
+                              </a>
+                            ) : (
+                              fu.recipient
+                            ))}
+                          </span>
+                        </div>
+                      );
+                    })()}
                     <div className="flex items-center justify-between pt-1">
                       <span className={`text-xs ${dateClass}`}>
                         {fu.follow_up_date}

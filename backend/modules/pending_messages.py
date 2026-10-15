@@ -132,6 +132,33 @@ def _record_from_rows(rows):
     return "", ""
 
 
+def _detail_from_rows(rows):
+    """What became of one application's Cold DM: who it went to, when it went,
+    and the outcome recorded against it.
+
+    The name and URL come from `_record_from_rows`, which prefers the newest
+    row carrying either half. The outcome and date come from the newest row
+    outright, because that is the connection this follow-up answers — if the
+    newest row happens to carry neither name nor url, its outcome is still the
+    current one.
+
+    `outcome` is the stored `follow_up_outcome`: `pending` (sent, nothing
+    recorded back), `responded`, or `no_response` — which `log_follow_up` sets
+    on every earlier pending row for the application when a newer message is
+    logged. It says nothing about whether the invitation was *accepted*:
+    `accepted_at` exists on the table but no code path writes it, so
+    acceptance is still something to check on the profile before sending.
+    """
+    name, url = _record_from_rows(rows)
+    newest = rows[-1] if rows else {}
+    return {
+        "name": name,
+        "profile_url": url,
+        "outcome": (newest.get("follow_up_outcome") or "").strip() or None,
+        "sent_at": newest.get("sent_at") or None,
+    }
+
+
 def _connection_records(application_ids):
     """{application_id: (name, profile_url)} for whoever each Cold DM went to.
 
@@ -151,6 +178,18 @@ def _connection_records(application_ids):
     round-trip each to a database a continent away. Applications with no Cold DM
     recorded are absent from the mapping; the caller reads that as ("", "").
     """
+    return {app_id: (detail["name"], detail["profile_url"])
+            for app_id, detail in _connection_details(application_ids).items()}
+
+
+def _connection_details(application_ids):
+    """{application_id: {name, profile_url, outcome, sent_at}} per Cold DM.
+
+    The same one query `_connection_records` was built on, reading the two
+    extra columns the Dashboard card needs so it can say what became of the
+    connection instead of only who it went to. `_connection_records` is a view
+    over this, so the richer read costs no extra round-trip.
+    """
     ids = sorted({int(value) for value in application_ids if value is not None})
     if not ids:
         return {}
@@ -161,7 +200,8 @@ def _connection_records(application_ids):
         for offset in range(0, len(ids), 200):
             chunk = ids[offset:offset + 200]
             rows = (db.table("follow_up_history")
-                    .select("entity_id,recipient_name,recipient_profile_url,message_content")
+                    .select("entity_id,recipient_name,recipient_profile_url,"
+                            "message_content,follow_up_outcome,sent_at")
                     .eq("entity_type", "application").in_("entity_id", chunk)
                     .eq("channel", DM_CHANNEL).order("id").execute()).data or []
             for row in rows:
@@ -170,7 +210,7 @@ def _connection_records(application_ids):
         print(f"[pending-messages] could not read the connection recipients: {exc}",
               file=sys.stderr)
         return {}
-    return {app_id: _record_from_rows(rows) for app_id, rows in by_app.items()}
+    return {app_id: _detail_from_rows(rows) for app_id, rows in by_app.items()}
 
 
 def _connection_record(application_id):

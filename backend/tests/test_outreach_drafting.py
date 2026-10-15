@@ -339,7 +339,9 @@ class ConnectionRecipientTests(unittest.TestCase):
         env = {"sys": sys, "re": re, "_PROFILE_URL": re.compile(eval(literal))}
         # The readers delegate down this chain, and `function` only lifts one
         # definition at a time, so each must be in the shared namespace.
-        for helper in ("_record_from_rows", "_connection_records", "_connection_record"):
+        for helper in ("_record_from_rows", "_detail_from_rows",
+                       "_connection_details", "_connection_records",
+                       "_connection_record"):
             env[helper] = function(module, helper, env)
         with patch.dict(sys.modules, {"tracker": tracker}):
             return function(module, name, env)(131)
@@ -422,7 +424,8 @@ class ConnectionRecipientTests(unittest.TestCase):
         literal = re.search(r"_PROFILE_URL = re\.compile\((r.[^\n]+?.)\)\n",
                             module.read_text()).group(1)
         env = {"sys": sys, "re": re, "_PROFILE_URL": re.compile(eval(literal))}
-        env["_record_from_rows"] = function(module, "_record_from_rows", env)
+        for helper in ("_record_from_rows", "_detail_from_rows", "_connection_details"):
+            env[helper] = function(module, helper, env)
         with patch.dict(sys.modules, {"tracker": tracker}):
             got = function(module, "_connection_records", env)([131, 140, 999])
         self.assertEqual(got, {
@@ -440,6 +443,58 @@ class ConnectionRecipientTests(unittest.TestCase):
         self.assertEqual(self.recipient([
             {"recipient_name": "First Person", "message_content": ""},
             {"recipient_name": "Second Person", "message_content": ""}]), "Second Person")
+
+    def detail(self, rows):
+        """The full record: who, when, and what became of it."""
+        return self._call(rows, "_connection_details")
+
+    def test_the_outcome_and_date_come_from_the_newest_row(self):
+        """The Dashboard card says what became of the connection. The outcome
+        has to track the newest attempt, even when that row is the one missing
+        a name — otherwise a resent invitation reports the old result."""
+        got = self._detail_from_rows([
+            {"recipient_name": "Viren Khatri", "message_content": "",
+             "follow_up_outcome": "no_response", "sent_at": "2026-09-01T00:00:00+00:00"},
+            {"recipient_name": "", "recipient_profile_url": "", "message_content": "",
+             "follow_up_outcome": "responded", "sent_at": "2026-10-06T00:00:00+00:00"},
+        ])
+        # Name still falls back to the newest row that carries one...
+        self.assertEqual(got["name"], "Viren Khatri")
+        # ...while the outcome is the current one, not the superseded one.
+        self.assertEqual(got["outcome"], "responded")
+        self.assertEqual(got["sent_at"], "2026-10-06T00:00:00+00:00")
+
+    def test_a_missing_outcome_reads_as_none_not_empty_string(self):
+        """An older row with no outcome stored must not render as a blank
+        badge on the card."""
+        got = self._detail_from_rows([
+            {"recipient_name": "Dana Rao", "message_content": "",
+             "follow_up_outcome": "", "sent_at": None}])
+        self.assertIsNone(got["outcome"])
+        self.assertIsNone(got["sent_at"])
+
+    def test_records_is_a_view_over_details_so_it_costs_one_query(self):
+        """`_connection_records` kept its (name, url) shape for the draft
+        builder, but both readers must share the single batched query — the
+        Dashboard is the caller and the database is a continent away."""
+        import inspect
+        src = (ROOT / "modules/pending_messages.py").read_text()
+        body = src.split("def _connection_records(", 1)[1].split("def _connection_details(", 1)[0]
+        self.assertIn("_connection_details(application_ids)", body)
+        # Only the details reader touches the table.
+        self.assertNotIn('db.table("follow_up_history")', body)
+        details = src.split("def _connection_details(", 1)[1].split("\ndef ", 1)[0]
+        self.assertEqual(details.count('db.table("follow_up_history")'), 1)
+        self.assertIn("follow_up_outcome,sent_at", details.replace('"\n                            "', ""))
+
+    def _detail_from_rows(self, rows):
+        import re as _re
+        module = ROOT / "modules/pending_messages.py"
+        literal = _re.search(r"_PROFILE_URL = re\.compile\((r.[^\n]+?.)\)\n",
+                             module.read_text()).group(1)
+        env = {"sys": sys, "re": _re, "_PROFILE_URL": _re.compile(eval(literal))}
+        env["_record_from_rows"] = function(module, "_record_from_rows", env)
+        return function(module, "_detail_from_rows", env)(rows)
 
 
 class PriorRoundContextTests(unittest.TestCase):

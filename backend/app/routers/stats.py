@@ -26,8 +26,12 @@ def _sendable_follow_ups(df):
     The follow-up is a LinkedIn message, so the recipient is whoever accepted
     this job's connection request. Dashboard hides the ones missing either
     rather than offering a card that cannot be acted on.
+
+    Each row also carries what became of that connection — its recorded
+    outcome, the day it was sent and the recipient's profile URL — so the card
+    can show the history the follow-up is answering.
     """
-    from pending_messages import _connection_records
+    from pending_messages import _connection_details
     from tracker import get_follow_up_drafts
 
     if df.empty:
@@ -39,12 +43,19 @@ def _sendable_follow_ups(df):
     # cost a round-trip each and held the page at "Loading...".
     ids = [row["id"] for row in rows]
     drafts = get_follow_up_drafts(ids)
-    recipients = _connection_records(ids)
+    connections = _connection_details(ids)
 
     for row in rows:
         app_id = int(row["id"])
         draft = drafts.get(app_id) or {}
-        row["recipient"] = recipients.get(app_id, ("", ""))[0] or None
+        connection = connections.get(app_id) or {}
+        row["recipient"] = connection.get("name") or None
+        # What became of the connection this follow-up answers. The card shows
+        # it so the queue says why each person is being written to again,
+        # rather than listing a name with no history behind it.
+        row["recipient_profile_url"] = connection.get("profile_url") or None
+        row["connection_outcome"] = connection.get("outcome")
+        row["connection_sent_at"] = connection.get("sent_at")
         row["draft_ready"] = draft.get("status") == "ready" and bool(
             (draft.get("content") or "").strip())
         # pandas widens an int column to float once any row is missing a match,
