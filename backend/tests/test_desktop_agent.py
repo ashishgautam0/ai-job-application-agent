@@ -450,10 +450,9 @@ class DesktopPromptTests(unittest.TestCase):
         self.assertTrue(any("PDF" in issue for issue in result["issues"]))
         self.assertIn("Resume.pdf", result["content"])
 
-    # LinkedIn and Wellfound are applied on; Indeed is searched through its
-    # connector and listed for the user, never applied to.
-    APPLY_PORTALS = ("LINKEDIN", "WELLFOUND")
-    PORTALS = APPLY_PORTALS + ("INDEED",)
+    # All three are browser portals the agent applies on.
+    APPLY_PORTALS = ("LINKEDIN", "WELLFOUND", "INDEED")
+    PORTALS = APPLY_PORTALS
 
     def test_prompt_covers_every_portal_dedup_tracker_and_no_caps(self):
         for portal in self.PORTALS:
@@ -525,12 +524,7 @@ class DesktopPromptTests(unittest.TestCase):
         for body in sections:
             name = body.split("\n", 1)[0]
             with self.subTest(portal=name):
-                if name.startswith("INDEED"):
-                    # Nothing is applied to here, so there is no off-site
-                    # procedure to route into — only a hard "do not apply".
-                    self.assertIn("do not apply to", body)
-                else:
-                    self.assertIn("EMPLOYER'S OWN SITE", body)
+                self.assertIn("EMPLOYER'S OWN SITE", body)
 
         # An off-site apply route is never a valid `skipped` reason.
         rules = self.prompt.split("## RULES THAT APPLY TO EVERY PORTAL", 1)[1] \
@@ -573,10 +567,11 @@ class DesktopPromptTests(unittest.TestCase):
         for portal in PORTAL_SOURCES:
             with self.subTest(portal=portal):
                 self.assertIn(portal, step2)
-        self.assertIn("both apply portals", step2)
-        # Indeed is in the source list, but only for a job the user says they
-        # applied to themselves — never recorded by the run.
-        self.assertIn("only ever used for\n  a job I told you I applied to myself", step2)
+        self.assertIn("all three portals", step2)
+        # Every source is recorded by the run itself — no portal is carved out
+        # into something the user records by hand.
+        self.assertNotIn("only ever used for", step2)
+        self.assertNotIn("I told you I applied to myself", step2)
 
     def test_no_portal_section_overrides_the_shared_title_rules(self):
         """A per-portal note must not re-admit titles the global rules reject —
@@ -642,10 +637,12 @@ class DesktopPromptTests(unittest.TestCase):
             with self.subTest(portal=portal):
                 self.assertIn(portal, summary)
                 self.assertIn(portal, order)
-        # The summary has to give the user the Indeed jobs to act on, since
-        # nothing else records them.
-        self.assertIn("### Indeed — apply to these yourself", summary)
-        self.assertIn("Nothing here is recorded or applied to", summary)
+        # Indeed is applied to and recorded like the rest, so it reports the
+        # same four numbers and has no hand-back table of its own.
+        self.assertIn("- Indeed: X searched, Y applied, Z skipped, S already handled",
+                      summary)
+        self.assertNotIn("apply to these yourself", summary)
+        self.assertNotIn("Nothing here is recorded or applied to", summary)
 
     def test_excluded_companies_reach_the_agent(self):
         """The exclusion list only filtered the hourly scraper's intake. The
@@ -725,57 +722,67 @@ class DesktopPromptTests(unittest.TestCase):
         self.assertIn("- Notice period: 15", result["content"])
         self.assertNotIn("{{", result["content"])
 
-    def test_indeed_is_searched_through_the_connector_and_never_applied_to(self):
-        """Indeed stopped being an apply portal: the agent reads it through the
-        connector and the user applies. Every instruction that would have it
-        open, sign in to, or submit on Indeed has to be gone, or the agent
-        still applies on a portal the user wanted to handle themselves."""
+    def test_indeed_is_applied_to_in_the_browser_like_the_other_portals(self):
+        """Indeed went back to being an apply portal. The connector pass is
+        gone, so the section has to carry the browser apply flow — open, both
+        apply controls, record, pace — or the run reaches Indeed and does
+        nothing on it."""
         indeed = self.prompt.split("### 3. INDEED", 1)[1].split("## FORM FILLING", 1)[0]
-        for required in ("do not sign in, and do not apply to",
-                         "You find the jobs; I apply to them myself",
-                         "search_jobs", "get_job_details", "get_company_data",
-                         # the same screening bar as a browser listing
-                         "TITLE RULES", "EXPERIENCE RULES", "RED FLAGS",
-                         "MNC rule apply unchanged",
-                         "Drop anything on the STEP 0 skip list",
-                         # The connector takes no date filter, so staleness is
-                         # the agent's to enforce or months-old jobs get listed.
-                         # It matches the browser portals at 24 hours, which on
-                         # live data passes almost nothing — so the prompt has
-                         # to say an empty list is the expected result, or the
-                         # agent will widen the window to produce something.
-                         "within the last 24 hours**",
-                         "it is a hard cut, not a preference",
-                         "Most runs will pass nothing",
-                         "no Indeed jobs posted in the last 24 hours",
-                         "never stretch the window"):
+        for required in ("Open `in.indeed.com` in my browser",
+                         "worked in the browser and applied to, exactly like the other two",
+                         # Both apply routes. "Apply on company site" is most
+                         # of the good Indeed listings, so it must not be the
+                         # one that gets left.
+                         '**"Apply now"**', '**"Apply on company site"**',
+                         "EMPLOYER'S OWN SITE",
+                         "never leave one just\n        because it is not an Indeed-hosted apply",
+                         # Same screening bar as the other two.
+                         "TITLE RULES", "RED FLAGS",
+                         "pay floor\n      and the MNC rule apply here exactly",
+                         "Check the posting URL against the skip list",
+                         # Recorded like any other application now.
+                         '`"source": "Indeed"`',
+                         "copying the posting's description text into",
+                         "Wait 20-30 seconds before the next application",
+                         'click Indeed\'s "Next" arrow',
+                         # Indeed's bot-check is a rest, not a run-ender.
+                         "rest Indeed for\n   at least 15 minutes"):
             with self.subTest(required=required):
                 self.assertIn(required, indeed)
-        # No browser verbs anywhere in the section.
-        for banned in ("in.indeed.com", "Apply now", "logged in", '"Next" arrow',
-                       "CAPTCHA, OTP & BLOCKERS"):
+        # Nothing may survive that tells the agent to hand Indeed back to the
+        # user or to read it through the connector.
+        for banned in ("search_jobs", "get_job_details", "get_company_data",
+                       "I apply to them myself", "Record nothing",
+                       "apply to these yourself", "find-only", "find only"):
             with self.subTest(banned=banned):
                 self.assertNotIn(banned, indeed)
 
-    def test_an_indeed_find_is_recorded_only_when_the_user_says_they_applied(self):
-        """Recording a find as `applied` would claim an application nobody
-        sent; recording it as `skipped` would hide a good job for good. The
-        run records neither until the user names the job."""
-        indeed = self.prompt.split("### 3. INDEED", 1)[1].split("## FORM FILLING", 1)[0]
-        self.assertIn("**Record nothing**: no `applied`, no `skipped`", indeed)
-        self.assertIn("A `skipped` would hide a\n   good job from me for good", indeed)
-        self.assertIn("When I tell you I applied to one", indeed)
-        self.assertIn('`source: "Indeed"` and `status: "applied"`', indeed)
-        self.assertIn("Record only the jobs I name, never the\nrest", indeed)
-        # And the recorded job then behaves like any other application.
-        self.assertIn("cold DM and follow-up schedule like any other", indeed)
+    def test_indeed_jobs_are_recorded_like_any_other_application(self):
+        """While Indeed was find-only, STEP 2, the source field and the daily
+        target each carved it out. An apply portal with those carve-outs left
+        in place would apply and then not record, or record and not count."""
+        step2 = self.prompt.split("STEP 2 — RECORD EVERY JOB", 1)[1].split("## KEEP GOING", 1)[0]
+        self.assertIn("the same call on **all three portals** — LinkedIn, Wellfound and Indeed",
+                      step2)
+        self.assertNotIn("only once I have told you", step2)
+        self.assertNotIn("`Indeed` is only ever used for", step2)
+        target = self.prompt.split("### DAILY TARGET", 1)[1].split("###", 1)[0]
+        self.assertIn("across LinkedIn, Wellfound and Indeed\ntogether.", target)
+        self.assertNotIn("Indeed is find-only", target)
+        # The browser-only rule no longer has a connector carve-out to widen
+        # it — Indeed is opened in the browser like every other job site.
+        blockers = self.prompt.split("## CAPTCHA, OTP & BLOCKERS", 1)[1].split("## STEP 2", 1)[0]
+        self.assertIn("**Never fetch a portal page with a direct request.**", blockers)
+        self.assertIn("tracker\n  API endpoints and my resume download.", blockers)
+        self.assertNotIn("Indeed connector", blockers)
 
-    def test_the_run_order_puts_the_find_only_portal_last(self):
-        """Indeed produces no applications, so it must never take time from
-        the two portals that do."""
+    def test_the_portal_sections_are_ordered_and_all_three_apply(self):
+        """The order is just the order of the passes now — no portal is the
+        odd one out, so nothing may describe one as not applying."""
         order = self.prompt.split("Work them in this order:", 1)[1].split("###", 1)[0]
         self.assertIn("LinkedIn → Wellfound → Indeed", order)
-        self.assertIn("never competes with the applications for time", order)
+        self.assertIn("All three are browser\nportals you apply on", order)
+        self.assertNotIn("never competes with the applications for time", order)
         headings = re.findall(r"^### (\d)\. (\w+)", self.prompt, flags=re.MULTILINE)
         self.assertEqual(headings, [("1", "LINKEDIN"), ("2", "WELLFOUND"), ("3", "INDEED")])
 
@@ -853,12 +860,13 @@ class DesktopPromptTests(unittest.TestCase):
         linkedin = self.prompt.split("### 1. LINKEDIN", 1)[1].split("### 2.", 1)[0]
         self.assertIn("Past 24 hours", linkedin)
         self.assertNotIn("Past week", linkedin)
-        # Indeed is searched through the connector, which takes no date filter,
-        # so its freshness is whatever search_jobs returns rather than a
-        # browser control the agent could forget to set.
+        # Indeed sets the same filter in the browser now. Its filter set is
+        # unreliable, so the section also has to say what to do when the
+        # control will not take, or stale jobs come back in through Indeed.
         indeed = self.prompt.split("### 3. INDEED", 1)[1].split("## FORM FILLING", 1)[0]
-        self.assertIn("search_jobs", indeed)
-        self.assertNotIn("Date posted", indeed)
+        self.assertIn("**Date posted = Last 24 hours**", indeed)
+        self.assertIn("read the posted date off\n   each listing", indeed)
+        self.assertIn("never widen the window to fill the list", indeed)
 
     def test_linkedin_does_not_filter_to_easy_apply(self):
         """The Easy Apply filter hides jobs that apply on the company's site,
@@ -1032,8 +1040,10 @@ class DesktopPromptTests(unittest.TestCase):
         self.assertIn("**Date posted = Past 24 hours**", search)
         self.assertIn("**Entry level** and **Associate**", search)
         self.assertIn("**Go through every results page, not just the first.**", search)
-        # Paging is a browser chore; the connector returns one response.
-        self.assertIn("Indeed connector\nreturns its results in one response", search)
+        # Paging is a browser chore on every portal, Indeed included — its
+        # good listings sit on page 2 and beyond.
+        self.assertIn('Indeed\'s "Next" arrow', search)
+        self.assertNotIn("returns its results in one response", search)
         section = self.prompt.split("### 1. LINKEDIN\n", 1)[1].split("\n### ", 1)[0]
         self.assertIn("go to the next results page", section)
         self.assertIn("Keep paging until there is no next page", section)
@@ -1086,10 +1096,9 @@ class DesktopPromptTests(unittest.TestCase):
         tracker so earlier runs that day count, then stop."""
         keep_going = self.prompt.split("## KEEP GOING UNTIL I SAY STOP", 1)[1] \
                                 .split("## SAFETY RULES", 1)[0]
-        for required in ("**My target is 10 applications a day, across LinkedIn and Wellfound\ntogether.**",
-                         # Indeed finds are not applications, so they must not
-                         # look like progress toward the day's number.
-                         "Indeed is find-only, so nothing there counts toward it",
+        for required in ("**My target is 10 applications a day, across LinkedIn, Wellfound and Indeed\ntogether.**",
+                         # No portal is counted differently from the others.
+                         "All three count the same way",
                          "do not\nstart another application once it does",
                          "**Only a confirmed submission counts**",
                          "**Use the tracker's number, not your own tally.**",
@@ -1227,8 +1236,8 @@ class DesktopPromptTests(unittest.TestCase):
         quoted = " ".join(line[2:].strip() for line in opening.splitlines()
                           if line.startswith("> "))
         self.assertEqual(starter, quoted)
-        for phrase in ("LinkedIn Easy Apply", "Wellfound Apply",
-                       "list matching Indeed jobs for me to apply to myself",
+        for phrase in ("LinkedIn Easy Apply", "Wellfound Apply", "Indeed Apply",
+                       "on LinkedIn, Wellfound and Indeed",
                        "the company's own site when a job redirects there",
                        "Submit each one yourself without asking me first",
                        # the tool asked per job before sending a phone number
@@ -1259,15 +1268,19 @@ class DesktopPromptTests(unittest.TestCase):
         self.assertIn("in your own words in the same message", opening)
         self.assertIn("You have my authorisation to fill in and submit", opening)
 
-    def test_the_only_connector_in_the_task_is_indeed(self):
+    def test_no_connector_is_part_of_the_task(self):
         """A Supabase or database connector on the conversation made the agent
-        stop and ask which task was meant instead of browsing. Indeed is now a
-        genuine exception, so the rule has to name it rather than ban them
-        all — and still send the agent past every other connector."""
+        stop and ask which task was meant instead of browsing. Indeed is a
+        browser portal again, so an attached Indeed connector is now the wrong
+        route rather than the intended one — and a connector search is not the
+        user's logged-in session, so it cannot apply to anything."""
         opening = self.prompt.split("## HOW TO START", 1)[1].split("## WHO YOU ARE", 1)[0]
-        self.assertIn("This is mostly a browser task", opening)
-        self.assertIn("Indeed connector", opening)
-        self.assertIn("ignore it rather\nthan asking which task was meant", opening)
+        self.assertIn("This is a browser task", opening)
+        self.assertIn("**No connector\nattached to the conversation is part of this task**", opening)
+        self.assertIn("if an Indeed connector is\nattached, ignore it and work the site in the browser",
+                      opening)
+        self.assertIn("cannot apply to anything", opening)
+        self.assertIn("Ignore the\nrest rather than asking which task was meant", opening)
 
     def test_prompt_does_not_promise_a_scraper_that_no_longer_runs(self):
         """Job discovery is the desktop agent's alone; a prompt that says
