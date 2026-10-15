@@ -59,6 +59,11 @@ export interface FollowUp {
   // address to send it to.
   draft_ready?: boolean;
   recipient?: string | null;
+  recipient_profile_url?: string | null;
+  // What became of the LinkedIn connection this follow-up answers:
+  // "pending" (sent, nothing recorded back), "responded" or "no_response".
+  connection_outcome?: string | null;
+  connection_sent_at?: string | null;
 }
 
 export interface ColdDmTodo {

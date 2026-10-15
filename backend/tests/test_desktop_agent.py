@@ -1031,6 +1031,28 @@ class DesktopPromptTests(unittest.TestCase):
         self.assertNotIn("data science", gate)
         self.assertIn("machine learning", gate)
 
+    def test_trainer_titles_are_skipped_and_beat_the_keep_list(self):
+        """Trainer roles were being applied to. The KEEP list matches any
+        title containing "AI", so "AI Trainer" — data-labelling and teaching
+        work, not engineering — passed on the AI word alone. The reject has to
+        be unconditional, the way the data-science one is."""
+        skip = self.prompt.split("### ALWAYS SKIP", 1)[1].split("### KEEP", 1)[0]
+        self.assertIn("**Reject trainer and teaching titles", skip)
+        self.assertIn("Trainer, Instructor, Tutor, Teacher, Faculty", skip)
+        self.assertIn("beats the KEEP list below", skip)
+        self.assertIn('"AI Trainer"', skip)
+        self.assertIn('"LLM Trainer", "AI Tutor" and "GenAI Instructor" are all skips', skip)
+        # One letter apart and two different rules, so the prompt says so
+        # rather than leaving the agent to guess they are the same entry.
+        self.assertIn("**Trainer is not Trainee.**", skip)
+        self.assertIn("Intern, Internship, Trainee, Apprentice", skip)
+        # The KEEP list must not re-admit it.
+        keep = self.prompt.split("### KEEP (apply if JD also fits)", 1)[1] \
+                          .split("### DOMAIN KEYWORD GATE", 1)[0]
+        for admitted in ("Trainer", "Instructor", "Tutor"):
+            with self.subTest(admitted=admitted):
+                self.assertNotIn(admitted, keep)
+
     def test_searches_use_24_hours_and_page_past_the_first_page(self):
         """The general filter line said "last 7 days" and overrode the
         per-portal 24-hour filter; nothing told the agent to page past the
@@ -1668,7 +1690,9 @@ class ColdDmTests(unittest.TestCase):
                 {"id": 9, "company": "Other", "scraped_job_id": None}]
         modules = {
             "pending_messages": SimpleNamespace(
-                _connection_records=lambda ids: {8: ("Viren Khatri", "https://x")}),
+                _connection_details=lambda ids: {8: {
+                    "name": "Viren Khatri", "profile_url": "https://x",
+                    "outcome": "responded", "sent_at": "2026-10-06T00:00:00+00:00"}}),
             "tracker": SimpleNamespace(
                 get_follow_up_drafts=lambda ids: {8: {"status": "ready", "content": "hi"}}),
         }
@@ -1685,14 +1709,61 @@ class ColdDmTests(unittest.TestCase):
         self.assertEqual((got[0]["recipient"], got[0]["draft_ready"]),
                          ("Viren Khatri", True))
         self.assertEqual((got[1]["recipient"], got[1]["draft_ready"]), (None, False))
+        # The connection's outcome rides along on the same batched read, so
+        # the card can say what became of it. A row with no Cold DM recorded
+        # carries nulls rather than borrowing its neighbour's.
+        self.assertEqual(
+            (got[0]["connection_outcome"], got[0]["connection_sent_at"],
+             got[0]["recipient_profile_url"]),
+            ("responded", "2026-10-06T00:00:00+00:00", "https://x"))
+        self.assertEqual(
+            (got[1]["connection_outcome"], got[1]["connection_sent_at"],
+             got[1]["recipient_profile_url"]),
+            (None, None, None))
         # And it stays JSON-serialisable, which a numpy float would not be.
         json_mod.dumps(got)
 
+    def test_a_due_follow_up_card_shows_what_became_of_the_connection(self):
+        """The card named a person with no history behind them, so there was
+        no telling a first silence from someone who had already written back.
+        It reports the stored outcome of the connection the follow-up
+        answers — and never claims the invitation was accepted, because
+        nothing records that."""
+        dashboard = (ROOT.parent / "frontend/src/app/(app)/dashboard/page.tsx").read_text()
+        outcomes = dashboard.split("const CONNECTION_OUTCOME", 1)[1].split("};", 1)[0]
+        # Every value the column actually holds has wording, or a card renders
+        # an outcome it has no label for.
+        for stored, label in (("responded", "They replied"),
+                              ("no_response", "No reply"),
+                              ("pending", "No reply yet")):
+            with self.subTest(stored=stored):
+                self.assertIn(stored, outcomes)
+                self.assertIn(label, outcomes)
+        # "pending" is nothing recorded back, not an accepted invitation.
+        self.assertNotIn("Accepted", outcomes)
+        self.assertIn("not that it was accepted,\n// which nothing records", dashboard)
+        # How long ago it went, so the queue reads as a timeline.
+        self.assertIn("fu.connection_sent_at", dashboard)
+        self.assertIn("sent ${since}d ago", dashboard)
+        self.assertIn("sent today", dashboard)
+        # The recipient links to the profile the agent has to open anyway, and
+        # that click must not also trigger the card's own open-the-job.
+        self.assertIn("fu.recipient_profile_url", dashboard)
+        self.assertIn('onClick={(e) => e.stopPropagation()}', dashboard)
+        self.assertIn('rel="noopener noreferrer"', dashboard)
+
     def test_a_due_follow_up_card_opens_that_job_s_tracker_section(self):
         """Clicking the card should land on the record that holds this
-        follow-up's draft and its recording form, not the top of the page."""
+        follow-up's draft and its recording form, not the top of the page —
+        and in a new tab, so the queue being worked through stays open."""
         dashboard = (ROOT.parent / "frontend/src/app/(app)/dashboard/page.tsx").read_text()
-        self.assertIn("router.push(`/jobs/${fu.scraped_job_id}#follow-up`)", dashboard)
+        self.assertIn(
+            'window.open(`/jobs/${fu.scraped_job_id}#follow-up`, "_blank", "noopener,noreferrer")',
+            dashboard)
+        # Navigating the Dashboard away loses the queue's scroll position and
+        # every open draft on it.
+        self.assertNotIn("router.push(`/jobs/${fu.scraped_job_id}", dashboard)
+        self.assertIn("in a new tab`", dashboard)
         # Both the pointer and the keyboard path go through one handler, so
         # they cannot drift apart.
         # Pointer, keyboard and the explicit button all go through one

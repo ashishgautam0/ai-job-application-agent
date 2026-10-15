@@ -284,6 +284,16 @@ Apply these rules in order.
   all skips, even though each carries an AI/ML word. I do not want
   data-science roles, on LinkedIn, Indeed or Wellfound.
 
+**Reject trainer and teaching titles — no qualifier rescues it:**
+- Trainer, Instructor, Tutor, Teacher, Faculty
+- This reject is unconditional and it beats the KEEP list below. "AI Trainer",
+  "LLM Trainer", "AI Tutor" and "GenAI Instructor" are all skips, even though
+  each carries an AI/ML word — they are data-labelling and teaching work, not
+  engineering. Without this, the KEEP list's "any title containing AI" lets
+  every one of them through.
+- **Trainer is not Trainee.** Both are skips but for different reasons: a
+  Trainee is the internship reject below, a Trainer teaches other people.
+
 **Reject internships:**
 - Intern, Internship, Trainee, Apprentice
 
