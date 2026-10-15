@@ -61,6 +61,8 @@ import { toast } from "sonner";
 
 // Fallback only — the backend sends the real target with the stats.
 const DEFAULT_DAILY_TARGET = 10;
+// The backend's wording for a tracker row with no scraped job behind it.
+const NO_SCRAPED_JOB = "No matching scraped job";
 const indiaToday = () => new Intl.DateTimeFormat("en-CA", {
   timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit",
 }).format(new Date());
@@ -211,6 +213,18 @@ export default function DashboardPage() {
   // are counted, not shown, until the routine writes their note.
   const readyColdDms = coldDmTodos.filter((todo) => todo.cold_dm_ready && todo.scraped_job_id);
   const waitingColdDms = coldDmTodos.length - readyColdDms.length;
+  // Say why each one is waiting. The old line claimed they were all waiting on
+  // a note for the current resume, which sent you off to wait for something
+  // that never arrives when the real blocker is a missing job posting.
+  const waitingReasons = Object.entries(
+    coldDmTodos
+      .filter((todo) => !(todo.cold_dm_ready && todo.scraped_job_id))
+      .reduce<Record<string, number>>((counts, todo) => {
+        const reason = todo.readiness_issue?.trim() || "Note not written for your current resume yet";
+        counts[reason] = (counts[reason] || 0) + 1;
+        return counts;
+      }, {}),
+  ).sort((a, b) => b[1] - a[1]);
   // A follow-up is sendable only with both halves: the written draft and an
   // address to send it to. The rest are counted, not shown.
   const readyFollowUps = followUps.filter((fu) => fu.draft_ready && fu.recipient);
@@ -380,9 +394,21 @@ export default function DashboardPage() {
                 </div>
               )}
               {waitingColdDms > 0 && (
-                <p className="text-xs text-muted-foreground">
-                  {waitingColdDms} more {waitingColdDms === 1 ? "is" : "are"} due but not ready yet — each appears here once its note is written for your current resume.
-                </p>
+                <div className="space-y-1 text-xs text-muted-foreground">
+                  <p>
+                    {waitingColdDms} more {waitingColdDms === 1 ? "is" : "are"} due but not ready yet:
+                  </p>
+                  <ul className="list-disc pl-5">
+                    {waitingReasons.map(([reason, count]) => (
+                      <li key={reason}>
+                        {count} × {reason}
+                        {reason === NO_SCRAPED_JOB && (count === 1
+                          ? " — this one will not clear on its own: the tracker row has no job posting behind it, so there is no description to write a note from."
+                          : " — these will not clear on their own: those tracker rows have no job posting behind them, so there is no description to write a note from.")}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
             </div>
           )}

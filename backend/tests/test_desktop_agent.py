@@ -819,6 +819,36 @@ class DesktopPromptTests(unittest.TestCase):
         self.assertNotIn("standalone task", self.prompt)
         self.assertNotIn("This task does not submit job applications", self.prompt)
 
+    def test_wellfound_reads_the_experience_field_not_just_the_prose(self):
+        """Wellfound jobs above the 1-year ceiling were being applied to. Its
+        listings carry the requirement in a meta line beside job type and
+        salary, which the description below often never repeats, so an agent
+        reading only the paragraphs never sees it."""
+        section = self.prompt.split("### 2. WELLFOUND", 1)[1].split("### 3.", 1)[0]
+        for required in (
+            "Read the experience requirement off the listing itself",
+            "that line is the requirement even when the description",
+            "**More than 1 mandatory year is a skip, with no exceptions here.**",
+            'record it as `skipped` with the reason',
+            # A friendly startup listing is not a reason to bend the ceiling.
+            "does not lower the\n      ceiling",
+            # Filter it out at the source rather than catching each by hand.
+            "Set the experience filter to its lowest band",
+            "if\n   an experience filter exists, it is set",
+        ):
+            with self.subTest(required=required):
+                self.assertIn(required, section)
+
+    def test_wellfound_has_to_capture_the_description(self):
+        """61 of 78 stored Wellfound jobs had no description at all, which is
+        both how the experience bar went unchecked and why the cold DM and
+        demo agents had nothing to write from."""
+        section = self.prompt.split("### 2. WELLFOUND", 1)[1].split("### 3.", 1)[0]
+        self.assertIn("copy the listing's description text into\n      `description`", section)
+        self.assertIn("including that meta line with the experience\n      requirement", section)
+        # Empty stays allowed; a summary never is.
+        self.assertIn("send it empty rather than\n      writing a summary", section)
+
     def test_the_browser_portals_search_the_last_24_hours(self):
         linkedin = self.prompt.split("### 1. LINKEDIN", 1)[1].split("### 2.", 1)[0]
         self.assertIn("Past 24 hours", linkedin)
