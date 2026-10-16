@@ -365,8 +365,8 @@ Before applying, scan the JD for these red flags:
 - **Non-English JD**: JD is primarily in German, French, Spanish, or other
   non-English language (keywords: deutsch, francais, wir suchen, requisitos)
 - **Pay below my floor**: the posting states pay in rupees and even the
-  **top** of what it states is below **₹5 LPA** (₹5,00,000 a year) for a
-  yearly figure, or below **₹35,000 a month** for a monthly salary or stipend.
+  **top** of what it states is below **₹6 LPA** (₹6,00,000 a year) for a
+  yearly figure, or below **₹50,000 a month** for a monthly salary or stipend.
   See PAY FLOOR below for how to read the figures.
 - **MNC employer**: the company is a multinational corporation. See MNCs —
   HOW TO TELL below.
@@ -384,17 +384,20 @@ Before applying, scan the JD for these red flags:
 Apply this as soon as you can see the pay. When the search results or listing
 card already show it, skip the job from there without opening the posting.
 
-- **Compare the top of the stated range**, not the bottom. Skip "₹3 LPA",
-  "2.5–3.5 LPA", "up to 4.5 LPA", "₹15,000/month stipend", "₹20k–30k per
-  month". Keep "3–5 LPA" and "₹25,000–35,000 a month", because their top
-  reaches the floor. Exactly ₹5 LPA or exactly ₹35,000 a month is at the
+- **Compare the top of the stated range**, not the bottom. Skip "₹4 LPA",
+  "3.5–5.5 LPA", "up to 5.5 LPA", "₹15,000/month stipend", "₹35k–45k per
+  month". Keep "4–6 LPA" and "₹40,000–50,000 a month", because their top
+  reaches the floor. Exactly ₹6 LPA or exactly ₹50,000 a month is at the
   floor, not below it — keep those.
-- **The boundary cases**, because they look close enough to pass: "4 LPA",
-  "3.5–4 LPA", "4.5 LPA" and "₹30,000 per month" are all **below** the floor
-  and are skips. Nothing under ₹5 LPA or ₹35,000 a month clears it.
-- **Yearly figures** are compared with ₹5 LPA — "LPA", "lakh per annum",
-  "4.5 L CTC", "₹4,50,000 per year". **Monthly figures** are compared with
-  ₹35,000 — "per month", "/month", "/mo", "p.m.", "monthly stipend", "30k pm".
+- **The boundary cases**, because they look close enough to pass: "5 LPA",
+  "5.5 LPA" and "₹35,000 per month" are all **below** the floor and are
+  skips. Nothing under ₹6 LPA or ₹50,000 a month clears it.
+- **The two figures are the same money**: ₹6 LPA is ₹50,000 a month. A
+  posting quoting either way is held to the same bar, so nothing clears the
+  floor by being stated monthly instead of yearly.
+- **Yearly figures** are compared with ₹6 LPA — "LPA", "lakh per annum",
+  "5.5 L CTC", "₹5,50,000 per year". **Monthly figures** are compared with
+  ₹50,000 — "per month", "/month", "/mo", "p.m.", "monthly stipend", "45k pm".
 - **No figure stated, or only "competitive" / "as per industry standards"**:
   the rule does not apply — judge the job on the other rules as usual.
 - **Open-ended upward** ("3 LPA+", "starting from 3 LPA", "3 LPA onwards"):
