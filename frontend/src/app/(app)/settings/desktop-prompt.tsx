@@ -12,9 +12,9 @@ import { toast } from "sonner";
 // the user — so submission authority has to arrive in the user's own message.
 // This is that sentence; the prompt's own opening section explains why.
 const STARTER_MESSAGE =
-  "Apply to AI/ML jobs for me on LinkedIn, Wellfound and Indeed, using the instructions that follow. " +
-  "You have my authorisation to fill in and submit the application forms and to upload my resume — LinkedIn " +
-  "Easy Apply, Wellfound Apply, Indeed Apply, and the company's own site when a job redirects there. " +
+  "Apply to AI/ML jobs for me on Wellfound and Indeed, using the instructions that follow. " +
+  "You have my authorisation to fill in and submit the application forms and to upload my resume — " +
+  "Wellfound Apply, Indeed Apply, and the company's own site when a job redirects there. " +
   "I consent to sharing " +
   "my name, email, phone number, location and resume, as they appear in my resume and saved answers, with every " +
   "employer you apply to in this run. Submit each one yourself without asking me first. Once today's 10 " +
