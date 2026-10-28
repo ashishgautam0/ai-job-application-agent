@@ -26,6 +26,7 @@ import type {
   ApplicationPromptSettings,
   RenderedApplicationPrompt,
   DesktopPromptResponse,
+  DesktopPromptKind,
 } from "./types";
 
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -287,9 +288,13 @@ export async function getRenderedOutreachPrompt(pageUrl: string, kind: "followup
   );
 }
 
-export async function getDesktopPrompt(pageUrl: string): Promise<DesktopPromptResponse> {
+export async function getDesktopPrompt(
+  pageUrl: string,
+  kind: DesktopPromptKind = "applications",
+): Promise<DesktopPromptResponse> {
   return apiFetch<DesktopPromptResponse>(
-    `/api/profile/desktop-prompt?page_url=${encodeURIComponent(pageUrl)}`,
+    `/api/profile/desktop-prompt?page_url=${encodeURIComponent(pageUrl)}`
+    + `&kind=${encodeURIComponent(kind)}`,
   );
 }
 

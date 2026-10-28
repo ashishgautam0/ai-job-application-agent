@@ -609,29 +609,44 @@ def _excluded_company_lines():
 
 
 @router.get("/desktop-prompt")
-def read_desktop_prompt(request: Request, page_url: str):
-    """Return the shipped Claude Desktop prompt plus its rendered copy.
+def read_desktop_prompt(request: Request, page_url: str = "",
+                        kind: str = "applications"):
+    """Return one shipped Claude Desktop prompt plus its rendered copy.
+
+    `kind` picks which: `applications` (search and apply) or `outreach` (the
+    cold DMs and follow-ups). They are separate runs, each pasted on its own,
+    so each is fetched separately rather than sliced out of one document.
 
     `template` is the shipped text; `content` is the same text with the live API
     and resume links resolved, which is what gets pasted into Claude Desktop.
     Settings no longer saves its own copy: a saved copy froze the prompt, so
     later improvements to the shipped file never reached the agent.
     """
-    from profile import default_desktop_prompt
+    from profile import DESKTOP_PROMPT_KINDS, default_desktop_prompt
 
+    if kind not in DESKTOP_PROMPT_KINDS:
+        raise HTTPException(
+            status_code=422,
+            detail=f"kind must be one of {sorted(DESKTOP_PROMPT_KINDS)}.",
+        )
     try:
-        template = default_desktop_prompt()
+        template = default_desktop_prompt(kind)
     except OSError as exc:
         raise HTTPException(
             status_code=404, detail="Desktop prompt default is unavailable.",
         ) from exc
 
-    # Phase 3 works the Dashboard's Follow-ups Due queue in the browser rather
-    # than through an API, so it needs the app's own origin. Only the browser
-    # knows it; left out, the placeholder is reported unresolved like any other.
+    # The outreach prompt works the Dashboard's Follow-ups Due queue in the
+    # browser rather than through an API, so it needs the app's own origin, and
+    # only the browser knows it. The applications prompt has no such link, so
+    # it is required of whichever template actually carries the placeholder
+    # rather than of every caller.
     page_url = _clean_text(page_url, 1_000)
-    if not page_url.startswith(("https://", "http://localhost")):
+    needs_page_url = "{{page_url}}" in template
+    if page_url and not page_url.startswith(("https://", "http://localhost")):
         raise HTTPException(status_code=422, detail="page_url must be an https URL.")
+    if needs_page_url and not page_url:
+        raise HTTPException(status_code=422, detail="page_url is required for this prompt.")
 
     resume = _application_pdf_metadata()
     values = {
@@ -652,11 +667,14 @@ def read_desktop_prompt(request: Request, page_url: str):
     issues = []
     if unresolved:
         issues.append("The prompt contains unresolved placeholders.")
-    if not resume:
+    # Only the applications prompt links the resume; warning about it on the
+    # outreach prompt would be an issue the user cannot act on.
+    if not resume and "{{resume_url}}" in template:
         issues.append("No Settings PDF is available, so the resume link will not work.")
     return {
         "content": content,
         "template": template,
+        "kind": kind,
         "customized": False,
         "issues": issues,
         "unresolved_placeholders": unresolved,

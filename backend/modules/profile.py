@@ -39,15 +39,30 @@ def _get_client():
 # ===================== PROFILE CRUD =====================
 
 _APPLICATION_PROMPT_KEY = "application_prompt"
-_DESKTOP_PROMPT_PATH = os.path.join(
+_PROMPTS_DIR = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-    "prompts", "job-agent-desktop.md",
+    "prompts",
 )
+# Applications and outreach are two prompts and two runs, each pasted on its
+# own. They share nothing: the outreach prompt never searches or applies, and
+# the applications prompt never opens LinkedIn.
+DESKTOP_PROMPT_KINDS = {
+    "applications": "job-agent-desktop.md",
+    "outreach": "job-agent-outreach.md",
+}
+DEFAULT_DESKTOP_PROMPT_KIND = "applications"
+_DESKTOP_PROMPT_PATH = os.path.join(_PROMPTS_DIR,
+                                    DESKTOP_PROMPT_KINDS[DEFAULT_DESKTOP_PROMPT_KIND])
 
 
-def default_desktop_prompt():
-    """Read the shipped Claude Desktop prompt used when nothing is saved yet."""
-    with open(_DESKTOP_PROMPT_PATH, encoding="utf-8") as handle:
+def desktop_prompt_path(kind=DEFAULT_DESKTOP_PROMPT_KIND):
+    """The shipped file for one prompt kind; KeyError for an unknown kind."""
+    return os.path.join(_PROMPTS_DIR, DESKTOP_PROMPT_KINDS[kind])
+
+
+def default_desktop_prompt(kind=DEFAULT_DESKTOP_PROMPT_KIND):
+    """Read one of the shipped Claude Desktop prompts."""
+    with open(desktop_prompt_path(kind), encoding="utf-8") as handle:
         return handle.read()
 
 
