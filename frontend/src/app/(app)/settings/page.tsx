@@ -115,7 +115,8 @@ export default function SettingsPage() {
       <h1 className="text-2xl font-bold">Prompts</h1>
       <p className="mt-1 text-sm text-muted-foreground">Generate a prompt, copy it, and paste it into Claude. Each one ships with the app and is not editable here.</p>
     </div>
-    <DesktopPrompt />
+    <DesktopPrompt kind="applications" />
+    <DesktopPrompt kind="outreach" />
     <Card>
       <CardHeader><CardTitle>Exclude companies from scraped jobs</CardTitle><p className="text-sm text-muted-foreground">This list is written into the Claude Desktop prompt above, so the agent never applies to these companies. Add one employer per line. Only the companies you name here are skipped — applying to a company does not exclude it, so the agent is free to apply to a second role at a company already in your Tracker.</p></CardHeader>
       <CardContent className="space-y-3">

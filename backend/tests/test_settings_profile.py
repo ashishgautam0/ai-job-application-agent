@@ -346,7 +346,8 @@ class SettingsProfileTests(unittest.TestCase):
     def test_settings_lists_the_prompts_first_and_the_resume_last(self):
         page = (ROOT.parent / "frontend/src/app/(app)/settings/page.tsx").read_text()
         order = [
-            "<DesktopPrompt />",
+            '<DesktopPrompt kind="applications" />',
+            '<DesktopPrompt kind="outreach" />',
             "Exclude companies from scraped jobs",
             '<h1 className="text-2xl font-bold">Resume profile</h1>',
             "Active backend resume",
@@ -354,10 +355,9 @@ class SettingsProfileTests(unittest.TestCase):
         found = [page.index(marker) for marker in order]
         self.assertEqual(found, sorted(found),
                          "Settings sections are out of order: " + ", ".join(order))
-        # Both outreach cards are retired for the same reason: the desktop
-        # prompt now runs applications, cold DMs and follow-ups end to end, so
-        # a second place to generate either one is only a way to send the same
-        # message twice. One card, one prompt, one paste.
+        # The two cards are one component with a kind, not two components: the
+        # old pair drifted apart, and a second way to generate either prompt is
+        # a second way to send the same message twice.
         for retired in ('kind="cold_dm"', "Cold DM prompt",
                         'kind="followup"', "LinkedIn follow-up prompt",
                         "OutreachPrompt"):

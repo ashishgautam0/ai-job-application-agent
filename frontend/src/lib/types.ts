@@ -312,9 +312,14 @@ export interface ApplicationPromptSettings {
   desktop_prompt_template: string;
 }
 
+// Two prompts, two runs: applications searches and applies, outreach sends the
+// cold DMs and follow-ups. Each is pasted into Claude Desktop on its own.
+export type DesktopPromptKind = "applications" | "outreach";
+
 export interface DesktopPromptResponse {
   content: string;
   template: string;
+  kind?: DesktopPromptKind;
   customized: boolean;
   issues: string[];
   unresolved_placeholders: string[];

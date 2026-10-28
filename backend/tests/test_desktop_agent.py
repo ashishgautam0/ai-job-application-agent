@@ -351,7 +351,7 @@ class CompanyExclusionsAreTheUsersOwnTests(unittest.TestCase):
         update = function(self.ROUTER, "update_company_exclusions", {
             "save_company_exclusions": lambda username, companies: saved.append(companies),
             "_company_exclusions": lambda: ["Rivet AI"],
-            "_DEFAULT_USERNAME": "subidh", "HTTPException": RuntimeError,
+            "_DEFAULT_USERNAME": "subidh", "HTTPException": StubHTTPException,
             "CompanyExclusionsResponse": lambda **kw: kw,
             "CompanyExclusionsSettings": SimpleNamespace})
         result = update(SimpleNamespace(companies=["Rivet AI"]))
@@ -368,9 +368,22 @@ class CompanyExclusionsAreTheUsersOwnTests(unittest.TestCase):
 
 
 
+class StubHTTPException(RuntimeError):
+    """FastAPI's HTTPException takes keyword arguments; bare RuntimeError does
+    not, so every raise in the endpoint used to blow up as a TypeError in the
+    tests instead of the error it meant. Still a RuntimeError for the existing
+    assertRaises calls."""
+
+    def __init__(self, status_code=None, detail=None):
+        super().__init__(f"{status_code}: {detail}")
+        self.status_code = status_code
+        self.detail = detail
+
+
 class DesktopPromptTests(unittest.TestCase):
     def setUp(self):
         self.prompt = profile_data.default_desktop_prompt()
+        self.outreach = profile_data.default_desktop_prompt("outreach")
 
     def test_settings_can_no_longer_save_its_own_copy_of_the_prompt(self):
         """A saved copy froze the prompt: later improvements to the shipped file
@@ -388,7 +401,8 @@ class DesktopPromptTests(unittest.TestCase):
         # Unrelated settings are still persisted.
         self.assertIn("Mine.", saved["automation_rules"])
 
-    def render(self, resume=None, excluded=(), page_url="https://app.test/dashboard"):
+    def render(self, resume=None, excluded=(), page_url="https://app.test/dashboard",
+               kind="applications"):
         """Call the endpoint with the data layer stubbed, as the CI lane has no DB."""
         module, _ = stub_tracker()
         lines = function(ROOT / "app/routers/profile.py", "_excluded_company_lines", {
@@ -400,30 +414,77 @@ class DesktopPromptTests(unittest.TestCase):
                 "_DEFAULT_USERNAME": "subidh",
                 "_application_pdf_metadata": lambda: resume,
                 "_clean_text": function(ROOT / "app/routers/profile.py", "_clean_text",
-                                        {"HTTPException": RuntimeError}),
+                                        {"HTTPException": StubHTTPException}),
                 "_excluded_company_lines": lines,
-                "HTTPException": RuntimeError,
+                "HTTPException": StubHTTPException,
                 "Request": SimpleNamespace,
             })
             request = SimpleNamespace(url_for=lambda name: f"https://api.test/{name}")
-            return endpoint(request, page_url)
+            return endpoint(request, page_url, kind)
+
+    def test_the_endpoint_serves_each_prompt_kind_and_rejects_others(self):
+        """Two prompts means the endpoint picks one. An unknown kind must be
+        refused rather than silently serving the applications prompt, or a
+        typo in the client would hand the user the wrong run's instructions."""
+        applications = self.render(resume={"filename": "r.pdf", "sha256": "a"})
+        self.assertEqual(applications["kind"], "applications")
+        self.assertIn("# Job Search & Auto-Apply Agent", applications["content"])
+        self.assertNotIn("## PART 1 — COLD DMs", applications["content"])
+
+        outreach = self.render(resume={"filename": "r.pdf", "sha256": "a"}, kind="outreach")
+        self.assertEqual(outreach["kind"], "outreach")
+        self.assertIn("# Outreach Agent", outreach["content"])
+        self.assertIn("## PART 1 — COLD DMs", outreach["content"])
+        self.assertIn("## PART 2 — FOLLOW-UPS", outreach["content"])
+        # Each resolves its own links and leaves nothing dangling.
+        self.assertIn("https://api.test/desktop_agent_cold_dms", outreach["content"])
+        self.assertIn("https://app.test/dashboard", outreach["content"])
+        self.assertNotIn("{{", outreach["content"])
+        self.assertEqual(outreach["unresolved_placeholders"], [])
+        self.assertEqual(outreach["issues"], [])
+
+        with self.assertRaises(RuntimeError):
+            self.render(kind="everything")
+
+    def test_page_url_is_required_only_by_the_prompt_that_uses_it(self):
+        """The Dashboard link lives in the outreach prompt alone. Demanding
+        page_url of the applications prompt too would be a 422 for a value it
+        never renders; omitting the check on outreach would ship a prompt with
+        a dangling placeholder."""
+        applications = self.render(resume={"filename": "r.pdf", "sha256": "a"}, page_url="")
+        self.assertEqual(applications["unresolved_placeholders"], [])
+        self.assertEqual(applications["issues"], [])
+        with self.assertRaises(RuntimeError):
+            self.render(kind="outreach", page_url="")
+        # A non-https value is still refused wherever it is supplied.
+        with self.assertRaises(RuntimeError):
+            self.render(page_url="ftp://nope")
+
+    def test_the_outreach_prompt_links_no_resume(self):
+        """The resume warning used to fire on every prompt. The outreach run
+        uploads nothing, so warning about a missing PDF there is an issue the
+        user cannot act on."""
+        self.assertNotIn("{{resume_url}}", self.outreach)
+        self.assertEqual(self.render(resume=None, kind="outreach")["issues"], [])
+        self.assertIn("No Settings PDF is available",
+                      " ".join(self.render(resume=None)["issues"]))
 
     def test_rendering_leaves_no_unresolved_placeholder(self):
         self.assertIn("{{seen_urls_url}}", self.prompt)
         self.assertIn("{{record_url}}", self.prompt)
-        self.assertIn("{{cold_dms_url}}", self.prompt)
-        self.assertIn("{{cold_dm_record_url}}", self.prompt)
+        # The cold DM endpoints moved to the outreach prompt with their parts.
+        self.assertIn("{{cold_dms_url}}", self.outreach)
+        self.assertIn("{{cold_dm_record_url}}", self.outreach)
+        self.assertNotIn("{{cold_dms_url}}", self.prompt)
         result = self.render(resume={"filename": "résumé.pdf", "sha256": "abc"})
         self.assertNotIn("{{", result["content"])
         self.assertEqual(result["unresolved_placeholders"], [])
         self.assertIn("https://api.test/desktop_agent_seen_urls", result["content"])
         self.assertIn("https://api.test/desktop_agent_record_job", result["content"])
-        self.assertIn("https://api.test/desktop_agent_cold_dms", result["content"])
-        self.assertIn("https://api.test/desktop_agent_record_cold_dm", result["content"])
-        # Phase 3 works the Dashboard in the browser, so it needs the app's
-        # own origin rather than an API route.
-        self.assertIn("{{page_url}}", self.prompt)
-        self.assertIn("https://app.test/dashboard", result["content"])
+        # The Dashboard link lives only in the outreach prompt now, so the
+        # applications render neither carries it nor needs page_url.
+        self.assertNotIn("{{page_url}}", self.prompt)
+        self.assertIn("{{page_url}}", self.outreach)
         self.assertIn("résumé.pdf", result["content"])
         self.assertFalse(result["customized"])
         self.assertEqual(result["issues"], [])
@@ -789,24 +850,34 @@ class DesktopPromptTests(unittest.TestCase):
         headings = re.findall(r"^### (\d)\. (\w+)", self.prompt, flags=re.MULTILINE)
         self.assertEqual(headings, [("1", "WELLFOUND"), ("2", "INDEED")])
 
-    def test_one_prompt_runs_all_three_phases_end_to_end(self):
-        """The follow-up used to be a second prompt in Settings, pasted into a
-        separate conversation. It is Phase 3 of this one now, so the handoffs
-        have to carry through or the run stops after the cold DMs."""
+    def test_applications_and_outreach_are_two_prompts_and_two_runs(self):
+        """Applications and outreach are separate Settings cards and separate
+        pastes. Each prompt has to end on its own and say the other exists, or
+        the agent either stops early waiting for a phase that is not there or
+        tries to run the other half without its instructions."""
         opening = self.prompt.split("## WHO YOU ARE", 1)[1].split("## MY PROFILE", 1)[0]
-        self.assertIn("**The run has three phases, back to back, from this one message.**",
-                      opening)
+        self.assertIn("**This run applies to jobs and nothing else.**", opening)
+        self.assertIn("a separate prompt with its own run", opening)
+        self.assertNotIn("three phases", self.prompt)
         keep_going = self.prompt.split("## KEEP GOING UNTIL I SAY STOP", 1)[1] \
-                                .split("## PHASE 2", 1)[0]
-        self.assertIn("1. PHASE 3 is finished", keep_going)
-        self.assertIn("Phase 2 ending is not a stopping point", keep_going)
+                                .split("## SAFETY RULES", 1)[0]
+        self.assertIn("1. Today's 10 applications are recorded", keep_going)
         summary = self.prompt.split("## SUMMARY — WHEN I STOP YOU", 1)[1]
-        self.assertIn("The run ends when PHASE 3 ends", summary)
+        self.assertIn("The run ends when today's 10 applications are recorded", summary)
+        # Neither prompt may carry the other's work.
+        self.assertNotIn("## PART 1", self.prompt)
+        self.assertNotIn("## PHASE 2", self.prompt)
+        for banned in ("STEP 0", "STEP 2", "TITLE RULES", "PAY FLOOR", "FORM FILLING"):
+            with self.subTest(banned=banned):
+                self.assertNotIn(banned, self.outreach)
+        self.assertIn("does **no job searching and no\napplying**", self.outreach)
+        self.assertIn("**The run has two parts, back to back, from this one message.**",
+                      self.outreach)
 
     def test_phase_three_only_messages_people_who_accepted(self):
         """A follow-up is a LinkedIn message, which only reaches someone who
         accepted the invitation — the same gate the separate prompt enforced."""
-        phase3 = self.prompt.split("## PHASE 3 — FOLLOW-UPS", 1)[1].split("## SAFETY RULES", 1)[0]
+        phase3 = self.outreach.split("## PART 2 — FOLLOW-UPS", 1)[1].split("## SAFETY RULES", 1)[0]
         for required in ("Open the recorded profile URL first",
                          "Only if it shows you are connected",
                          "stop on that job.",
@@ -821,13 +892,13 @@ class DesktopPromptTests(unittest.TestCase):
         """The separate prompt said to confirm immediately before each send,
         which was right for a standalone task and fatal inside a run: every
         question ends the turn, and an ended turn is a stopped run."""
-        phase3 = self.prompt.split("## PHASE 3 — FOLLOW-UPS", 1)[1].split("## SAFETY RULES", 1)[0]
+        phase3 = self.outreach.split("## PART 2 — FOLLOW-UPS", 1)[1].split("## SAFETY RULES", 1)[0]
         self.assertIn("do not ask me\n   before sending", phase3)
         self.assertIn("a question here ends the run", phase3)
         self.assertNotIn("obtain explicit confirmation", phase3)
         # ...and it is not described as a standalone task any more.
-        self.assertNotIn("standalone task", self.prompt)
-        self.assertNotIn("This task does not submit job applications", self.prompt)
+        self.assertNotIn("standalone task", self.outreach)
+        self.assertNotIn("This task does not submit job applications", self.outreach)
 
     def test_wellfound_reads_the_experience_field_not_just_the_prose(self):
         """Wellfound jobs above the 1-year ceiling were being applied to. Its
@@ -882,13 +953,13 @@ class DesktopPromptTests(unittest.TestCase):
         order = self.prompt.split("## PORTAL-BY-PORTAL", 1)[1].split("### 1.", 1)[0]
         for required in ("**LinkedIn is not a job\nportal in this run**",
                          "do not search LinkedIn",
-                         "it is used only in PHASE 2 and PHASE 3"):
+                         "a separate prompt, not part of this run"):
             with self.subTest(required=required):
                 self.assertIn(required, order)
         # The login is still needed, and the prompt says what for.
         opening = self.prompt.split("# Job Search", 1)[1].split("## WHO YOU ARE", 1)[0]
-        self.assertIn("**Be logged into LinkedIn too**", opening)
-        self.assertIn("no jobs are searched", opening)
+        self.assertIn("LinkedIn is not used here at all", opening)
+        self.assertIn("separate outreach prompt", opening)
         # A new record must never claim LinkedIn as its source again.
         step2 = self.prompt.split("STEP 2 — RECORD EVERY JOB", 1)[1].split("## KEEP GOING", 1)[0]
         self.assertIn("Never `LinkedIn`", step2)
@@ -1149,17 +1220,17 @@ class DesktopPromptTests(unittest.TestCase):
                          "do not\nstart another application once it does",
                          "**Only a confirmed submission counts**",
                          "**Use the tracker's number, not your own tally.**",
-                         "go straight\n  on to PHASE 2 — COLD DMs",
+                         "and stop. Do not look for \"one more\"",
                          "after midnight\n  IST"):
             with self.subTest(required=required):
                 self.assertIn(required, keep_going)
         step0 = self.prompt.split("STEP 0 — LOAD THE SKIP LIST", 1)[1].split("## WHAT TO SEARCH", 1)[0]
         self.assertIn('"applied_today": A, "daily_target": 10', step0)
         self.assertIn('"dms_today": D, "dm_target": 10', step0)
-        # A met application target no longer ends the run: it starts Phase 2.
-        self.assertIn("today's application target is met: do\nnot search or apply — go straight to PHASE 2.",
-                      step0)
-        self.assertIn("If `dms_today` is also 10\nor more, skip to PHASE 3", step0)
+        # A met application target ends this run; the outreach prompt is a
+        # separate paste, so nothing here hands off to it.
+        self.assertIn("today's application target is met: do\nnot search or apply.", step0)
+        self.assertIn("none of this run's business", step0)
         self.assertNotIn("There is no application cap", self.prompt)
 
     def test_the_prompt_target_matches_the_backend_constant(self):
@@ -1194,7 +1265,7 @@ class DesktopPromptTests(unittest.TestCase):
                                 .split("## SAFETY RULES", 1)[0]
         self.assertIn("**Do not send me progress updates.**", keep_going)
         self.assertIn("**Your turn ends for three reasons only:**", keep_going)
-        self.assertIn("Meeting the application target is **not** one of them", keep_going)
+        self.assertIn("are **never** reasons", keep_going)
         self.assertIn("**Send me nothing until then**", self.prompt)
         # Two more mid-run "tell me" lines hid in the portal and API sections.
         self.assertNotIn("stop this portal, tell me, and move to Naukri", self.prompt)
@@ -1272,30 +1343,53 @@ class DesktopPromptTests(unittest.TestCase):
         self.assertIn("ask once, phrased so my\none answer covers the rest of the run", section)
         self.assertIn("never ask again after I say yes", section)
 
-    def test_settings_starter_message_matches_the_prompt_and_names_every_route(self):
-        """Authority to submit has to come from the user's own message, so the
-        sentence Settings copies must be the one the prompt shows — and it has
-        to name company-site redirects, not just Easy Apply."""
+    def test_settings_starter_messages_match_their_prompts(self):
+        """Authority to act has to come from the user's own message, so each
+        sentence Settings copies must be exactly the one its prompt shows. Two
+        prompts means two starter messages, and a mismatched pair would have
+        the user authorise the wrong run."""
         tsx = (ROOT.parent / "frontend/src/app/(app)/settings/desktop-prompt.tsx").read_text()
-        body = tsx.split("const STARTER_MESSAGE =", 1)[1].split(";", 1)[0]
-        starter = "".join(re.findall(r'"([^"]*)"', body))
-        opening = self.prompt.split("## HOW TO START", 1)[1].split("## WHO YOU ARE", 1)[0]
-        quoted = " ".join(line[2:].strip() for line in opening.splitlines()
-                          if line.startswith("> "))
-        self.assertEqual(starter, quoted)
+        block = tsx.split("const STARTER_MESSAGES", 1)[1].split("\n};", 1)[0]
+        # Each entry runs from its own key to the next key at that indent, so
+        # the concatenation is read whole however it is wrapped.
+        entries = dict(re.findall(r"\n  (\w+):\n(.*?)(?=\n  \w+:\n|\Z)", block, re.S))
+        messages = {kind: "".join(re.findall(r'"([^"]*)"', body))
+                    for kind, body in entries.items()}
+        self.assertEqual(sorted(messages), ["applications", "outreach"])
+
+        for kind, prompt in (("applications", self.prompt), ("outreach", self.outreach)):
+            with self.subTest(kind=kind):
+                opening = prompt.split("## HOW TO START", 1)[1].split("## WHO YOU ARE", 1)[0]
+                quoted = " ".join(line[2:].strip() for line in opening.splitlines()
+                                  if line.startswith("> "))
+                self.assertEqual(messages[kind], quoted)
+
+        # The applications sentence covers submitting forms and the resume, and
+        # says nothing about outreach.
         for phrase in ("Wellfound Apply", "Indeed Apply",
                        "on Wellfound and Indeed",
                        "the company's own site when a job redirects there",
                        "Submit each one yourself without asking me first",
                        # the tool asked per job before sending a phone number
                        "I consent to sharing my name, email, phone number, location and resume",
-                       "with every employer you apply to in this run",
-                       # Phase 2 sends invitations; that consent must be the user's too
-                       "Once today's 10 applications are done, go on to the cold DMs",
-                       "send up to 10 LinkedIn connection invitations a day",
-                       "send each one yourself without asking me first"):
+                       "with every employer you apply to in this run"):
             with self.subTest(phrase=phrase):
-                self.assertIn(phrase, starter)
+                self.assertIn(phrase, messages["applications"])
+        for banned in ("cold DM", "connection invitation", "Follow-ups Due"):
+            with self.subTest(banned=banned):
+                self.assertNotIn(banned, messages["applications"])
+
+        # The outreach sentence is the one that authorises sending, and must
+        # cover both parts — an invitation and a message are separate acts.
+        for phrase in ("send up to 10 LinkedIn connection invitations a day",
+                       "a note from the cold DM list in these instructions",
+                       "you have checked works at that company",
+                       "send up to 10 LinkedIn messages a day from my Follow-ups Due queue",
+                       "who already accepted one of those invitations",
+                       "Send each one yourself without asking me"):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, messages["outreach"])
+        self.assertNotIn("apply", messages["outreach"].lower().replace("applying", ""))
 
     def test_prompt_does_not_claim_to_authorize_itself(self):
         """Claude Desktop treats a pasted document as data, so a prompt that
@@ -1852,15 +1946,19 @@ class ColdDmTests(unittest.TestCase):
         source = (ROOT / "modules" / "tracker.py").read_text()
         line = next(l for l in source.splitlines() if l.startswith("DAILY_DM_TARGET"))
         self.assertEqual(line.split("=", 1)[1].strip(), "10")
-        prompt = profile_data.default_desktop_prompt()
-        self.assertIn("## PHASE 2 — COLD DMs: 10 LINKEDIN CONNECTION NOTES A DAY", prompt)
+        prompt = profile_data.default_desktop_prompt("outreach")
+        self.assertIn("## PART 1 — COLD DMs: 10 LINKEDIN CONNECTION NOTES A DAY", prompt)
 
 
 class ColdDmPromptTests(unittest.TestCase):
     def setUp(self):
-        prompt = profile_data.default_desktop_prompt()
-        self.phase2 = prompt.split("## PHASE 2 — COLD DMs", 1)[1].split("## PHASE 3", 1)[0]
-        self.phase3 = prompt.split("## PHASE 3 — FOLLOW-UPS", 1)[1].split("## SAFETY RULES", 1)[0]
+        # Cold DMs and follow-ups are their own prompt and their own run, so
+        # they are read from the outreach file, not sliced out of the
+        # applications one.
+        prompt = profile_data.default_desktop_prompt("outreach")
+        self.outreach = prompt
+        self.phase2 = prompt.split("## PART 1 — COLD DMs", 1)[1].split("## PART 2", 1)[0]
+        self.phase3 = prompt.split("## PART 2 — FOLLOW-UPS", 1)[1].split("## SAFETY RULES", 1)[0]
 
     def test_phase_two_sends_without_asking_and_records_each_send(self):
         for required in ("GET {{cold_dms_url}}", "POST {{cold_dm_record_url}}",
@@ -1988,8 +2086,9 @@ class ColdDmPromptTests(unittest.TestCase):
         self.assertIn("Stop sending at once, for the day", self.phase2)
 
     def test_phase_two_hands_off_to_phase_three_and_still_says_nothing(self):
-        """Phase 2 used to end the run. It now hands straight to Phase 3, and
-        a summary written here would stop the run before the follow-ups."""
-        self.assertIn("Then go straight on to PHASE 3. Until the run ends, as in Phase 1, "
+        """The cold DMs used to end the run. They now hand straight to the
+        follow-ups, and a summary written here would stop the run before
+        them."""
+        self.assertIn("Then go straight on to PART 2. Until the run ends, "
                       "send me\nnothing.", self.phase2)
         self.assertNotIn("Then give me the summary", self.phase2)

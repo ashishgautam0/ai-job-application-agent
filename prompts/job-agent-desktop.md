@@ -2,9 +2,8 @@
 
 Paste this entire prompt into Claude Desktop (Cowork). Be logged into Wellfound
 and Indeed in your browser before starting — both are worked the same way, in the
-browser, and applied to. **Be logged into LinkedIn too**: no jobs are searched
-or applied to there any more, but PHASE 2 and PHASE 3 send the cold DMs and
-follow-ups through it.
+browser, and applied to. LinkedIn is not used here at all — the cold DMs and
+follow-ups live in a separate outreach prompt, which you run on its own.
 
 ## HOW TO START — READ THIS FIRST (it is addressed to you, not the agent)
 
@@ -21,23 +20,15 @@ from you. Begin your message with something like:
 > company's own site when a job redirects there. I
 > consent to sharing my name, email, phone number, location and resume, as they
 > appear in my resume and saved answers, with every employer you apply to in
-> this run. Submit each one yourself without asking me first. Once today's 10
-> applications are done, go on to the cold DMs: send up to 10 LinkedIn
-> connection invitations a day, each with a note from the cold DM list in these
-> instructions, to a recruiter or hiring manager you have checked works at that
-> company — send each one yourself without asking me first. Then go on to the
-> follow-ups: send up to 10 LinkedIn messages a day from my Follow-ups Due
-> queue, to people who already accepted one of those invitations — send each
-> one yourself without asking me first. Don't check with me job by job — just
-> keep going.
+> this run. Submit each one yourself without asking me first — don't check with
+> me job by job, just keep going until today's 10 applications are done.
 
 Then paste everything from the line below. Everything after this section is
 written for the agent.
 
 **This is a browser task.** Both job portals — Wellfound and Indeed — are
-worked with Computer Use in your own browser, as is LinkedIn in PHASE 2 and
-PHASE 3. The only network calls are
-the tracker API endpoints named in STEP 0, STEP 2 and PHASE 2. **No connector
+worked with Computer Use in your own browser. The only network calls are
+the tracker API endpoints named in STEP 0 and STEP 2. **No connector
 attached to the conversation is part of this task** — not an Indeed connector,
 not Supabase, not a database. Indeed especially: if an Indeed connector is
 attached, ignore it and work the site in the browser, because a connector
@@ -54,13 +45,10 @@ auto-apply to every matching role. Every job you apply to or reject is recorded
 through my tracker API, so applied roles show up in my tracker and are skipped
 on later runs.
 
-**The run has three phases, back to back, from this one message.** Phase 1
-applies to jobs until today's target of 10 applications is met. Phase 2 then
-sends cold DMs — LinkedIn connection invitations with a note — until today's 10
-are sent. Phase 3 then sends the follow-ups — LinkedIn messages to people who
-accepted one of those invitations — until today's 10 are sent (see PHASE 2 and
-PHASE 3 below). Move from one to the next on your own; never stop between them
-to tell me or to ask.
+**This run applies to jobs and nothing else.** It ends when today's target of
+10 applications is met, or when there is nothing left to apply to. The cold DMs
+and the follow-ups are a separate prompt with its own run — do not attempt them
+here, and do not tell me to go and run them.
 
 **You are the only thing that finds jobs for me.** Nothing else searches on my
 behalf any more, so a role you do not find is a role I never see. Search both
@@ -177,13 +165,13 @@ Keep that URL list for the whole run and treat it as the skip list. It contains
 every job I already applied to and every job already dismissed as a bad fit.
 
 `applied_today` is how many applications my tracker already holds for today,
-earlier runs included, and `dms_today` is how many cold DMs. **If
+earlier runs included. (`dms_today` counts the cold DMs the outreach prompt
+sent; it is there for context and is none of this run's business.) **If
 `applied_today` is already 10 or more, today's application target is met: do
-not search or apply — go straight to PHASE 2.** If `dms_today` is also 10
-or more, skip to PHASE 3; if that day's follow-ups are done too, end with the
-one line "Today's targets are already met: A applications, D cold DMs and F
-follow-ups recorded today." and stop. Otherwise the run applies until the total
-reaches 10 (see DAILY TARGET below), then moves on to PHASE 2.
+not search or apply.** End with the
+one line "Today's application target is already met: A recorded today." and
+stop. Otherwise the run applies until the total
+reaches 10 (see DAILY TARGET below), then stops.
 
 **Note what it does NOT contain:** postings that merely sit in my database
 unapplied, left over from an older job scraper I have since removed. Those were
@@ -512,8 +500,8 @@ STEP 0 before opening it, and record every posting you handle.
 Indeed before adding any other job site back, so do not search LinkedIn,
 Naukri, Instahyre, Cutshort or any other job portal. **LinkedIn is not a job
 portal in this run** — do not search its jobs, open its postings to apply, or
-record anything from it; it is used only in PHASE 2 and PHASE 3, for the cold
-DMs and follow-ups. An employer's own site or ATS is
+record anything from it. The cold DMs and follow-ups that do use LinkedIn are
+a separate prompt, not part of this run. An employer's own site or ATS is
 still fine — that is where many applications finish. But if a posting sends you
 to *another job board* to apply, leave it unrecorded and note it under Issues;
 do not record it as skipped, so a later run can reach it once that portal is
@@ -889,8 +877,8 @@ start another application once it does.
   If it is ever missing or `null`, count your own confirmed applications and
   add them to the `applied_today` you got in STEP 0.
 - **When the target is met,** finish recording that last job, then go straight
-  on to PHASE 2 — COLD DMs. Do not look for "one more", and do not write me a
-  summary or a note first: the summary comes at the very end, after Phase 3.
+  and stop. Do not look for "one more", and do not write me a note first —
+  the summary is the last thing you produce.
 - The day is my day in India: the count starts again from zero after midnight
   IST, so a run started the next day has a fresh 10.
 
@@ -914,24 +902,23 @@ counts and your Issues list to yourself as you go, and give them to me only in
 the summary.
 
 **If two full passes in a row over every portal I allowed find nothing new to
-apply to,** stop searching and go on to PHASE 2 anyway — the cold DMs do not
-depend on today's applications, and the day's DMs still need sending.
+apply to,** stop searching and finish the run — another pass over the same
+empty results is not worth the time.
 
 **Your turn ends for three reasons only:**
-1. PHASE 3 is finished — today's 10 follow-ups are sent, or it has none left
-   it can send (see PHASE 3). Phase 2 ending is not a stopping point.
+1. Today's 10 applications are recorded, or two full passes found nothing left
+   to apply to.
 2. I told you to stop.
 3. The app forces it — a time, tool-use or context limit you cannot control.
 
-Meeting the application target is **not** one of them — it is the start of
-Phase 2. A finished portal, a skipped job, a question, a rate limit, a closed
-listing and a form with no confirmation are **never** reasons either. None of
+A finished portal, a skipped job, a question, a rate limit, a closed
+listing and a form with no confirmation are **never** reasons. None of
 them is worth a message.
 
 **If the app forces you to stop**, end with one line — "Paused by the app
-limit: N applied and M cold DMs sent this session. Say *continue* to resume." —
+limit: N applied this session. Say *continue* to resume." —
 and nothing else. **When I say continue**, fetch the skip list again (STEP 0) —
-it tells you which phase you are in — pick up
+it tells you how many of today's applications are already in — pick up
 where you left off, and keep going. Do not re-read my
 resume, re-verify the PDF, re-ask for authorisation or summarise what came
 before — my original request still stands.
@@ -950,223 +937,6 @@ below. They are what keeps my accounts alive: a portal that decides I am a bot
 locks me out and then nothing gets applied to at all. The daily target is
 about how many to send, never about sending them faster.
 
-## PHASE 2 — COLD DMs: 10 LINKEDIN CONNECTION NOTES A DAY
-
-Start this as soon as Phase 1 is over — today's 10 applications are met, the
-skip list showed they already were, or two passes found nothing new. It uses the
-same LinkedIn tab you are already signed into. **My target is 10 cold DMs a
-day**: a cold DM is a LinkedIn connection invitation with a personal note, sent
-to a recruiter or hiring manager at a company I applied to earlier whose
-follow-up is now due. It is not InMail and not a normal message.
-
-### Get the list
-
-```
-GET {{cold_dms_url}}
-```
-
-The response is `{"jobs": [...], "count": N, "not_ready": R, "dms_today": D, "dm_target": 10, ...}`.
-Each job carries `tracker_id`, `company`, `title`, `location`, `url`,
-`cold_dm` (the note I have already written for it), `recruiters_search_url`
-and `hiring_managers_search_url`. **Only these jobs get a cold DM** — never pick
-a company yourself, and never write a note for a job that is not on the list.
-`not_ready` counts due jobs whose note is not written yet; leave them alone.
-
-- If `dms_today` is already 10 or more, Phase 2 is done.
-- If the request fails, retry it twice. If it still fails, Phase 2 cannot run:
-  note it under Issues and finish with the summary.
-
-### For each job on the list, in order
-
-1. **Find one person — work down this list until someone checks out.** Whoever
-   you land on must **currently** work at that exact company, with their own
-   headline or current Experience entry saying so. Open at most five profiles
-   per job.
-   1. **If the job's `url` is a LinkedIn posting, open it first and use the
-      person who posted it.** Nothing is applied to on LinkedIn any more, so
-      this covers the jobs already in my tracker from before that change —
-      still a third of the cold-DM list, and the only ones that name a person,
-      so do not skip the check on them. The posting carries a **"Meet the
-      hiring team"** block near the bottom naming one person and tagging them
-      **"Job poster"** — usually a recruiter or talent-acquisition
-      executive. **That person is the recipient. They posted this job, so
-      they are the one reading replies about it** — use them and do not
-      search for anyone else. The block stays on the posting even after it
-      says "No longer accepting applications", so look for it whatever the
-      posting's state.
-
-      **Never take a name from "People you can reach out to" or "Recent
-      <role> hires at <company>".** Those are LinkedIn's guesses at employees
-      and alumni you might know — not the person hiring for this job. Only
-      the "Job poster" named under "Meet the hiring team" counts here.
-
-      **This step is LinkedIn only — Indeed and Wellfound have no
-      equivalent.** Their listings name the company, not a person: a
-      Wellfound job shows the company avatar and at most a "Recruiter
-      recently active" status with no name behind it. So for an Indeed or
-      Wellfound job, do not go hunting on the posting — go straight to
-      step 2. **Every job from now on is one of those two**, so step 2 is the
-      normal starting point and this step is the exception, not the rule. If one ever does name somebody, that name is a lead and not a
-      recipient: find them on LinkedIn and hold them to the same bar as
-      anyone else before sending, because the cold DM is a LinkedIn
-      connection note and a name with no LinkedIn profile behind it cannot
-      receive one.
-   2. **A non-LinkedIn job, or no poster named on the posting?** Then open
-      `recruiters_search_url` and look for a recruiter, talent-acquisition or
-      HR person.
-   3. No recruiter? Open `hiring_managers_search_url` and look for someone
-      who currently leads the team the role sits in.
-   4. Still nobody, and it is a small company or startup? A **founder,
-      co-founder, CTO or head of engineering** is the right person — at that
-      size they do the hiring themselves.
-
-   Only skip the job when every step above comes up empty, and then list it
-   under "Cold DMs not sent" with which steps you tried. A verified founder
-   beats no message at all; a guessed person is still never acceptable — the
-   bar is "their profile shows they work there now", not "the name looks
-   plausible".
-2. **Check the connection first.** If we are already connected, or an
-   invitation is already Pending, skip the job. Never withdraw and re-invite.
-   Never invite the same person twice in a run, even for a different job.
-3. **Write the note from the job's `cold_dm`.** Use it as it is, changing only:
-   - **`[FIRST NAME]` → this person's actual first name**, exactly as their
-     profile spells it. The stored note opens `Hi [FIRST NAME], ` and that
-     token is the only thing standing between a personal note and one addressed
-     to nobody — replace it, never delete it. "Hi, I recently applied…" is a
-     complete-looking sentence, which is exactly why a missed replacement slips
-     through unnoticed.
-   - the exact company and role, if the stored note has them slightly off;
-   - the length, to fit the character limit LinkedIn shows in the note box,
-     spaces included — shorten and recheck until it fits, **after** substituting
-     the name, since the real name changes the count.
-
-   Never add a fact the note and my resume do not support, never claim an
-   attachment, and never send an invitation without a note.
-4. **Read the note back before you click Send.** It must start with this
-   person's real first name, and must contain no square-bracket placeholder
-   left in it. A note still holding `[FIRST NAME]`, or opening with a bare `Hi,`, is **not
-   finished — do not send it**: go back to step 3 and put the name in. This
-   check costs two seconds and is the difference between a personal note and
-   one that reads as a mail-merge failure to a founder.
-5. **Send it yourself.** Connect (under "More" if it is not shown) → Add a note
-   → your note → Send. My message at the top of this conversation already asked
-   you to send these without checking with me, so **do not ask me before
-   sending**.
-6. **Check it went.** The button turns to Pending, or LinkedIn confirms the
-   invitation was sent. If you cannot tell, look at My Network → Sent
-   invitations before doing anything else — never send a second one blindly.
-7. **Record it immediately:**
-
-```
-POST {{cold_dm_record_url}}
-Content-Type: application/json
-
-{
-  "tracker_id": 123,
-  "recipient_name": "Priya Sharma",
-  "recipient_profile_url": "https://www.linkedin.com/in/priya-sharma/",
-  "note": "<the exact note you sent>"
-}
-```
-
-   The response is `{"recorded": true, "duplicate": false, "dms_today": D, "dm_target": 10}`.
-   `duplicate: true` means that job already had a DM recorded — note it and move
-   on. **If the POST fails after the invitation went, retry only the POST —
-   never re-send the invitation.** If it still fails, list it under Not Recorded
-   and carry on.
-8. **Wait 30–60 seconds** before the next invitation, as you do between
-   applications.
-
-**Only a confirmed, recorded invitation counts.** Use `dms_today` from the
-record responses: when it reaches 10, stop sending. If it is ever missing or
-`null`, add your own confirmed sends to the `dms_today` you started with.
-
-### When Phase 2 ends
-
-- **10 cold DMs today** — done.
-- **The list runs out first** — fetch it once more, since notes get written
-  during the day. If nothing new is on it, Phase 2 is done with fewer than 10;
-  say how many were not ready (`not_ready`) in the summary.
-- **LinkedIn pushes back** — an invitation limit, a warning, a restriction, a
-  CAPTCHA, or "Add a note" no longer offered because the note allowance is used
-  up. Stop sending at once, for the day: pushing on risks my account. Put what
-  LinkedIn said under Issues.
-
-Then go straight on to PHASE 3. Until the run ends, as in Phase 1, send me
-nothing.
-
-## PHASE 3 — FOLLOW-UPS: 10 LINKEDIN MESSAGES A DAY
-
-Start this as soon as Phase 2 is over. Same browser, same LinkedIn tab. **My
-target is 10 follow-ups a day.** A follow-up is a LinkedIn *message* to someone
-who already accepted a Cold DM invitation — not a new invitation, and not
-InMail.
-
-**THE CADENCE.** Day 1 the job enters the Tracker. Day 8 is the connection
-note. Day 16 is the single follow-up round, and the last: once it is recorded
-the record is marked Ghosted. Only work a card whose saved follow-up date is
-actually due in Asia/Kolkata. Never change a date to make one due, and never
-send a round early because a draft exists.
-
-**IT IS CONDITIONAL ON THEM HAVING ACCEPTED.** LinkedIn only carries a direct
-message once the invitation has been accepted, so for every job, in this order:
-
-1. **Open the recorded profile URL first** — that exact URL, not a search and
-   not a guess.
-2. **Read the connection state there.**
-3. **Only if it shows you are connected** — they accepted the Cold DM
-   invitation — write and send.
-
-Pending, Connect, Withdrawn, ignored, or no recorded URL: **stop on that job.**
-Write nothing, send nothing, record nothing, and leave its date alone. It stays
-in the due queue and a later run picks it up once they accept, so an unaccepted
-invitation costs that job nothing — report it as "not accepted yet, left
-queued". Never send a second invitation, never withdraw and reinvite, and never
-treat a pending invitation as a delivered message. There is no fallback channel.
-
-### Work the queue
-
-1. Open the app at {{page_url}} and snapshot the **Follow-ups Due** section
-   once, including tracked jobs outside today's application batch. Click each
-   card to open its Tracker detail; never scan all companies or guess IDs.
-   Report broken links or load errors as blocked, not as an empty queue.
-2. Recheck the saved date in Asia/Kolkata and the recorded connection history:
-   at least seven calendar days since that connection was sent. Skip future
-   dates, terminal records and already-recorded rounds.
-3. Use the card's current **Follow-up draft** and its displayed number. Queued,
-   missing, stale or inconsistent with history: report pending draft and move
-   on. Never invent previous contact, replies or facts.
-4. Open the profile and check acceptance, as above. Then send the draft as a
-   message in the existing conversation. Never claim a resume is attached —
-   nothing can be attached to a LinkedIn message. Keep it to the greeting, the
-   one-line reminder, the question and the sign-off: they already read the
-   connection note, so do not restate the pitch, add a new fact, or send the
-   demo link again.
-5. **Send it yourself.** My message at the top of this conversation covers
-   these the same way it covers applications and cold DMs, so **do not ask me
-   before sending** — a question here ends the run.
-6. Read the conversation first so the same round does not go twice. After an
-   uncertain send, check the conversation; never blindly resend.
-7. **Record it only after a verified send:** fill *Sent follow-up message* with
-   the exact text, choose *Sent via*, and click **Record sent follow-up** on
-   that same Tracker detail. Check the new history row, number, channel,
-   message and timestamp. If logging is uncertain, inspect history before any
-   retry; never resend or record twice. At most one follow-up per record.
-8. **Stop at 10 sent** for the Asia/Kolkata day. Read the Dashboard's *Daily
-   Target — Follow-ups* card first and subtract what today already has. Jobs
-   left queued for an unaccepted invitation do not count, so keep going past
-   them. Once 10 are sent and recorded, stop and report the rest as deferred.
-
-### When Phase 3 ends
-
-- **10 follow-ups today** — done.
-- **The queue runs out first** — done with fewer; say how many were waiting on
-  a draft or a recipient.
-- **LinkedIn pushes back** — a warning, a restriction or a CAPTCHA. Stop for
-  the day and put what LinkedIn said under Issues.
-
-Then give me the summary, and not before.
-
 ## SAFETY RULES
 
 1. Never invent skills, experience, metrics, or qualifications
@@ -1184,11 +954,11 @@ Then give me the summary, and not before.
 
 ## SUMMARY — WHEN I STOP YOU
 
-The run ends when PHASE 3 ends — after all three of today's targets, 10
-applications, then 10 cold DMs, then 10 follow-ups. Produce this summary
+The run ends when today's 10 applications are recorded, or when two full
+passes find nothing left to apply to. Produce this summary
 **only** when your turn ends for one of the reasons in KEEP GOING UNTIL I SAY
-STOP — Phase 3 is finished or I tell you to stop. Never produce it, or any part of it, as a
-per-portal or end-of-Phase-1 update: that message is what stops the run. A turn the app forces to end gets the one-line
+STOP. Never produce it, or any part of it, as a
+per-portal update: that message is what stops the run. A turn the app forces to end gets the one-line
 pause notice instead, not this.
 
 When I stop you, present:
@@ -1204,12 +974,10 @@ When I stop you, present:
 - Passes completed over the portal list: N
 - Portals not reached this run: [none, or which ones]
 
-- Cold DMs: X sent this run, D of 10 today, N on the list, R not ready yet
-
 ### Applied Jobs (all recorded in the tracker)
 | # | Portal | Company | Title | Location | URL |
 |---|--------|---------|-------|----------|-----|
-| 1 | LinkedIn | Acme AI | ML Engineer | Bangalore | [link] |
+| 1 | Wellfound | Acme AI | ML Engineer | Bangalore | [link] |
 | ... |
 
 ### Skipped Jobs (with reasons)
@@ -1227,18 +995,8 @@ When I stop you, present:
 ### Signed in with Google / LinkedIn / Indeed
 - [Each site where you used one of those sign-ins to apply]
 
-### Cold DMs sent
-| # | Company | Role | Recipient | Profile URL |
-|---|---------|------|-----------|-------------|
-| 1 | Acme AI | ML Engineer | Priya Sharma (Talent Acquisition) | [link] |
-| ... |
-
-### Cold DMs not sent
-- [Each listed job skipped in Phase 2, and why: no verified person, already
-  connected, invitation pending]
-
 ### Not Recorded
-- [Any job or cold DM whose POST failed, so I can add it manually]
+- [Any job whose POST failed, so I can add it manually]
 
 ### Issues
 - [Any CAPTCHAs, OTP prompts, errors, portal problems encountered, and the jobs
@@ -1257,8 +1015,7 @@ one.
 Apply to everything that passes the rules on both portals, without
 asking me first, and when you reach the last allowed portal go back to the
 first and start the next pass.
-Keep going until today's target of 10 applications is met, then go straight on
-to PHASE 2 and send today's 10 cold DMs, then PHASE 3 and today's 10
-follow-ups, then stop.
+Keep going until today's target of 10 applications is met, then stop. The
+cold DMs and follow-ups are a separate prompt — do not start them here.
 **Send me nothing until then** — no progress updates, no questions, no
-per-portal or end-of-phase notes. Everything goes in the summary.
+per-portal notes. Everything goes in the summary.
