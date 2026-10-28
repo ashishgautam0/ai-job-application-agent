@@ -13,7 +13,7 @@ import profile as profile_data
 # The prompt works LinkedIn, Indeed and Wellfound while those three are tuned.
 # The other portals are paused, not dropped: the recording endpoint still
 # accepts them, so they can return to the prompt without a backend change.
-PORTAL_SOURCES = ("LinkedIn", "Indeed", "Wellfound")
+PORTAL_SOURCES = ("Indeed", "Wellfound")
 PAUSED_SOURCES = ("Naukri", "Instahyre", "Cutshort", "Shine",
                   "Glassdoor", "FirstNaukri", "Unstop", "Apna")
 
@@ -451,7 +451,7 @@ class DesktopPromptTests(unittest.TestCase):
         self.assertIn("Resume.pdf", result["content"])
 
     # All three are browser portals the agent applies on.
-    APPLY_PORTALS = ("LINKEDIN", "WELLFOUND", "INDEED")
+    APPLY_PORTALS = ("WELLFOUND", "INDEED")
     PORTALS = APPLY_PORTALS
 
     def test_prompt_covers_every_portal_dedup_tracker_and_no_caps(self):
@@ -567,7 +567,7 @@ class DesktopPromptTests(unittest.TestCase):
         for portal in PORTAL_SOURCES:
             with self.subTest(portal=portal):
                 self.assertIn(portal, step2)
-        self.assertIn("all three portals", step2)
+        self.assertIn("both portals", step2)
         # Every source is recorded by the run itself — no portal is carved out
         # into something the user records by hand.
         self.assertNotIn("only ever used for", step2)
@@ -588,7 +588,7 @@ class DesktopPromptTests(unittest.TestCase):
                                       f"{name} relaxes a rule without deferring to TITLE RULES")
 
     def test_paused_portals_are_neither_searched_nor_recorded_as_skips(self):
-        """Only LinkedIn, Indeed and Wellfound are worked for now. A posting that hands
+        """Only Indeed and Wellfound are worked for now. A posting that hands
         off to another job board is left unrecorded, not skipped, so it stays
         reachable once that portal returns to the prompt."""
         order = self.prompt.split("Work them in this order:", 1)[1].split("###", 1)[0]
@@ -600,8 +600,8 @@ class DesktopPromptTests(unittest.TestCase):
                                     re.compile(rf"^### \d+\. {portal.upper()}", re.M))
                 self.assertNotIn(portal, step2)
                 self.assertNotIn(portal, summary)
-        self.assertNotIn("Naukri", order.split("**Only these three portals", 1)[0])
-        self.assertIn("**Only these three portals for now.**", order)
+        self.assertNotIn("Naukri", order.split("**Only these two portals", 1)[0])
+        self.assertIn("**Only these two portals for now.**", order)
         self.assertIn("*another job board* to apply, leave it unrecorded", order)
         self.assertIn("An employer's own site or ATS is\nstill fine", order)
         self.assertNotIn("eleven", self.prompt)
@@ -625,10 +625,10 @@ class DesktopPromptTests(unittest.TestCase):
     def test_wellfound_searches_the_country_not_the_home_city(self):
         """Noida is where the owner lives, not the search area; a city filter
         collapses Wellfound's results."""
-        section = self.prompt.split("### 2. WELLFOUND", 1)[1].split("### 3.", 1)[0]
+        section = self.prompt.split("### 1. WELLFOUND", 1)[1].split("### 2.", 1)[0]
         self.assertIn("Set **Location = India** — the country, not a\n   city.", section)
         self.assertIn("Do not type Noida or any other city here", section)
-        self.assertIn("**Every rule that governs LinkedIn governs Wellfound too**", section)
+        self.assertIn("**Every shared rule governs Wellfound too**", section)
 
     def test_summary_and_run_order_cover_every_portal(self):
         summary = self.prompt.split("## SUMMARY — WHEN I STOP YOU", 1)[1]
@@ -727,7 +727,7 @@ class DesktopPromptTests(unittest.TestCase):
         gone, so the section has to carry the browser apply flow — open, both
         apply controls, record, pace — or the run reaches Indeed and does
         nothing on it."""
-        indeed = self.prompt.split("### 3. INDEED", 1)[1].split("## FORM FILLING", 1)[0]
+        indeed = self.prompt.split("### 2. INDEED", 1)[1].split("## FORM FILLING", 1)[0]
         for required in ("Open `in.indeed.com` in my browser",
                          "worked in the browser and applied to, exactly like the other two",
                          # Both apply routes. "Apply on company site" is most
@@ -762,12 +762,14 @@ class DesktopPromptTests(unittest.TestCase):
         target each carved it out. An apply portal with those carve-outs left
         in place would apply and then not record, or record and not count."""
         step2 = self.prompt.split("STEP 2 — RECORD EVERY JOB", 1)[1].split("## KEEP GOING", 1)[0]
-        self.assertIn("the same call on **all three portals** — LinkedIn, Wellfound and Indeed",
-                      step2)
+        self.assertIn("the same call on **both portals** — Wellfound and Indeed", step2)
+        # A new record may never claim LinkedIn again, but the old ones stand.
+        self.assertIn("Never `LinkedIn`", step2)
+        self.assertIn("older `LinkedIn` records in my tracker stay as they", step2)
         self.assertNotIn("only once I have told you", step2)
         self.assertNotIn("`Indeed` is only ever used for", step2)
         target = self.prompt.split("### DAILY TARGET", 1)[1].split("###", 1)[0]
-        self.assertIn("across LinkedIn, Wellfound and Indeed\ntogether.", target)
+        self.assertIn("across Wellfound and Indeed\ntogether.", target)
         self.assertNotIn("Indeed is find-only", target)
         # The browser-only rule no longer has a connector carve-out to widen
         # it — Indeed is opened in the browser like every other job site.
@@ -776,15 +778,16 @@ class DesktopPromptTests(unittest.TestCase):
         self.assertIn("tracker\n  API endpoints and my resume download.", blockers)
         self.assertNotIn("Indeed connector", blockers)
 
-    def test_the_portal_sections_are_ordered_and_all_three_apply(self):
-        """The order is just the order of the passes now — no portal is the
+    def test_the_portal_sections_are_ordered_and_both_apply(self):
+        """The order is just the order of the passes — no portal is the
         odd one out, so nothing may describe one as not applying."""
         order = self.prompt.split("Work them in this order:", 1)[1].split("###", 1)[0]
-        self.assertIn("LinkedIn → Wellfound → Indeed", order)
-        self.assertIn("All three are browser\nportals you apply on", order)
+        self.assertIn("Wellfound → Indeed", order)
+        self.assertNotIn("LinkedIn →", order)
+        self.assertIn("Both are browser portals you\napply on", order)
         self.assertNotIn("never competes with the applications for time", order)
         headings = re.findall(r"^### (\d)\. (\w+)", self.prompt, flags=re.MULTILINE)
-        self.assertEqual(headings, [("1", "LINKEDIN"), ("2", "WELLFOUND"), ("3", "INDEED")])
+        self.assertEqual(headings, [("1", "WELLFOUND"), ("2", "INDEED")])
 
     def test_one_prompt_runs_all_three_phases_end_to_end(self):
         """The follow-up used to be a second prompt in Settings, pasted into a
@@ -831,7 +834,7 @@ class DesktopPromptTests(unittest.TestCase):
         listings carry the requirement in a meta line beside job type and
         salary, which the description below often never repeats, so an agent
         reading only the paragraphs never sees it."""
-        section = self.prompt.split("### 2. WELLFOUND", 1)[1].split("### 3.", 1)[0]
+        section = self.prompt.split("### 1. WELLFOUND", 1)[1].split("### 2.", 1)[0]
         for required in (
             "Read the experience requirement off the listing itself",
             "that line is the requirement even when the description",
@@ -850,34 +853,45 @@ class DesktopPromptTests(unittest.TestCase):
         """61 of 78 stored Wellfound jobs had no description at all, which is
         both how the experience bar went unchecked and why the cold DM and
         demo agents had nothing to write from."""
-        section = self.prompt.split("### 2. WELLFOUND", 1)[1].split("### 3.", 1)[0]
+        section = self.prompt.split("### 1. WELLFOUND", 1)[1].split("### 2.", 1)[0]
         self.assertIn("copy the listing's description text into\n      `description`", section)
         self.assertIn("including that meta line with the experience\n      requirement", section)
         # Empty stays allowed; a summary never is.
         self.assertIn("send it empty rather than\n      writing a summary", section)
 
     def test_the_browser_portals_search_the_last_24_hours(self):
-        linkedin = self.prompt.split("### 1. LINKEDIN", 1)[1].split("### 2.", 1)[0]
-        self.assertIn("Past 24 hours", linkedin)
-        self.assertNotIn("Past week", linkedin)
+        wellfound = self.prompt.split("### 1. WELLFOUND", 1)[1].split("### 2.", 1)[0]
+        self.assertIn("most\n   recent date filter available", wellfound)
+        self.assertNotIn("Past week", self.prompt)
         # Indeed sets the same filter in the browser now. Its filter set is
         # unreliable, so the section also has to say what to do when the
         # control will not take, or stale jobs come back in through Indeed.
-        indeed = self.prompt.split("### 3. INDEED", 1)[1].split("## FORM FILLING", 1)[0]
+        indeed = self.prompt.split("### 2. INDEED", 1)[1].split("## FORM FILLING", 1)[0]
         self.assertIn("**Date posted = Last 24 hours**", indeed)
         self.assertIn("read the posted date off\n   each listing", indeed)
         self.assertIn("never widen the window to fill the list", indeed)
 
-    def test_linkedin_does_not_filter_to_easy_apply(self):
-        """The Easy Apply filter hides jobs that apply on the company's site,
-        which are exactly the ones this run should still reach."""
-        linkedin = self.prompt.split("### 1. LINKEDIN", 1)[1].split("### 2.", 1)[0]
-        self.assertIn('Do NOT turn on the "Easy Apply" filter', linkedin)
-        for required in ("Lever, Workday, SmartRecruiters",
-                         'click "Yes" on the "Did you apply?" prompt',
-                         "never click Yes for an"):
-            with self.subTest(rule=required):
-                self.assertIn(required, linkedin)
+    def test_linkedin_is_not_a_job_portal(self):
+        """LinkedIn stopped being a portal the run searches and applies on. It
+        is still opened for the Phase 2/3 outreach, so it cannot simply be
+        struck out everywhere — the prompt has to draw that line itself, or an
+        agent that reads "be logged into LinkedIn" starts searching its jobs."""
+        self.assertNotIn("### 1. LINKEDIN", self.prompt)
+        self.assertNotIn("linkedin.com/jobs", self.prompt)
+        self.assertNotIn("Easy Apply", self.prompt)
+        order = self.prompt.split("## PORTAL-BY-PORTAL", 1)[1].split("### 1.", 1)[0]
+        for required in ("**LinkedIn is not a job\nportal in this run**",
+                         "do not search LinkedIn",
+                         "it is used only in PHASE 2 and PHASE 3"):
+            with self.subTest(required=required):
+                self.assertIn(required, order)
+        # The login is still needed, and the prompt says what for.
+        opening = self.prompt.split("# Job Search", 1)[1].split("## WHO YOU ARE", 1)[0]
+        self.assertIn("**Be logged into LinkedIn too**", opening)
+        self.assertIn("no jobs are searched", opening)
+        # A new record must never claim LinkedIn as its source again.
+        step2 = self.prompt.split("STEP 2 — RECORD EVERY JOB", 1)[1].split("## KEEP GOING", 1)[0]
+        self.assertIn("Never `LinkedIn`", step2)
 
     def test_gender_is_answered_and_other_demographics_are_declined(self):
         """Supplying gender must not license inventing race, disability or
@@ -1015,7 +1029,7 @@ class DesktopPromptTests(unittest.TestCase):
             with self.subTest(query=banned):
                 self.assertNotIn(banned, queries)
         self.assertIn("**Never run a data-science search on any portal.**", search)
-        for portal in ("LinkedIn", "Indeed", "Wellfound"):
+        for portal in ("Indeed", "Wellfound"):
             with self.subTest(portal=portal):
                 self.assertIn(portal, search)
 
@@ -1059,16 +1073,24 @@ class DesktopPromptTests(unittest.TestCase):
         first results page."""
         search = self.prompt.split("## WHAT TO SEARCH", 1)[1].split("## TITLE RULES", 1)[0]
         self.assertNotIn("7 days", self.prompt)
-        self.assertIn("**Date posted = Past 24 hours**", search)
-        self.assertIn("**Entry level** and **Associate**", search)
+        # LinkedIn's filter row went with its portal section; Indeed's is the
+        # one stated in the shared search rules now.
+        self.assertIn("**Date posted = Last 24 hours**", search)
+        self.assertIn("= **Entry Level**", search)
+        self.assertNotIn("**LinkedIn**:", search)
         self.assertIn("**Go through every results page, not just the first.**", search)
         # Paging is a browser chore on every portal, Indeed included — its
         # good listings sit on page 2 and beyond.
-        self.assertIn('Indeed\'s "Next" arrow', search)
+        self.assertIn('Indeed\'s "Next"\narrow', search)
         self.assertNotIn("returns its results in one response", search)
-        section = self.prompt.split("### 1. LINKEDIN\n", 1)[1].split("\n### ", 1)[0]
-        self.assertIn("go to the next results page", section)
-        self.assertIn("Keep paging until there is no next page", section)
+        # Both portal sections carry the paging step themselves, so neither
+        # stops at page 1 if the shared rule above is skimmed.
+        wellfound = self.prompt.split("### 1. WELLFOUND\n", 1)[1].split("\n### ", 1)[0]
+        self.assertIn("go to the next page of results", wellfound)
+        self.assertIn("Keep paging until there is none", wellfound)
+        indeed = self.prompt.split("### 2. INDEED", 1)[1].split("## FORM FILLING", 1)[0]
+        self.assertIn('click Indeed\'s "Next" arrow', indeed)
+        self.assertIn("Keep paging until there is no next page", indeed)
 
     def test_sign_in_is_never_a_silent_skip_and_its_terms_are_accepted(self):
         """"Login required: stop that job" dropped jobs silently. A sign-in
@@ -1121,9 +1143,9 @@ class DesktopPromptTests(unittest.TestCase):
         tracker so earlier runs that day count, then stop."""
         keep_going = self.prompt.split("## KEEP GOING UNTIL I SAY STOP", 1)[1] \
                                 .split("## SAFETY RULES", 1)[0]
-        for required in ("**My target is 10 applications a day, across LinkedIn, Wellfound and Indeed\ntogether.**",
-                         # No portal is counted differently from the others.
-                         "All three count the same way",
+        for required in ("**My target is 10 applications a day, across Wellfound and Indeed\ntogether.**",
+                         # Neither portal is counted differently from the other.
+                         "Both count the same way",
                          "do not\nstart another application once it does",
                          "**Only a confirmed submission counts**",
                          "**Use the tracker's number, not your own tally.**",
@@ -1220,19 +1242,19 @@ class DesktopPromptTests(unittest.TestCase):
         self.assertIn("*which* sponsorship or visa type", answers)
 
     def test_every_apply_route_on_both_portals_is_submitted_without_asking(self):
-        """Easy Apply and company-site redirects on both portals are all
-        submitted by the agent; a redirect must not read as a new application
-        that needs fresh permission."""
+        """Both portals' own apply forms and their company-site redirects are
+        all submitted by the agent; a redirect must not read as a new
+        application that needs fresh permission."""
         section = self.prompt.split("### DO NOT ASK ME BEFORE SUBMITTING", 1)[1] \
                              .split("**Do not ask me anything mid-run.", 1)[0]
-        for route in ("LinkedIn **Easy Apply**",
-                      "LinkedIn **Apply** → company site or ATS",
+        for route in ("Indeed **Apply now**",
+                      "Either portal's **Apply on company site** → ATS",
                       "Wellfound **Apply**"):
             with self.subTest(route=route):
                 self.assertIn(route, section)
-        # Indeed is find-only, so it must not appear as a route that gets
-        # submitted without asking.
-        self.assertNotIn("Indeed **Apply", section)
+        # Nothing is applied to on LinkedIn, so it must not appear as a route
+        # that gets submitted without asking.
+        self.assertNotIn("LinkedIn", section)
         self.assertIn("click the final Submit yourself", section)
         self.assertIn("A redirect to the company's site does not reset any of this", section)
 
@@ -1261,8 +1283,8 @@ class DesktopPromptTests(unittest.TestCase):
         quoted = " ".join(line[2:].strip() for line in opening.splitlines()
                           if line.startswith("> "))
         self.assertEqual(starter, quoted)
-        for phrase in ("LinkedIn Easy Apply", "Wellfound Apply", "Indeed Apply",
-                       "on LinkedIn, Wellfound and Indeed",
+        for phrase in ("Wellfound Apply", "Indeed Apply",
+                       "on Wellfound and Indeed",
                        "the company's own site when a job redirects there",
                        "Submit each one yourself without asking me first",
                        # the tool asked per job before sending a phone number
