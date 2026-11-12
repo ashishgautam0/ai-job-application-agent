@@ -29,7 +29,10 @@ import type {
   DesktopPromptKind,
 } from "./types";
 
-export const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
+// Always use relative URLs so every request goes through the Next.js
+// rewrite (next.config.ts), which proxies to the backend server-side.
+// This avoids CORS issues across Vercel deployment URLs.
+export const API_URL = "";
 
 async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
   const headers: Record<string, string> = {
