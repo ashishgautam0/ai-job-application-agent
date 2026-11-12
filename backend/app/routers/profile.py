@@ -97,7 +97,10 @@ def _remove_obsolete_application_pdfs(source_sha256):
 
 
 def _application_pdf_metadata():
-    latest = get_latest_profile_snapshot(_DEFAULT_USERNAME)
+    try:
+        latest = get_latest_profile_snapshot(_DEFAULT_USERNAME)
+    except RuntimeError:
+        return None
     if not latest:
         return None
     path = _application_path(latest.get("source_sha256"))
@@ -183,7 +186,11 @@ def _company_exclusions():
 
 @router.get("/company-exclusions", response_model=CompanyExclusionsResponse)
 def read_company_exclusions():
-    return CompanyExclusionsResponse(companies=_company_exclusions())
+    try:
+        companies = _company_exclusions()
+    except RuntimeError:
+        companies = []
+    return CompanyExclusionsResponse(companies=companies)
 
 
 @router.put("/company-exclusions", response_model=CompanyExclusionsResponse)
@@ -381,8 +388,12 @@ def _review_corrections(row, body):
 
 @router.get("/resume", response_model=ResumeProfileStatusResponse)
 def resume_status():
-    active = get_active_profile_snapshot(_DEFAULT_USERNAME)
-    latest = get_latest_profile_snapshot(_DEFAULT_USERNAME)
+    try:
+        active = get_active_profile_snapshot(_DEFAULT_USERNAME)
+        latest = get_latest_profile_snapshot(_DEFAULT_USERNAME)
+    except RuntimeError:
+        active = None
+        latest = None
     return {"active": _public_snapshot(active), "latest": _public_snapshot(latest)}
 
 
@@ -602,7 +613,10 @@ def _excluded_company_lines():
     reaches it one way only: written into its prompt. Nothing else filters
     these employers out any more.
     """
-    companies = _company_exclusions()
+    try:
+        companies = _company_exclusions()
+    except RuntimeError:
+        companies = []
     if not companies:
         return "- (No companies are excluded.)"
     return "\n".join(f"- {name}" for name in companies)
