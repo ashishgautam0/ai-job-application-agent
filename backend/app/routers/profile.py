@@ -441,7 +441,10 @@ async def upload_resume(file: UploadFile = File(...)):
         pages_with_text=sum(bool(text) for text in page_text),
     )
     digest = hashlib.sha256(raw).hexdigest()
-    previous = get_latest_profile_snapshot(_DEFAULT_USERNAME)
+    try:
+        previous = get_latest_profile_snapshot(_DEFAULT_USERNAME)
+    except Exception:
+        previous = None
     previous_digest = (previous or {}).get("source_sha256")
     try:
         _store_application_pdf(raw, digest)
@@ -455,7 +458,10 @@ async def upload_resume(file: UploadFile = File(...)):
                 _storage_client().storage.from_(_PDF_BUCKET).remove([_application_path(digest)])
             except Exception:
                 pass
-        raise
+        raise HTTPException(
+            status_code=503,
+            detail="The database is temporarily unavailable. Please try again in a few minutes.",
+        )
     if not saved:
         if digest != previous_digest:
             try:

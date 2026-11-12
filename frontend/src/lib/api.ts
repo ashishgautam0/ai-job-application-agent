@@ -313,11 +313,15 @@ export async function uploadResumePdf(file: File): Promise<ResumeProfile> {
   if (!res.ok) {
     let message = `Upload failed: ${res.status}`;
     try {
-      const body = await res.json();
-      if (typeof body.detail === "string") message = body.detail;
+      const text = await res.text();
+      try {
+        const body = JSON.parse(text);
+        if (typeof body.detail === "string") message = body.detail;
+      } catch {
+        if (text) message = text;
+      }
     } catch {
-      const body = await res.text();
-      if (body) message = body;
+      // body unreadable
     }
     throw new Error(message);
   }
