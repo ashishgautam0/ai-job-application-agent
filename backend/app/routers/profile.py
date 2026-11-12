@@ -99,7 +99,7 @@ def _remove_obsolete_application_pdfs(source_sha256):
 def _application_pdf_metadata():
     try:
         latest = get_latest_profile_snapshot(_DEFAULT_USERNAME)
-    except RuntimeError:
+    except Exception:
         return None
     if not latest:
         return None
@@ -188,7 +188,7 @@ def _company_exclusions():
 def read_company_exclusions():
     try:
         companies = _company_exclusions()
-    except RuntimeError:
+    except Exception:
         companies = []
     return CompanyExclusionsResponse(companies=companies)
 
@@ -391,7 +391,7 @@ def resume_status():
     try:
         active = get_active_profile_snapshot(_DEFAULT_USERNAME)
         latest = get_latest_profile_snapshot(_DEFAULT_USERNAME)
-    except RuntimeError:
+    except Exception:
         active = None
         latest = None
     return {"active": _public_snapshot(active), "latest": _public_snapshot(latest)}
@@ -615,7 +615,7 @@ def _excluded_company_lines():
     """
     try:
         companies = _company_exclusions()
-    except RuntimeError:
+    except Exception:
         companies = []
     if not companies:
         return "- (No companies are excluded.)"
