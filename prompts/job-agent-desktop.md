@@ -244,6 +244,16 @@ marked internship only in the job-type field, and the filter is what surfaces
 them. Without the filter, do not run these — they return full-time jobs, every
 one of which is a skip, and reading them is time not spent on internships.
 
+**Then run a trainee pass with the job-type filter OFF.** Trainee and
+apprentice postings count as internships here (see IS IT AN INTERNSHIP), but
+portals often type them as full-time, so the Internship filter hides the very
+postings this pass is for. Turn it off and run **"AI/ML Trainee",
+"Machine Learning Trainee", "AI Trainee", "ML Apprentice", "Graduate
+Trainee"** as their own searches. The title is the evidence on this pass, so
+nothing else loosens: a result whose title carries neither trainee,
+apprentice nor intern is a full-time job and a skip, and every other rule
+applies unchanged. Turn the filter back on for the next query.
+
 **Never run a data-science search on any portal.** Do not type "Data
 Scientist", "Data Science", "Data Analyst" or "Data Science Intern" into
 Indeed or
@@ -280,6 +290,11 @@ jobs at all.
 - The **title** says Intern or Internship.
 - The **description** calls it an internship — "internship programme",
   "6-month internship", "summer intern", "this internship".
+- The **title says Trainee or Apprentice**. In India these are routinely used
+  for the same thing an internship is, so they count here — "AI/ML Trainee",
+  "ML Apprentice", "Graduate Trainee" are all in. This is a deliberate
+  exception to "silence means full-time": these two words are evidence on
+  their own, where a plain engineering title is not.
 
 **It is a full-time job, and a skip, when:**
 - Nothing in the posting calls it an internship. **Silence means full-time.**
@@ -289,10 +304,11 @@ jobs at all.
   "Gen AI Engineer" — and the job type field does not say internship. A
   perfect AI/ML role at a company I would love is still a skip. That is the
   whole point of this run.
-- **It says Trainee, Apprentice, Graduate Engineer or New Grad but never says
-  internship.** These sound early-career but they are full-time jobs, so they
-  are skips. Only "Graduate Intern" or a trainee posting that calls itself an
-  internship qualifies.
+- **It says Graduate Engineer or New Grad but never says internship, intern,
+  trainee or apprentice.** These two are permanent headcount on a full salary
+  — early-career, but a job — so they are skips. "Graduate Engineer" is out;
+  "Graduate Trainee" and "Graduate Intern" are in, because trainee and intern
+  are the words that carry the meaning.
 - It is a full-time offer with an internship-to-hire path — "intern first,
   then full-time", "6-month probation then permanent". The posting is for the
   full-time role; skip it.
@@ -370,9 +386,12 @@ INTERNSHIP above. Nothing here rescues a full-time job.
 - The title still has to clear every other rule: an "ML Intern" is a keep, a
   "Data Science Intern" is a skip under the data-science reject, and a
   "Senior ML Intern" is a skip on seniority.
-- **Trainee, Apprentice, Graduate Engineer and New Grad are not internship
-  titles.** They are full-time work unless the posting itself says internship
-  — see IS IT AN INTERNSHIP.
+- **Trainee and Apprentice count as internship titles** — "AI/ML Trainee",
+  "ML Apprentice", "Graduate Trainee" are keeps, held to the same ₹20,000
+  floor and every other rule.
+- **Graduate Engineer and New Grad do not.** They are full-time work unless
+  the posting itself says internship, intern, trainee or apprentice — see
+  IS IT AN INTERNSHIP.
 
 **Research titles (keep only as an internship, AI/ML focused):**
 - Research Intern, Applied Science Intern, AI/ML Research Intern
@@ -459,7 +478,8 @@ Before applying, scan the JD for these red flags:
 - **Contract risk**: "contract", "freelance", "gig", "project-based",
   "temporary"
 - **Generic trainee**: "management trainee", "graduate trainee",
-  "fresher trainee"
+  "fresher trainee" — flag it, but a trainee posting is in scope now, so this
+  is a note on the record and never a reason to skip
 
 ### PAY FLOOR — HOW TO READ THE FIGURE
 
