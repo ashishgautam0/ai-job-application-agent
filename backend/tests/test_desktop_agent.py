@@ -834,14 +834,14 @@ class DesktopPromptTests(unittest.TestCase):
         nothing on it."""
         indeed = self.prompt.split("### 2. INDEED", 1)[1].split("## FORM FILLING", 1)[0]
         for required in ("Open `in.indeed.com` in my browser",
-                         "worked in the browser and applied to, exactly like the other two",
+                         "worked in the browser and applied to, exactly like Wellfound",
                          # Both apply routes. "Apply on company site" is most
                          # of the good Indeed listings, so it must not be the
                          # one that gets left.
                          '**"Apply now"**', '**"Apply on company site"**',
                          "EMPLOYER'S OWN SITE",
                          "never leave one just\n        because it is not an Indeed-hosted apply",
-                         # Same screening bar as the other two.
+                         # Same screening bar as Wellfound.
                          "TITLE RULES", "RED FLAGS",
                          "pay floor\n      and the MNC rule apply here exactly",
                          "Check the posting URL against the skip list",
@@ -861,6 +861,22 @@ class DesktopPromptTests(unittest.TestCase):
                        "apply to these yourself", "find-only", "find only"):
             with self.subTest(banned=banned):
                 self.assertNotIn(banned, indeed)
+
+    def test_no_section_counts_a_portal_that_is_no_longer_there(self):
+        """Indeed's section described itself three times as working "exactly
+        like the other two", left over from when LinkedIn made a third portal.
+        Wellfound plus Indeed is two, so "the other two" pointed at a portal
+        the run is explicitly fenced away from -- and the prompt names the one
+        it means now instead.
+
+        The count and the fence have to agree, or the agent is told to match a
+        portal it is forbidden to visit."""
+        for stale in ("the other two", "the other three", "all three portals",
+                      "three portals", "the third portal"):
+            with self.subTest(stale=stale):
+                self.assertNotIn(stale, self.prompt)
+        self.assertIn("**Only these two portals for now.**", self.prompt)
+        self.assertIn("Work them in this order: Wellfound \u2192 Indeed", self.prompt)
 
     def test_indeed_jobs_are_recorded_like_any_other_application(self):
         """While Indeed was find-only, STEP 2, the source field and the daily

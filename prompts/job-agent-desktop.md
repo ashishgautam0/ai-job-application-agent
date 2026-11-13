@@ -648,11 +648,11 @@ Indeed is a skip here.
 ### 2. INDEED INDIA
 
 1. Open `in.indeed.com` in my browser — I am already logged in. Indeed is
-   worked in the browser and applied to, exactly like the other two: nothing
+   worked in the browser and applied to, exactly like Wellfound: nothing
    here is listed for me to do by hand.
 2. Type the first search query in the "What" box and `India` in the "Where" box.
    Then set **Date posted = Last 24 hours** and **Experience level = Entry
-   Level**. The 24-hour cut is the same freshness bar as the other two portals
+   Level**. The 24-hour cut is the same freshness bar Wellfound gets
    and it is a hard cut: if the filter will not take, read the posted date off
    each listing and drop anything older yourself. Most runs will find few
    Indeed jobs this fresh, which is the expected result and not a failure —
@@ -665,7 +665,7 @@ Indeed is a skip here.
    b. Click the result to open the JD pane
    c. Read the title — check against TITLE RULES above
    d. Read the JD — check experience requirement and RED FLAGS. The pay floor
-      and the MNC rule apply here exactly as they do on the other two.
+      and the MNC rule apply here exactly as they do on Wellfound.
    e. If it passes all checks, use whatever apply control the listing offers:
       - **"Apply now"** is Indeed's own hosted application: step through the
         flow, confirm my contact details, upload my resume PDF, answer the
