@@ -16,7 +16,7 @@ import { toast } from "sonner";
 // prompt they belong to, which a test checks.
 const STARTER_MESSAGES: Record<DesktopPromptKind, string> = {
   applications:
-    "Apply to AI/ML jobs and internships for me on Wellfound and Indeed, using the instructions that follow. " +
+    "Apply to AI/ML internships for me on Wellfound and Indeed, using the instructions that follow. " +
     "You have my authorisation to fill in and submit the application forms and to upload my resume — " +
     "Wellfound Apply, Indeed Apply, and the company's own site when a job redirects there. " +
     "I consent to sharing " +
