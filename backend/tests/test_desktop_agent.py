@@ -428,7 +428,7 @@ class DesktopPromptTests(unittest.TestCase):
         typo in the client would hand the user the wrong run's instructions."""
         applications = self.render(resume={"filename": "r.pdf", "sha256": "a"})
         self.assertEqual(applications["kind"], "applications")
-        self.assertIn("# Job & Internship Auto-Apply Agent", applications["content"])
+        self.assertIn("# Internship Auto-Apply Agent", applications["content"])
         self.assertNotIn("## PART 1 — COLD DMs", applications["content"])
 
         outreach = self.render(resume={"filename": "r.pdf", "sha256": "a"}, kind="outreach")
@@ -916,7 +916,8 @@ class DesktopPromptTests(unittest.TestCase):
         the agent either stops early waiting for a phase that is not there or
         tries to run the other half without its instructions."""
         opening = self.prompt.split("## WHO YOU ARE", 1)[1].split("## MY PROFILE", 1)[0]
-        self.assertIn("**This run applies to jobs and internships, and nothing else.**", opening)
+        self.assertIn("**This run applies to internships only. Full-time jobs are out of scope.**",
+                      opening)
         self.assertIn("a separate prompt with its own run", opening)
         self.assertNotIn("three phases", self.prompt)
         keep_going = self.prompt.split("## KEEP GOING UNTIL I SAY STOP", 1)[1] \
@@ -974,8 +975,8 @@ class DesktopPromptTests(unittest.TestCase):
             # A friendly startup listing is not a reason to bend the ceiling.
             "happen to know does not lower the ceiling",
             # Filter it out at the source rather than catching each by hand.
-            "Set the experience filter to its lowest band",
-            "if\n   an experience filter exists, it is set",
+            "Then set the experience filter to its lowest band",
+            "if\n   a job-type or experience filter exists, it is set",
         ):
             with self.subTest(required=required):
                 self.assertIn(required, section)
@@ -1017,7 +1018,7 @@ class DesktopPromptTests(unittest.TestCase):
             with self.subTest(required=required):
                 self.assertIn(required, order)
         # The login is still needed, and the prompt says what for.
-        opening = self.prompt.split("# Job & Internship", 1)[1].split("## WHO YOU ARE", 1)[0]
+        opening = self.prompt.split("# Internship Auto-Apply", 1)[1].split("## WHO YOU ARE", 1)[0]
         self.assertIn("LinkedIn is not used here at all", opening)
         self.assertIn("separate outreach prompt", opening)
         # A new record must never claim LinkedIn as its source again.
@@ -1140,7 +1141,7 @@ class DesktopPromptTests(unittest.TestCase):
     def test_gen_ai_engineer_is_searched_first_under_every_spelling(self):
         search = self.prompt.split("## WHAT TO SEARCH", 1)[1].split("## TITLE RULES", 1)[0]
         first = search.split("1. ", 1)[1].split("\n2. ", 1)[0]
-        for spelling in ('"Gen AI Engineer"', '"GenAI Engineer"', '"Generative AI Engineer"'):
+        for spelling in ('"Gen AI Intern"', '"GenAI Intern"', '"Generative AI Intern"'):
             with self.subTest(spelling=spelling):
                 self.assertIn(spelling, first)
         keep = self.prompt.split("### KEEP (apply if JD also fits)", 1)[1].split("### DOMAIN", 1)[0]
@@ -1241,44 +1242,106 @@ class DesktopPromptTests(unittest.TestCase):
         self.assertIn("terms of service and privacy policy of any site you sign\ninto to apply",
                       terms)
 
-    def test_internships_are_applied_to_and_searched_for(self):
-        """Internships went from an unconditional reject to in scope. Flipping
-        the reject alone would be inert: the ten role queries barely surface
-        internships, so the run has to hunt for them on purpose."""
-        skip = self.prompt.split("### ALWAYS SKIP", 1)[1].split("### KEEP", 1)[0]
-        keep = self.prompt.split("### KEEP (apply if JD also fits)", 1)[1] \
+    def test_only_internships_are_applied_to_and_full_time_roles_are_skipped(self):
+        """Internships went from an unconditional reject, to in scope beside
+        jobs, to the whole run. A full-time AI/ML role is a skip now however
+        well it matches.
+
+        The scope test runs BEFORE the title rules, because a full-time "AI
+        Engineer" passes every title rule there is -- the title cannot be what
+        rejects it. And it reads silence the opposite way from the experience
+        rule: no mention of an internship means full-time, where no mention of
+        years means eligible. Both readings are deliberate and they sit a few
+        hundred lines apart, so each says which way it goes."""
+        scope = self.prompt.split("## IS IT AN INTERNSHIP \u2014 THE FIRST TEST", 1)[1] \
+                           .split("## TITLE RULES", 1)[0]
+        for required in ("is this posting an\ninternship?",
+                         "This run does not apply to full-time\njobs at all.",
+                         # The employer's own classification beats the title.
+                         "The portal's **job type field**",
+                         "better than the title, because it is the\n  employer's own classification",
+                         "**Silence means full-time.**",
+                         "This is the opposite of how the experience rule reads silence",
+                         # The case that would otherwise sail through.
+                         'The title is a plain engineering title \u2014 "AI Engineer"',
+                         "A\n  perfect AI/ML role at a company I would love is still a skip",
+                         # Early-career titles are full-time work.
+                         "**It says Trainee, Apprentice, Graduate Engineer or New Grad but never says\n  internship.**",
+                         "internship-to-hire path",
+                         '`"job_type": "Job"`'):
+            with self.subTest(required=required):
+                self.assertIn(required, scope)
+        # The title rules may not re-open what the scope test closed.
+        title_rules = self.prompt.split("## TITLE RULES", 1)[1].split("## EXPERIENCE RULES", 1)[0]
+        self.assertIn("**after** the posting has passed IS IT AN\nINTERNSHIP", title_rules)
+        self.assertIn("Nothing here rescues a full-time job.", title_rules)
+        keep = title_rules.split("### KEEP (apply if JD also fits)", 1)[1] \
                           .split("### DOMAIN KEYWORD GATE", 1)[0]
-        # Not a reject any more...
-        self.assertNotIn("Reject internships", skip)
-        # ...and a named keep, gated on pay rather than on the title.
-        self.assertIn("**Internships and early-career titles", keep)
-        self.assertIn("Intern, Internship, Trainee, Apprentice", keep)
-        self.assertIn("pays at least \u20b940,000 a month", keep)
-        self.assertIn("a skip on pay, not on the title", keep)
+        self.assertIn("**Internship titles \u2014 this is the whole run:**", keep)
+        self.assertIn("pays at least \u20b920,000 a\n  month", keep)
+        self.assertIn("**Trainee, Apprentice, Graduate Engineer and New Grad are not internship\n  titles.**", keep)
         # The other rules still bite: an AI word does not rescue a title.
         self.assertIn('a\n  "Data Science Intern" is a skip', keep)
         self.assertIn('"Senior ML Intern" is a skip on seniority', keep)
+        # The full-time research titles went with the rest.
+        self.assertIn("Research Intern, Applied Science Intern", keep)
+        self.assertIn("The full-time forms", keep)
+        # The old wording, from when jobs were in scope, must not survive.
+        for gone in ("**Internships and early-career titles",
+                     "Intern, Internship, Trainee, Apprentice, Graduate Engineer, New Grad",
+                     "**This run applies to jobs and internships, and nothing else.**",
+                     "Both count\nthe same way toward the target"):
+            with self.subTest(gone=gone):
+                self.assertNotIn(gone, self.prompt)
 
-        # The search pass, or the change finds nothing.
-        search = self.prompt.split("## WHAT TO SEARCH", 1)[1].split("## TITLE RULES", 1)[0]
-        self.assertIn("**Then run the internship pass.**", search)
-        for query in ('"AI/ML Intern"', '"Machine Learning Intern"', '"Gen AI\n  Intern"'):
+    def test_the_search_pass_hunts_internships_not_full_time_roles(self):
+        """Rescoping the rules alone would be inert: ten full-time role
+        queries return full-time results, every one of them a skip, and the
+        run would spend its time reading postings it cannot apply to.
+
+        The portal's own job-type filter does the scope test on every result
+        at once, which is why it is set before anything else -- and why a bare
+        engineering query is allowed only while that filter holds."""
+        search = self.prompt.split("## WHAT TO SEARCH", 1)[1] \
+                            .split("## IS IT AN INTERNSHIP", 1)[0]
+        self.assertIn("**Set the portal's job-type filter to Internship before anything else.**",
+                      search)
+        self.assertIn("it does the scope test for you on every result at once", search)
+        for query in ('"AI/ML Intern"', '"ML Intern" or "Machine Learning Intern"',
+                      '"NLP Intern"', '"Research Intern" or "Applied Science Intern"'):
             with self.subTest(query=query):
                 self.assertIn(query, search)
-        # A job-type filter beats matching on title text.
-        self.assertIn("**Job type = Internship** filter", search)
-        self.assertIn("far more reliable than the title text", search)
+        # A bare engineering query is only worth running behind the filter.
+        self.assertIn("**A bare engineering query is worth running only with the job-type filter on.**",
+                      search)
+        self.assertIn("Without the filter, do not run these", search)
+        self.assertIn("**Job type = Internship**", search)
+        # Both portals set the filter in their own steps, not just here.
+        wellfound = self.prompt.split("### 1. WELLFOUND", 1)[1].split("### 2.", 1)[0]
+        indeed = self.prompt.split("### 2. INDEED", 1)[1].split("## FORM FILLING", 1)[0]
+        self.assertIn("**Set the job type to Internship**", wellfound)
+        self.assertIn("**Is it an internship?**", wellfound)
+        self.assertIn("**Job type = Internship** \u2014 that filter defines the run", indeed)
+        self.assertIn("**Is it an internship?**", indeed)
+        # The old full-time queries are gone from the list.
+        for gone in ('1. "Gen AI Engineer", then',
+                     '"Applied Scientist" or "Research Engineer"',
+                     "**Then run the internship pass.**"):
+            with self.subTest(gone=gone):
+                self.assertNotIn(gone, self.prompt)
 
     def test_a_record_says_whether_it_was_a_job_or_an_internship(self):
         """`job_type` defaults to "Job" server-side, so an internship recorded
         without it lands in the tracker as a job and the split is lost. The
         column already holds both values, so the prompt has to send it."""
         step2 = self.prompt.split("STEP 2 — RECORD EVERY JOB", 1)[1].split("## KEEP GOING", 1)[0]
-        self.assertIn('"job_type": "Job"', step2)
+        # Everything applied to is an internship now, so the example payload
+        # carries the value every application sends.
+        self.assertIn('"job_type": "Internship"', step2)
         self.assertIn("- **job_type**: exactly `Job` or `Internship`", step2)
-        self.assertIn("Send it on every record, including a\n  `skipped` one", step2)
+        self.assertIn('a `Job` with `status: "applied"` is a bug', step2)
+        self.assertIn("`Job` is for a **skip** of a\n  full-time posting", step2)
         self.assertIn("left out it defaults to `Job`", step2)
-        self.assertIn("an internship recorded as\n  a job makes my stats wrong", step2)
         # The API accepts exactly this field name and maps it to the column.
         schemas = (ROOT / "app/models/schemas.py").read_text()
         body = schemas.split("class DesktopAgentJobRequest", 1)[1].split("class ", 1)[0]
@@ -1289,43 +1352,53 @@ class DesktopPromptTests(unittest.TestCase):
         # And the summary reports the split, so a run that found only jobs is
         # visible as such rather than looking like the internship pass worked.
         summary = self.prompt.split("## SUMMARY — WHEN I STOP YOU", 1)[1]
-        self.assertIn("Of those applied: J jobs, I internships", summary)
-        self.assertIn("| 2 | Indeed | Internship |", summary)
+        self.assertIn("Of those skipped: F were full-time roles, not internships", summary)
+        self.assertIn("### Applied Internships", summary)
 
-    def test_jobs_paying_below_the_floor_are_skipped(self):
-        """The user's pay floor: under ₹6 LPA a year or ₹50,000 a month is
-        not worth applying to. It compares the top of the stated range, so a
-        range that reaches the floor is kept, and an unstated figure never
-        triggers it."""
-        red_flags = self.prompt.split("## RED FLAGS — CHECK EVERY JD", 1)[1] \
+    def test_the_stipend_floor_is_twenty_thousand_a_month(self):
+        """The floor has moved with the scope: 5 LPA, then 6 LPA, then one
+        40,000 figure covering jobs and internships, now 20,000 for a run that
+        applies to internships alone. A stipend is what internships quote, so
+        the monthly figure leads.
+
+        It compares the top of the stated range, so a range that reaches the
+        floor is kept, and an unstated figure never triggers it -- which is
+        not the same as unpaid, and the prompt now says so, because an
+        internship with no stated stipend is the common case and must not be
+        read as the unpaid red flag two bullets above it."""
+        red_flags = self.prompt.split("## RED FLAGS \u2014 CHECK EVERY JD", 1)[1] \
                                .split("### COMPANIES I HAVE EXCLUDED", 1)[0]
         skip_list = red_flags.split("**SKIP immediately if any of these appear:**", 1)[1] \
                              .split("**Flag but still apply", 1)[0]
         self.assertIn("**Pay below my floor**", skip_list)
-        self.assertIn("**\u20b940,000 a month**", skip_list)
-        self.assertIn("The same floor applies to a job and to an internship", skip_list)
-        # The job-only floor is gone: one figure covers both now.
-        for gone in ("\u20b96 LPA", "\u20b950,000"):
+        self.assertIn("**\u20b920,000 a month**", skip_list)
+        # Every earlier floor must be gone from the whole prompt.
+        for gone in ("\u20b96 LPA", "\u20b950,000", "\u20b940,000", "\u20b94.8 LPA",
+                     "The same floor applies to a job and to an internship"):
             with self.subTest(gone=gone):
                 self.assertNotIn(gone, self.prompt)
         floor = red_flags.split("### PAY FLOOR \u2014 HOW TO READ THE FIGURE", 1)[1]
         for required in ("**Compare the top of the stated range**",
-                         # One floor, stated as the one thing it is.
-                         "**One floor, \u20b940,000 a month, for everything.**",
-                         "there is no separate, higher bar for a\nfull-time role",
-                         'Keep "3\u20135 LPA" and "\u20b930,000\u201340,000 a month"',
-                         "**Exactly on the floor is in, not out.** \u20b94.8 LPA, or \u20b940,000 a month.",
+                         "**The floor is \u20b920,000 a month.**",
+                         "Internships quote a monthly stipend almost\nalways",
+                         'Keep\n  "\u20b915,000\u201320,000 a month"',
+                         "**Exactly on the floor is in, not out.** \u20b920,000 a month, or \u20b92.4 LPA.",
                          # The figures that look close enough to pass.
-                         '"4 LPA",\n  "4.5 LPA", "\u20b935,000 per month" and "35k stipend"',
+                         '"\u20b915,000 per\n  month", "18k stipend" and "\u20b91.8 LPA"',
                          # Restating the period cannot clear it.
-                         "\u20b940,000 a month is \u20b94.8 LPA",
+                         "\u20b920,000 a month is \u20b92.4 LPA",
                          # A stipend is pay, not an exemption.
                          "A **stipend** is still pay",
                          "**No figure stated",
+                         # ...but no stipend stated is not the same as unpaid.
+                         "an unstated stipend is not\n  unpaid",
                          "**Open-ended upward**",
                          "Pay below floor:"):
             with self.subTest(required=required):
                 self.assertIn(required, floor)
+        # The old example quoted 20,000 as a figure BELOW the floor, which is
+        # now exactly on it.
+        self.assertNotIn("Pay below floor: \u20b920,000/month stipend", self.prompt)
 
     def test_the_run_stops_at_the_daily_target(self):
         """10 applications a day across the three portals, counted by the
@@ -1547,7 +1620,7 @@ class DesktopPromptTests(unittest.TestCase):
         for stale in ("hourly scraper", "Today Todo", "my scraper"):
             with self.subTest(stale=stale):
                 self.assertNotIn(stale, self.prompt)
-        self.assertIn("You are the only thing that finds jobs", self.prompt)
+        self.assertIn("You are the only thing that finds internships", self.prompt)
 
     def test_prompt_fits_the_saved_field_limit(self):
         """Nothing expands into the prompt now that the answers are inline, so

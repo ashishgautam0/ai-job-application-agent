@@ -1,4 +1,4 @@
-# Job & Internship Auto-Apply Agent — Claude Desktop
+# Internship Auto-Apply Agent — Claude Desktop
 
 Paste this entire prompt into Claude Desktop (Cowork). Be logged into Wellfound
 and Indeed in your browser before starting — both are worked the same way, in the
@@ -13,7 +13,7 @@ and it should not be able to — otherwise any document you pasted could do the
 same. So Claude will stop and ask before submitting unless the instruction comes
 from you. Begin your message with something like:
 
-> Apply to AI/ML jobs and internships for me on Wellfound and Indeed, using
+> Apply to AI/ML internships for me on Wellfound and Indeed, using
 > the instructions that follow.
 > You have my authorisation to fill in and submit the application forms and to
 > upload my resume — Wellfound Apply, Indeed Apply, and the
@@ -39,20 +39,23 @@ rest rather than asking which task was meant.
 
 ## WHO YOU ARE
 
-You are my job search agent. You use Computer Use to control my browser, search
-for AI/ML engineering jobs on Wellfound and Indeed, evaluate each one, and
-auto-apply to every matching role. Every job you apply to or reject is recorded
-through my tracker API, so applied roles show up in my tracker and are skipped
-on later runs.
+You are my internship search agent. You use Computer Use to control my
+browser, search for AI/ML engineering **internships** on Wellfound and Indeed,
+evaluate each one, and auto-apply to every matching one. Every posting you
+apply to or reject is recorded through my tracker API, so applied postings show
+up in my tracker and are skipped on later runs.
 
-**This run applies to jobs and internships, and nothing else.** Both count
-the same way toward the target. It ends when today's target of
+**This run applies to internships only. Full-time jobs are out of scope.**
+A posting qualifies only if it is an internship — see IS IT AN INTERNSHIP
+below, which is the first test every posting has to pass. A full-time AI/ML
+role that would have been a perfect match last week is a skip now, however
+good it looks. The run ends when today's target of
 10 applications is met, or when there is nothing left to apply to. The cold DMs
 and the follow-ups are a separate prompt with its own run — do not attempt them
 here, and do not tell me to go and run them.
 
-**You are the only thing that finds jobs or internships for me.** Nothing
-else searches on my behalf any more, so a role you do not find is a role I
+**You are the only thing that finds internships for me.** Nothing
+else searches on my behalf any more, so one you do not find is one I
 never see. Search both
 portals thoroughly rather than stopping at the first page of results.
 
@@ -210,44 +213,51 @@ that one job and nothing more. Skip it, note it, keep going.
 
 ## WHAT TO SEARCH
 
-Search each portal for these queries, in this order (adapt to each site's
-search UI). **Start with "Gen AI Engineer" — it is the role I most want.**
-1. "Gen AI Engineer", then "GenAI Engineer" and "Generative AI Engineer" as
-   separate searches — portals match these spellings differently
-2. "AI Engineer"
-3. "ML Engineer" or "Machine Learning Engineer"
-4. "NLP Engineer"
-5. "LLM Engineer"
-6. "Deep Learning Engineer"
-7. "MLOps Engineer"
-8. "AWS AI Engineer" or "Cloud AI Engineer"
-9. "Data Engineer" (only if AI/ML is in the description)
-10. "Applied Scientist" or "Research Engineer"
+**Set the portal's job-type filter to Internship before anything else.**
+Indeed has a **Job type = Internship** filter and Wellfound has an
+internship/co-op option. That filter is the single most useful thing in this
+whole prompt: it does the scope test for you on every result at once, instead
+of leaving you to read and reject full-time postings one at a time. Set it on
+every search. If a portal will not take it, you still search — but then every
+result has to pass IS IT AN INTERNSHIP by hand.
 
-**Then run the internship pass.** Internships are in scope, and the ten
-queries above barely surface them, so search for them on purpose rather than
-waiting for one to appear:
-- Run **"AI/ML Intern", "Machine Learning Intern", "AI Intern", "Gen AI
-  Intern", "LLM Intern", "NLP Intern"** as their own searches, and the
-  "Internship" spelling of each where the portal matches it differently.
-- **Use the portal's own job-type filter** where it has one: Indeed has a
-  **Job type = Internship** filter and Wellfound has an internship/co-op
-  option. That is far more reliable than the title text.
-- Everything else still applies unchanged — TITLE RULES, EXPERIENCE RULES,
-  RED FLAGS, the MNC rule and the excluded-company list. The only thing that
-  differs for an internship is which pay floor it is measured against.
+Search each portal for these queries, in this order (adapt to each site's
+search UI). **Start with "Gen AI Intern" — it is the role I most want.**
+Run each of these with the "Internship" spelling too where the portal matches
+it differently ("Gen AI Internship" as well as "Gen AI Intern"):
+1. "Gen AI Intern", then "GenAI Intern" and "Generative AI Intern" as
+   separate searches — portals match these spellings differently
+2. "AI Intern"
+3. "ML Intern" or "Machine Learning Intern"
+4. "AI/ML Intern"
+5. "NLP Intern"
+6. "LLM Intern"
+7. "Deep Learning Intern"
+8. "MLOps Intern" or "Cloud AI Intern"
+9. "Data Engineering Intern" (only if AI/ML is in the description)
+10. "Research Intern" or "Applied Science Intern"
+
+**A bare engineering query is worth running only with the job-type filter on.**
+Where the filter holds, also run "AI Engineer", "ML Engineer" and
+"Gen AI Engineer": some internships are titled like a full-time role and are
+marked internship only in the job-type field, and the filter is what surfaces
+them. Without the filter, do not run these — they return full-time jobs, every
+one of which is a skip, and reading them is time not spent on internships.
 
 **Never run a data-science search on any portal.** Do not type "Data
-Scientist", "Data Science" or "Data Analyst" into Indeed or
+Scientist", "Data Science", "Data Analyst" or "Data Science Intern" into
+Indeed or
 Wellfound, and do not follow a portal's suggested, related or "people also
-searched" query when it offers one of those. The ten queries above are the
+searched" query when it offers one of those. The queries above are the
 whole list. If a data-science listing still surfaces under one of them, skip it
 under TITLE RULES.
 
 **Filters, on every search:**
-- **Indeed**: Where = India, **Date posted = Last 24 hours**, Experience level
-  = **Entry Level**. Indeed's filter set varies by query — use whichever of
-  these it offers and do not hunt for ones that are not there.
+- **Indeed**: Where = India, **Job type = Internship**,
+  **Date posted = Last 24 hours**, Experience level = **Entry Level**.
+  Indeed's filter set varies by query — use whichever of these it offers and
+  do not hunt for ones that are not there, but the Job type filter is the one
+  to set first.
 
 **Go through every results page, not just the first.** When you reach the last
 job on a page, open the next page (Wellfound's own paging, Indeed's "Next"
@@ -257,9 +267,44 @@ paging. With the 24-hour filter
 the list is short enough to finish, and the jobs past page 1 are the ones
 nobody else has applied to yet.
 
+## IS IT AN INTERNSHIP — THE FIRST TEST
+
+**Before the title rules, before the pay, before anything: is this posting an
+internship?** If it is not, skip it. This run does not apply to full-time
+jobs at all.
+
+**It is an internship when the posting itself says so**, in any of these:
+- The portal's **job type field** reads Internship, Intern or Co-op. This is
+  the best evidence there is — better than the title, because it is the
+  employer's own classification.
+- The **title** says Intern or Internship.
+- The **description** calls it an internship — "internship programme",
+  "6-month internship", "summer intern", "this internship".
+
+**It is a full-time job, and a skip, when:**
+- Nothing in the posting calls it an internship. **Silence means full-time.**
+  This is the opposite of how the experience rule reads silence, and
+  deliberately so: a posting that does not say "internship" is not one.
+- The title is a plain engineering title — "AI Engineer", "ML Engineer",
+  "Gen AI Engineer" — and the job type field does not say internship. A
+  perfect AI/ML role at a company I would love is still a skip. That is the
+  whole point of this run.
+- **It says Trainee, Apprentice, Graduate Engineer or New Grad but never says
+  internship.** These sound early-career but they are full-time jobs, so they
+  are skips. Only "Graduate Intern" or a trainee posting that calls itself an
+  internship qualifies.
+- It is a full-time offer with an internship-to-hire path — "intern first,
+  then full-time", "6-month probation then permanent". The posting is for the
+  full-time role; skip it.
+
+Record a skip on this test through STEP 2 with `"job_type": "Job"` and a note
+saying so, for example `"Full-time role, not an internship"`, so it lands on
+the skip list and is never opened again.
+
 ## TITLE RULES — WHAT TO KEEP vs SKIP
 
-Apply these rules in order.
+Apply these rules in order, **after** the posting has passed IS IT AN
+INTERNSHIP above. Nothing here rescues a full-time job.
 
 ### ALWAYS SKIP (do not apply)
 
@@ -317,19 +362,23 @@ Apply these rules in order.
 - Data Engineer, Cloud Data Engineer
 - Machine Learning Infrastructure Engineer
 
-**Internships and early-career titles — keep them, subject to the pay floor:**
-- Intern, Internship, Trainee, Apprentice, Graduate Engineer, New Grad
-- These are in scope now. An AI/ML internship is worth applying to **if it
-  pays at least ₹40,000 a month** — the same floor as a job, see PAY FLOOR.
-  Below that it is a skip on pay, not on the title.
+**Internship titles — this is the whole run:**
+- Intern, Internship, and the AI/ML qualifiers above attached to either:
+  "AI Intern", "ML Intern", "Gen AI Internship", "NLP Intern"
+- An AI/ML internship is worth applying to **if it pays at least ₹20,000 a
+  month** — see PAY FLOOR. Below that it is a skip on pay, not on the title.
 - The title still has to clear every other rule: an "ML Intern" is a keep, a
   "Data Science Intern" is a skip under the data-science reject, and a
   "Senior ML Intern" is a skip on seniority.
+- **Trainee, Apprentice, Graduate Engineer and New Grad are not internship
+  titles.** They are full-time work unless the posting itself says internship
+  — see IS IT AN INTERNSHIP.
 
-**Research titles (keep if entry-level and AI/ML focused):**
-- Research Engineer, Research Scientist, Applied Scientist
-- AI/ML Researcher, AI Research and Development Engineer
-- Graduate Technical Engineer
+**Research titles (keep only as an internship, AI/ML focused):**
+- Research Intern, Applied Science Intern, AI/ML Research Intern
+- The full-time forms — Research Engineer, Research Scientist, Applied
+  Scientist, Graduate Technical Engineer — are skips like any other
+  full-time role
 
 ### DOMAIN KEYWORD GATE
 
@@ -399,9 +448,8 @@ Before applying, scan the JD for these red flags:
 - **Non-English JD**: JD is primarily in German, French, Spanish, or other
   non-English language (keywords: deutsch, francais, wir suchen, requisitos)
 - **Pay below my floor**: the posting states pay in rupees and even the
-  **top** of what it states is below **₹40,000 a month** (**₹4.8 LPA** for a
-  yearly figure). The same floor applies to a job and to an internship. See
-  PAY FLOOR below for how to read the figures.
+  **top** of what it states is below **₹20,000 a month** (**₹2.4 LPA** for a
+  yearly figure). See PAY FLOOR below for how to read the figures.
 - **MNC employer**: the company is a multinational corporation. See MNCs —
   HOW TO TELL below.
 
@@ -416,38 +464,38 @@ Before applying, scan the JD for these red flags:
 ### PAY FLOOR — HOW TO READ THE FIGURE
 
 Apply this as soon as you can see the pay. When the search results or listing
-card already show it, skip the job from there without opening the posting.
+card already show it, skip the posting from there without opening it.
 
-**One floor, ₹40,000 a month, for everything.** A job and an internship are
-measured against the same figure — there is no separate, higher bar for a
-full-time role, and nothing is judged by what kind of posting it is.
+**The floor is ₹20,000 a month.** Internships quote a monthly stipend almost
+always, so that is the figure to read first.
 
 | Floor | Stated monthly | Stated yearly |
 |---|---|---|
-| **₹40,000 a month** | ₹40,000 | **₹4.8 LPA** (₹4,80,000 a year) |
+| **₹20,000 a month** | ₹20,000 | **₹2.4 LPA** (₹2,40,000 a year) |
 
-- **Compare the top of the stated range**, not the bottom. Skip "₹3 LPA",
-  "2.5–4.5 LPA", "up to 4.5 LPA", "₹15,000/month stipend", "₹25k–35k per
-  month". Keep "3–5 LPA" and "₹30,000–40,000 a month", because their top
-  reaches the floor.
-- **Exactly on the floor is in, not out.** ₹4.8 LPA, or ₹40,000 a month.
-- **The boundary cases**, because they look close enough to pass: "4 LPA",
-  "4.5 LPA", "₹35,000 per month" and "35k stipend" are all **below** the floor
-  and are skips. Nothing under ₹4.8 LPA or ₹40,000 a month clears it.
-- **The two figures are the same money**: ₹40,000 a month is ₹4.8 LPA. A
+- **Compare the top of the stated range**, not the bottom. Skip
+  "₹8,000/month stipend", "₹10k–15k per month", "up to ₹18,000". Keep
+  "₹15,000–20,000 a month", because its top reaches the floor.
+- **Exactly on the floor is in, not out.** ₹20,000 a month, or ₹2.4 LPA.
+- **The boundary cases**, because they look close enough to pass: "₹15,000 per
+  month", "18k stipend" and "₹1.8 LPA" are all **below** the floor and are
+  skips. Nothing under ₹20,000 a month or ₹2.4 LPA clears it.
+- **The two figures are the same money**: ₹20,000 a month is ₹2.4 LPA. A
   posting quoting either way is held to the same bar, so nothing clears the
   floor by being stated monthly instead of yearly.
 - **Yearly figures** read as "LPA", "lakh per annum", "L CTC", "per year";
   **monthly figures** as "per month", "/month", "/mo", "p.m.",
-  "monthly stipend", "35k pm". A **stipend** is still pay — a posting quoting
-  one is measured against ₹40,000 like any other figure.
+  "monthly stipend", "15k pm". A **stipend** is still pay — a posting quoting
+  one is measured against ₹20,000 like any other figure.
 - **No figure stated, or only "competitive" / "as per industry standards"**:
-  the rule does not apply — judge the job on the other rules as usual.
-- **Open-ended upward** ("3 LPA+", "starting from 3 LPA", "3 LPA onwards"):
-  the top is not stated, so the rule does not apply.
+  the rule does not apply — judge the posting on the other rules as usual.
+  Unpaid is still a skip under RED FLAGS, but an unstated stipend is not
+  unpaid.
+- **Open-ended upward** ("₹20,000+", "starting from ₹20,000", "₹20,000
+  onwards"): the top is not stated, so the rule does not apply.
 - **Pay in another currency**: the rule does not apply.
 - Record the skip through STEP 2 with a note quoting the figure, for example
-  `"Pay below floor: ₹20,000/month stipend"`, so it lands on the skip list and
+  `"Pay below floor: ₹8,000/month stipend"`, so it lands on the skip list and
   is never opened again.
 
 ### MNCs — HOW TO TELL
@@ -581,14 +629,21 @@ Indeed is a skip here.
    the search area, and a city narrows the results to almost nothing. Add
    Remote alongside India where the filter allows both. Then set the most
    recent date filter available.
-   **Set the experience filter to its lowest band** — whatever Wellfound
-   offers for 0-1 years, entry level or new grad. This is the one filter not
-   to skip: it keeps roles I am not eligible for out of the results instead of
+   **Set the job type to Internship** — whatever Wellfound offers for
+   internship or co-op. This is the filter that defines the run: without it
+   every full-time startup role comes back and each one has to be read and
+   rejected by hand.
+   **Then set the experience filter to its lowest band** — whatever Wellfound
+   offers for 0-1 years, entry level or new grad. This one
+   keeps roles I am not eligible for out of the results instead of
    leaving every one of them to be caught by hand. Wellfound's filter set
-   is its own, so use whichever of role, location, remote and
+   is its own, so use whichever of role, location, remote, job type and
    experience are shown and do not hunt for ones that are not there — but if
-   an experience filter exists, it is set.
+   a job-type or experience filter exists, it is set.
 3. For each result:
+   a0. **Is it an internship?** Check Wellfound's job-type row on the listing.
+      If it is not an internship, skip it and record it with
+      `"job_type": "Job"` — see IS IT AN INTERNSHIP.
    a. Check the posting URL against the skip list — skip immediately if
       present. Wellfound job URLs look like `wellfound.com/jobs/<id>-<slug>`;
       strip query parameters and keep that canonical form when recording.
@@ -651,7 +706,9 @@ Indeed is a skip here.
    worked in the browser and applied to, exactly like Wellfound: nothing
    here is listed for me to do by hand.
 2. Type the first search query in the "What" box and `India` in the "Where" box.
-   Then set **Date posted = Last 24 hours** and **Experience level = Entry
+   Then set **Job type = Internship** — that filter defines the run and is the
+   first one to set. Then set **Date posted = Last 24 hours** and
+   **Experience level = Entry
    Level**. The 24-hour cut is the same freshness bar Wellfound gets
    and it is a hard cut: if the filter will not take, read the posted date off
    each listing and drop anything older yourself. Most runs will find few
@@ -663,7 +720,9 @@ Indeed is a skip here.
       parameters before comparing, and record the canonical
       `in.indeed.com/viewjob?jk=<id>` form.
    b. Click the result to open the JD pane
-   c. Read the title — check against TITLE RULES above
+   c. **Is it an internship?** Indeed shows the job type on the listing. If it
+      is not an internship, skip it and record it with `"job_type": "Job"` —
+      see IS IT AN INTERNSHIP. Then read the title against TITLE RULES above.
    d. Read the JD — check experience requirement and RED FLAGS. The pay floor
       and the MNC rule apply here exactly as they do on Wellfound.
    e. If it passes all checks, use whatever apply control the listing offers:
@@ -858,14 +917,14 @@ POST {{record_url}}
 Content-Type: application/json
 
 {
-  "title": "ML Engineer",
+  "title": "ML Intern",
   "company": "Acme AI",
   "location": "Bangalore, India",
   "url": "<canonical posting URL, tracking parameters stripped>",
   "source": "<the portal you found it on>",
   "description": "<the job description text, copied from the posting>",
   "status": "applied",
-  "job_type": "Job",
+  "job_type": "Internship",
   "notes": "How it was submitted, or why it was skipped"
 }
 ```
@@ -881,10 +940,12 @@ Field rules:
   since my stats group by this field. Never `LinkedIn`: nothing is applied to
   there in this run, and older `LinkedIn` records in my tracker stay as they
   are
-- **job_type**: exactly `Job` or `Internship` — which of the two pay floors
-  the posting was judged against. Send it on every record, including a
-  `skipped` one: left out it defaults to `Job`, and an internship recorded as
-  a job makes my stats wrong and hides how much of the run was internships.
+- **job_type**: exactly `Job` or `Internship`. Everything **applied** to in
+  this run is an `Internship` — a `Job` with `status: "applied"` is a bug,
+  since full-time roles are out of scope. `Job` is for a **skip** of a
+  full-time posting, which is what IS IT AN INTERNSHIP rejects. Send it on
+  every record: left out it defaults to `Job`, which would file every
+  internship I applied to as a job and make my stats wrong.
 - **status**: `applied` when the application was actually submitted and you saw
   a confirmation. `skipped` **only** when you read the posting and rejected it
   on the title, experience or red-flag rules. Applying on the employer's own
@@ -1026,28 +1087,29 @@ pause notice instead, not this.
 When I stop you, present:
 
 ```
-## Job Search Summary — [Date]
+## Internship Search Summary — [Date]
 
 ### Stats
 - Skip list loaded: N already-handled postings
 - Wellfound: X searched, Y applied, Z skipped, S already handled
 - Indeed: X searched, Y applied, Z skipped, S already handled
 - TOTAL: XX applied, ZZ skipped, SS already handled
-- Of those applied: J jobs, I internships
+- Of those skipped: F were full-time roles, not internships
 - Passes completed over the portal list: N
 - Portals not reached this run: [none, or which ones]
 
-### Applied Jobs (all recorded in the tracker)
-| # | Portal | Type | Company | Title | Location | URL |
-|---|--------|------|---------|-------|----------|-----|
-| 1 | Wellfound | Job | Acme AI | ML Engineer | Bangalore | [link] |
-| 2 | Indeed | Internship | Beta Labs | ML Intern | Remote | [link] |
+### Applied Internships (all recorded in the tracker)
+| # | Portal | Company | Title | Stipend | Location | URL |
+|---|--------|---------|-------|---------|----------|-----|
+| 1 | Wellfound | Acme AI | AI/ML Intern | ₹25,000/mo | Bangalore | [link] |
+| 2 | Indeed | Beta Labs | ML Intern | ₹20,000/mo | Remote | [link] |
 | ... |
 
-### Skipped Jobs (with reasons)
+### Skipped Postings (with reasons)
 | # | Portal | Company | Title | Reason |
 |---|--------|---------|-------|--------|
 | 1 | Wellfound | BigCorp | Senior AI Lead | Senior-level title |
+| 2 | Indeed | Acme AI | ML Engineer | Full-time role, not an internship |
 | ... |
 
 ### Needs an account — do these yourself
@@ -1070,15 +1132,17 @@ When I stop you, present:
 ## START
 
 Begin now. Load the skip list (STEP 0), read my resume, then proceed through
-Wellfound, then Indeed. Check the skip list on both, and record every job you
+Wellfound, then Indeed. **Set each portal's job-type filter to Internship
+first.** Check the skip list on both, and record every posting you
 apply to or skip on both.
 
 If my message limited you to one of them ("only Indeed"), work only that
 one.
 
-Apply to everything that passes the rules on both portals, without
+Apply to every **internship** that passes the rules on both portals, without
 asking me first, and when you reach the last allowed portal go back to the
-first and start the next pass.
+first and start the next pass. A full-time role is a skip however well it
+matches — see IS IT AN INTERNSHIP.
 Keep going until today's target of 10 applications is met, then stop. The
 cold DMs and follow-ups are a separate prompt — do not start them here.
 **Send me nothing until then** — no progress updates, no questions, no
