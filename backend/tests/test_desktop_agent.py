@@ -1265,8 +1265,14 @@ class DesktopPromptTests(unittest.TestCase):
                          # The case that would otherwise sail through.
                          'The title is a plain engineering title \u2014 "AI Engineer"',
                          "A\n  perfect AI/ML role at a company I would love is still a skip",
-                         # Early-career titles are full-time work.
-                         "**It says Trainee, Apprentice, Graduate Engineer or New Grad but never says\n  internship.**",
+                         # Trainee and apprentice are internship words here;
+                         # graduate engineer and new grad are not.
+                         "The **title says Trainee or Apprentice**",
+                         "In India these are routinely used\n  for the same thing an internship is",
+                         "deliberate\n  exception to \"silence means full-time\"",
+                         "**It says Graduate Engineer or New Grad but never says internship, intern,\n  trainee or apprentice.**",
+                         "permanent headcount on a full salary",
+                         '"Graduate Engineer" is out;\n  "Graduate Trainee" and "Graduate Intern" are in',
                          "internship-to-hire path",
                          '`"job_type": "Job"`'):
             with self.subTest(required=required):
@@ -1279,7 +1285,8 @@ class DesktopPromptTests(unittest.TestCase):
                           .split("### DOMAIN KEYWORD GATE", 1)[0]
         self.assertIn("**Internship titles \u2014 this is the whole run:**", keep)
         self.assertIn("pays at least \u20b920,000 a\n  month", keep)
-        self.assertIn("**Trainee, Apprentice, Graduate Engineer and New Grad are not internship\n  titles.**", keep)
+        self.assertIn("**Trainee and Apprentice count as internship titles**", keep)
+        self.assertIn("**Graduate Engineer and New Grad do not.**", keep)
         # The other rules still bite: an AI word does not rescue a title.
         self.assertIn('a\n  "Data Science Intern" is a skip', keep)
         self.assertIn('"Senior ML Intern" is a skip on seniority', keep)
@@ -1293,6 +1300,35 @@ class DesktopPromptTests(unittest.TestCase):
                      "Both count\nthe same way toward the target"):
             with self.subTest(gone=gone):
                 self.assertNotIn(gone, self.prompt)
+
+    def test_trainee_and_apprentice_need_the_filter_turned_off_to_be_found(self):
+        """Trainee and apprentice are internship words here, but portals often
+        type those postings as full-time -- so the Internship job-type filter,
+        which the rest of the run leans on, hides the very postings this pass
+        exists for. The pass has to turn it off, or letting the two titles
+        back in finds nothing.
+
+        Nothing else loosens with the filter off: the title carries the
+        evidence on this pass, so a result with none of trainee, apprentice or
+        intern in it is still a full-time job and a skip."""
+        search = self.prompt.split("## WHAT TO SEARCH", 1)[1] \
+                            .split("## IS IT AN INTERNSHIP", 1)[0]
+        self.assertIn("**Then run a trainee pass with the job-type filter OFF.**", search)
+        self.assertIn("portals often type them as full-time, so the Internship filter hides the very\npostings this pass is for", search)
+        for query in ('"AI/ML Trainee"', '"ML Apprentice"', '"Graduate\nTrainee"'):
+            with self.subTest(query=query):
+                self.assertIn(query, search)
+        self.assertIn("The title is the evidence on this pass, so\nnothing else loosens", search)
+        self.assertIn("neither trainee,\napprentice nor intern is a full-time job and a skip", search)
+        self.assertIn("Turn the filter back on for the next query.", search)
+        # The red flag two sections down has to agree: a trainee posting is in
+        # scope, so "generic trainee" annotates the record, never rejects it.
+        red_flags = self.prompt.split("## RED FLAGS", 1)[1].split("### PAY FLOOR", 1)[0]
+        flagged = red_flags.split("**Flag but still apply", 1)[1]
+        self.assertIn("a trainee posting is in scope now, so this\n  is a note on the record and never a reason to skip", flagged)
+        # And Trainer stays a skip -- one letter apart, opposite verdicts.
+        self.assertIn("**Trainer is not Trainee.**", self.prompt)
+        self.assertIn("A Trainer teaches other people and is a skip", self.prompt)
 
     def test_the_search_pass_hunts_internships_not_full_time_roles(self):
         """Rescoping the rules alone would be inert: ten full-time role
