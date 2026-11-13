@@ -667,50 +667,65 @@ class DesktopPromptTests(unittest.TestCase):
         self.assertIn("An employer's own site or ATS is\nstill fine", order)
         self.assertNotIn("eleven", self.prompt)
 
-    def test_one_year_is_the_mandatory_experience_ceiling_everywhere(self):
-        """The ceiling was 2 years, which let roles demanding more than the
-        owner has through. It is 1 year now, and the same on every portal."""
+    def test_freshers_and_zero_to_one_years_are_the_only_eligible_bands(self):
+        """The ceiling has only ever moved one way: 2 years, then 1 mandatory
+        year, now every figure the posting prints."""
         rules = self.prompt.split("## EXPERIENCE RULES", 1)[1].split("## RED FLAGS", 1)[0]
-        for required in ("**I have 1 year of experience, so 1 year is the ceiling.**",
-                         '**Any figure of 2 years or more, however it is worded**',
-                         'JD says 0-1 years, "1+ year"',
+        for required in ("**Freshers and 0-1 years only.**",
+                         "Every figure the posting names has to stay\ninside one year",
+                         "**SKIP if the posting names any figure past one year",
+                         "**No years are mentioned at all**",
+                         "**An explicit 0-1 band**",
                          "This ceiling is the same on every portal, and the same for an internship",
-                         # Freshers are named in their own words now.
+                         # Freshers are named in their own words.
                          '"no prior experience required"',
                          # Being an internship must not relax the ceiling.
                          'an "ML Intern" demanding 2 years of prior experience\nis a skip'):
             with self.subTest(required=required):
                 self.assertIn(required, rules)
-        # The old 2-year allowance must not survive anywhere in the rules.
+        # Every earlier, looser ceiling must be gone from the whole prompt.
         for gone in ('JD says "2+ years" or "2 years" (borderline — apply)',
-                     "requirement above 2 years (24 months)"):
+                     "requirement above 2 years (24 months)",
+                     "even where the number exceeds 1 year",
+                     "1 year is my ceiling for any"):
             with self.subTest(gone=gone):
                 self.assertNotIn(gone, self.prompt)
 
-    def test_preferred_does_not_rescue_a_figure_of_two_years_or_more(self):
-        """The widest hole in the ceiling: a figure marked "preferred" was kept
-        "even where the number exceeds 1 year", so a 5-years-preferred senior
-        role passed every check. A posting that names 2 years is asking for 2
-        years whatever word sits beside the number.
+    def test_a_range_a_fresher_fits_is_still_a_skip(self):
+        """The subtle case, and the one the rules have to argue the owner out
+        of: "0-2 years" and "1-2 years" would accept them, so every earlier
+        version kept them. They are skips now because the posting printed a 2,
+        and the rules say so in those words -- a rule that only said "2 years
+        or more" would read as not covering a range topping out at 2.
 
-        What survives is a band whose BOTTOM admits the owner -- "0-2 years"
-        asks for 0 -- which is a different thing from a soft 2."""
+        "1+ years" is the same trap from the other side: it asks for the one
+        year they have, but names no top at all."""
         rules = self.prompt.split("## EXPERIENCE RULES", 1)[1].split("## RED FLAGS", 1)[0]
-        for required in ('**"Preferred" does not rescue a figure of 2 years or more.**',
-                         '"3 years\n  preferred", "5+ years desirable", "2 years nice to have" are all skips',
-                         'A figure of 1 year or less marked "preferred" or "nice to have"',
-                         "**Bands whose bottom is 0 or 1**",
-                         '"0-2 years", "1-2 years", "0-3 years"',
-                         "**The test is the bottom of what the posting demands, against 1 year.**",
-                         '"2-4 years" demands 2 and is out. "0-2 years" demands 0 and is in.'):
+        for required in ("**A range that reaches past a year**, even one a fresher would fit",
+                         '**"0-2 years", "1-2 years", "0-3 years", "1 to 3 years" are all skips.**',
+                         "**An upper bound of more than a year**",
+                         '"up to 2 years", "at most 2 years"',
+                         "**Anything open-ended upward from a year**",
+                         '**"1+ years", "minimum 1 year",\n  "at least 1 year", "more than 1 year"**',
+                         '**"Preferred" rescues nothing.**',
+                         "**The test is the highest number the posting prints, against one year.**",
+                         '"0-2 years" prints 2 and is out, even though I\nwould sit inside that range'):
             with self.subTest(required=required):
                 self.assertIn(required, rules)
-        self.assertNotIn("even where the number exceeds 1 year", self.prompt)
-        # Wellfound's own meta line carried the same carve-out.
+        # The carve-outs that used to admit these are gone.
+        for gone in ("**Bands whose bottom is 0 or 1**",
+                     "the top is the room above me",
+                     "Upper-bound phrases, which cap rather than demand",
+                     "The bottom of a band is what it asks",
+                     'JD says 0-1 years, "1+ year"'):
+            with self.subTest(gone=gone):
+                self.assertNotIn(gone, self.prompt)
+        # Wellfound's own meta-line rule has to match.
         wellfound = self.prompt.split("### 1. WELLFOUND", 1)[1].split("### 2.", 1)[0]
-        self.assertIn('a figure\n      of 1 year or less marked preferred', wellfound)
-        self.assertIn('"3+ years preferred" in\n      that field is a skip', wellfound)
-        self.assertNotIn("marked preferred rather than required", self.prompt)
+        self.assertIn("**Any figure past one year in that field is a skip", wellfound)
+        self.assertIn('"1+", "2+", "3+", "5+", "0-2 years", "1-2 years"', wellfound)
+        self.assertIn("an explicit 0-1 band, or no\n      figure at all", wellfound)
+        self.assertNotIn("a range whose bottom is 0 or 1", self.prompt)
 
     def test_wellfound_searches_the_country_not_the_home_city(self):
         """Noida is where the owner lives, not the search area; a city filter
@@ -938,10 +953,10 @@ class DesktopPromptTests(unittest.TestCase):
         for required in (
             "Read the experience requirement off the listing itself",
             "that line is the requirement even when the description",
-            "**More than 1 mandatory year is a skip, with no exceptions here.**",
+            "**Any figure past one year in that field is a skip, with no exceptions",
             'record it as `skipped` with the reason',
             # A friendly startup listing is not a reason to bend the ceiling.
-            "does not lower the\n      ceiling",
+            "happen to know does not lower the ceiling",
             # Filter it out at the source rather than catching each by hand.
             "Set the experience filter to its lowest band",
             "if\n   an experience filter exists, it is set",
