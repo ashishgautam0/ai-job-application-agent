@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { getApplications } from "@/lib/api";
 import type { Application } from "@/lib/types";
 
@@ -41,7 +40,6 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function TrackerPage() {
-  const router = useRouter();
   const [applications, setApplications] = useState<Application[]>([]);
   const [appPage, setAppPage] = useState(1);
   const [appsLoading, setAppsLoading] = useState(true);
@@ -78,9 +76,11 @@ export default function TrackerPage() {
     appSafePage * APPS_PER_PAGE,
   );
 
+  // A new tab, so the list you are working through keeps its filters, its
+  // page and its scroll position instead of being navigated away.
   function openJobPage(app: Application) {
     if (app.scraped_job_id) {
-      router.push(`/jobs/${app.scraped_job_id}`);
+      window.open(`/jobs/${app.scraped_job_id}`, "_blank", "noopener,noreferrer");
       return;
     }
     toast.info("This tracker record has no matching scraped-job detail page.");
