@@ -124,8 +124,13 @@ class ResumeTests(unittest.IsolatedAsyncioTestCase):
         raw = self.pdf()
         with patch.object(routes, "get_latest_profile_snapshot", return_value={"source_sha256": "a" * 64}), \
              patch.object(routes, "create_resume_profile", side_effect=RuntimeError("database unavailable")):
-            with self.assertRaises(RuntimeError):
+            # A database failure surfaces as a 503 with a message the user can
+            # act on, not the raw exception: a bare RuntimeError reached the
+            # browser as a 500 with no explanation.
+            with self.assertRaises(HTTPException) as caught:
                 await routes.upload_resume(self.upload_file("new.pdf", raw))
+        self.assertEqual(caught.exception.status_code, 503)
+        self.assertIn("temporarily unavailable", caught.exception.detail)
         self.assertEqual(self.bucket.files, {old_path: b"current"})
 
     def test_status_and_download_need_no_browser_token(self):

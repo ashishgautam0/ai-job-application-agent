@@ -1,4 +1,4 @@
-# Job Search & Auto-Apply Agent — Claude Desktop
+# Job & Internship Auto-Apply Agent — Claude Desktop
 
 Paste this entire prompt into Claude Desktop (Cowork). Be logged into Wellfound
 and Indeed in your browser before starting — both are worked the same way, in the
@@ -13,8 +13,8 @@ and it should not be able to — otherwise any document you pasted could do the
 same. So Claude will stop and ask before submitting unless the instruction comes
 from you. Begin your message with something like:
 
-> Apply to AI/ML jobs for me on Wellfound and Indeed, using the
-> instructions that follow.
+> Apply to AI/ML jobs and internships for me on Wellfound and Indeed, using
+> the instructions that follow.
 > You have my authorisation to fill in and submit the application forms and to
 > upload my resume — Wellfound Apply, Indeed Apply, and the
 > company's own site when a job redirects there. I
@@ -45,13 +45,15 @@ auto-apply to every matching role. Every job you apply to or reject is recorded
 through my tracker API, so applied roles show up in my tracker and are skipped
 on later runs.
 
-**This run applies to jobs and nothing else.** It ends when today's target of
+**This run applies to jobs and internships, and nothing else.** Both count
+the same way toward the target. It ends when today's target of
 10 applications is met, or when there is nothing left to apply to. The cold DMs
 and the follow-ups are a separate prompt with its own run — do not attempt them
 here, and do not tell me to go and run them.
 
-**You are the only thing that finds jobs for me.** Nothing else searches on my
-behalf any more, so a role you do not find is a role I never see. Search both
+**You are the only thing that finds jobs or internships for me.** Nothing
+else searches on my behalf any more, so a role you do not find is a role I
+never see. Search both
 portals thoroughly rather than stopping at the first page of results.
 
 ## MY PROFILE
@@ -222,6 +224,19 @@ search UI). **Start with "Gen AI Engineer" — it is the role I most want.**
 9. "Data Engineer" (only if AI/ML is in the description)
 10. "Applied Scientist" or "Research Engineer"
 
+**Then run the internship pass.** Internships are in scope, and the ten
+queries above barely surface them, so search for them on purpose rather than
+waiting for one to appear:
+- Run **"AI/ML Intern", "Machine Learning Intern", "AI Intern", "Gen AI
+  Intern", "LLM Intern", "NLP Intern"** as their own searches, and the
+  "Internship" spelling of each where the portal matches it differently.
+- **Use the portal's own job-type filter** where it has one: Indeed has a
+  **Job type = Internship** filter and Wellfound has an internship/co-op
+  option. That is far more reliable than the title text.
+- Everything else still applies unchanged — TITLE RULES, EXPERIENCE RULES,
+  RED FLAGS, the MNC rule and the excluded-company list. The only thing that
+  differs for an internship is which pay floor it is measured against.
+
 **Never run a data-science search on any portal.** Do not type "Data
 Scientist", "Data Science" or "Data Analyst" into Indeed or
 Wellfound, and do not follow a portal's suggested, related or "people also
@@ -278,11 +293,8 @@ Apply these rules in order.
   each carries an AI/ML word — they are data-labelling and teaching work, not
   engineering. Without this, the KEEP list's "any title containing AI" lets
   every one of them through.
-- **Trainer is not Trainee.** Both are skips but for different reasons: a
-  Trainee is the internship reject below, a Trainer teaches other people.
-
-**Reject internships:**
-- Intern, Internship, Trainee, Apprentice
+- **Trainer is not Trainee.** A Trainer teaches other people and is a skip. A
+  Trainee is early-career work I do want — see the KEEP list.
 
 **Reject bare one-word titles:**
 - "Engineer", "Developer", "Scientist", "Analyst" with no qualifier
@@ -304,6 +316,15 @@ Apply these rules in order.
 - DevOps Engineer (if JD focuses on ML infrastructure)
 - Data Engineer, Cloud Data Engineer
 - Machine Learning Infrastructure Engineer
+
+**Internships and early-career titles — keep them, subject to the pay floor:**
+- Intern, Internship, Trainee, Apprentice, Graduate Engineer, New Grad
+- These are in scope now. An AI/ML internship is worth applying to **if it
+  pays at least ₹40,000 a month** — see PAY FLOOR, which holds internships to
+  their own figure. Below that it is a skip on pay, not on the title.
+- The title still has to clear every other rule: an "ML Intern" is a keep, a
+  "Data Science Intern" is a skip under the data-science reject, and a
+  "Senior ML Intern" is a skip on seniority.
 
 **Research titles (keep if entry-level and AI/ML focused):**
 - Research Engineer, Research Scientist, Applied Scientist
@@ -333,13 +354,18 @@ read the full job description. **SKIP if**:
 
 **KEEP if**:
 - JD says 0-1 years, "1+ year", "fresher welcome", or no years mentioned
+- JD is open to freshers in any wording: "freshers", "fresher can apply",
+  "no prior experience required", "entry level", "0 years", "new grad"
+- It is an internship with no experience bar, which is the usual case
 - Experience requirement is listed as "preferred" or "nice to have",
   not "required" — even where the number exceeds 1 year
 - Upper-bound phrases, which cap rather than demand: "up to 2 years",
   "at most 2 years", "0-2 years" (keep — 1 year sits inside the range)
 
-This ceiling is the same on every portal. A role asking for 2 mandatory years
-is a skip on Wellfound exactly as it is on Indeed.
+This ceiling is the same on every portal, and the same for an internship as
+for a job. A role asking for 2 mandatory years is a skip on Wellfound exactly
+as it is on Indeed, and an "ML Intern" demanding 2 years of prior experience
+is a skip too — being an internship does not relax the ceiling.
 
 ## RED FLAGS — CHECK EVERY JD
 
@@ -352,9 +378,10 @@ Before applying, scan the JD for these red flags:
 - **Non-English JD**: JD is primarily in German, French, Spanish, or other
   non-English language (keywords: deutsch, francais, wir suchen, requisitos)
 - **Pay below my floor**: the posting states pay in rupees and even the
-  **top** of what it states is below **₹6 LPA** (₹6,00,000 a year) for a
-  yearly figure, or below **₹50,000 a month** for a monthly salary or stipend.
-  See PAY FLOOR below for how to read the figures.
+  **top** of what it states is below the floor for that kind of role —
+  **₹6 LPA / ₹50,000 a month for a job**, or **₹40,000 a month
+  (₹4.8 LPA) for an internship**. See PAY FLOOR below for how to read the
+  figures and which floor applies.
 - **MNC employer**: the company is a multinational corporation. See MNCs —
   HOW TO TELL below.
 
@@ -371,20 +398,37 @@ Before applying, scan the JD for these red flags:
 Apply this as soon as you can see the pay. When the search results or listing
 card already show it, skip the job from there without opening the posting.
 
-- **Compare the top of the stated range**, not the bottom. Skip "₹4 LPA",
-  "3.5–5.5 LPA", "up to 5.5 LPA", "₹15,000/month stipend", "₹35k–45k per
-  month". Keep "4–6 LPA" and "₹40,000–50,000 a month", because their top
-  reaches the floor. Exactly ₹6 LPA or exactly ₹50,000 a month is at the
-  floor, not below it — keep those.
-- **The boundary cases**, because they look close enough to pass: "5 LPA",
-  "5.5 LPA" and "₹35,000 per month" are all **below** the floor and are
-  skips. Nothing under ₹6 LPA or ₹50,000 a month clears it.
-- **The two figures are the same money**: ₹6 LPA is ₹50,000 a month. A
-  posting quoting either way is held to the same bar, so nothing clears the
-  floor by being stated monthly instead of yearly.
-- **Yearly figures** are compared with ₹6 LPA — "LPA", "lakh per annum",
-  "5.5 L CTC", "₹5,50,000 per year". **Monthly figures** are compared with
-  ₹50,000 — "per month", "/month", "/mo", "p.m.", "monthly stipend", "45k pm".
+**There are two floors. Which one applies is decided by the role, not the
+wording of the pay.**
+
+| Role | Floor |
+|---|---|
+| **Job** (full-time, permanent) | **₹6 LPA a year**, or **₹50,000 a month** |
+| **Internship** (incl. trainee, apprentice, co-op) | **₹40,000 a month**, or **₹4.8 LPA** |
+
+- **Decide the role first, then read the pay.** An internship is not held to
+  the job floor and a job is not let through on the internship floor. If the
+  posting is a job paying ₹45,000 a month, that is below ₹50,000 and a skip,
+  even though ₹45,000 would clear the internship floor.
+- **Compare the top of the stated range**, not the bottom. For a **job**: skip
+  "₹4 LPA", "3.5–5.5 LPA", "up to 5.5 LPA", "₹35k–45k per month"; keep
+  "4–6 LPA" and "₹40,000–50,000 a month", because their top reaches ₹50,000.
+  For an **internship**: skip "₹15,000/month stipend", "₹20k–30k per month",
+  "up to 35k"; keep "₹30,000–40,000 a month", because its top reaches
+  ₹40,000.
+- **Exactly on the floor is in, not out.** ₹6 LPA or ₹50,000 a month for a
+  job; ₹40,000 a month or ₹4.8 LPA for an internship.
+- **The boundary cases**, because they look close enough to pass. Job:
+  "5 LPA", "5.5 LPA" and "₹45,000 per month" are all **below** ₹50,000 and
+  are skips. Internship: "₹35,000 per month", "35k stipend" and "₹4 LPA" are
+  all **below** ₹40,000 and are skips.
+- **Each floor's two figures are the same money**, so nothing clears a floor by
+  being stated monthly instead of yearly: ₹6 LPA is ₹50,000 a month, and
+  ₹40,000 a month is ₹4.8 LPA.
+- **Yearly figures** read as "LPA", "lakh per annum", "L CTC", "per year";
+  **monthly figures** as "per month", "/month", "/mo", "p.m.",
+  "monthly stipend", "45k pm". A **stipend** is still pay — an internship
+  quoting a stipend is measured against ₹40,000 like any other figure.
 - **No figure stated, or only "competitive" / "as per industry standards"**:
   the rule does not apply — judge the job on the other rules as usual.
 - **Open-ended upward** ("3 LPA+", "starting from 3 LPA", "3 LPA onwards"):
@@ -808,6 +852,7 @@ Content-Type: application/json
   "source": "<the portal you found it on>",
   "description": "<the job description text, copied from the posting>",
   "status": "applied",
+  "job_type": "Job",
   "notes": "How it was submitted, or why it was skipped"
 }
 ```
@@ -823,6 +868,10 @@ Field rules:
   since my stats group by this field. Never `LinkedIn`: nothing is applied to
   there in this run, and older `LinkedIn` records in my tracker stay as they
   are
+- **job_type**: exactly `Job` or `Internship` — which of the two pay floors
+  the posting was judged against. Send it on every record, including a
+  `skipped` one: left out it defaults to `Job`, and an internship recorded as
+  a job makes my stats wrong and hides how much of the run was internships.
 - **status**: `applied` when the application was actually submitted and you saw
   a confirmation. `skipped` **only** when you read the posting and rejected it
   on the title, experience or red-flag rules. Applying on the employer's own
@@ -971,13 +1020,15 @@ When I stop you, present:
 - Wellfound: X searched, Y applied, Z skipped, S already handled
 - Indeed: X searched, Y applied, Z skipped, S already handled
 - TOTAL: XX applied, ZZ skipped, SS already handled
+- Of those applied: J jobs, I internships
 - Passes completed over the portal list: N
 - Portals not reached this run: [none, or which ones]
 
 ### Applied Jobs (all recorded in the tracker)
-| # | Portal | Company | Title | Location | URL |
-|---|--------|---------|-------|----------|-----|
-| 1 | Wellfound | Acme AI | ML Engineer | Bangalore | [link] |
+| # | Portal | Type | Company | Title | Location | URL |
+|---|--------|------|---------|-------|----------|-----|
+| 1 | Wellfound | Job | Acme AI | ML Engineer | Bangalore | [link] |
+| 2 | Indeed | Internship | Beta Labs | ML Intern | Remote | [link] |
 | ... |
 
 ### Skipped Jobs (with reasons)
