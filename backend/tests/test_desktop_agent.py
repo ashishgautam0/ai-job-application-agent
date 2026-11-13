@@ -1246,25 +1246,23 @@ class DesktopPromptTests(unittest.TestCase):
         skip_list = red_flags.split("**SKIP immediately if any of these appear:**", 1)[1] \
                              .split("**Flag but still apply", 1)[0]
         self.assertIn("**Pay below my floor**", skip_list)
-        self.assertIn("**₹6 LPA / ₹50,000 a month for a job**", skip_list)
-        self.assertIn("**₹40,000 a month\n  (₹4.8 LPA) for an internship**", skip_list)
-        floor = red_flags.split("### PAY FLOOR — HOW TO READ THE FIGURE", 1)[1]
+        self.assertIn("**\u20b940,000 a month**", skip_list)
+        self.assertIn("The same floor applies to a job and to an internship", skip_list)
+        # The job-only floor is gone: one figure covers both now.
+        for gone in ("\u20b96 LPA", "\u20b950,000"):
+            with self.subTest(gone=gone):
+                self.assertNotIn(gone, self.prompt)
+        floor = red_flags.split("### PAY FLOOR \u2014 HOW TO READ THE FIGURE", 1)[1]
         for required in ("**Compare the top of the stated range**",
-                         # Two floors, and which applies is the role's doing.
-                         "**There are two floors.",
-                         "decided by the role, not the\nwording of the pay",
-                         "**Decide the role first, then read the pay.**",
-                         # The trap: a job paying an internship-clearing figure.
-                         "a job paying ₹45,000 a month, that is below ₹50,000 and a skip",
-                         '"4–6 LPA" and "₹40,000–50,000 a month", because their top reaches ₹50,000',
-                         'keep "₹30,000–40,000 a month"',
-                         "**Exactly on the floor is in, not out.**",
-                         # Each floor's boundary figures, which look close.
-                         '"5 LPA", "5.5 LPA" and "₹45,000 per month"',
-                         '"₹35,000 per month", "35k stipend" and "₹4 LPA"',
-                         # Neither floor is cleared by restating the period.
-                         "₹6 LPA is ₹50,000 a month",
-                         "₹40,000 a month is ₹4.8 LPA",
+                         # One floor, stated as the one thing it is.
+                         "**One floor, \u20b940,000 a month, for everything.**",
+                         "there is no separate, higher bar for a\nfull-time role",
+                         'Keep "3\u20135 LPA" and "\u20b930,000\u201340,000 a month"',
+                         "**Exactly on the floor is in, not out.** \u20b94.8 LPA, or \u20b940,000 a month.",
+                         # The figures that look close enough to pass.
+                         '"4 LPA",\n  "4.5 LPA", "\u20b935,000 per month" and "35k stipend"',
+                         # Restating the period cannot clear it.
+                         "\u20b940,000 a month is \u20b94.8 LPA",
                          # A stipend is pay, not an exemption.
                          "A **stipend** is still pay",
                          "**No figure stated",

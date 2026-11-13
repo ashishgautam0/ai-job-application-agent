@@ -320,8 +320,8 @@ Apply these rules in order.
 **Internships and early-career titles — keep them, subject to the pay floor:**
 - Intern, Internship, Trainee, Apprentice, Graduate Engineer, New Grad
 - These are in scope now. An AI/ML internship is worth applying to **if it
-  pays at least ₹40,000 a month** — see PAY FLOOR, which holds internships to
-  their own figure. Below that it is a skip on pay, not on the title.
+  pays at least ₹40,000 a month** — the same floor as a job, see PAY FLOOR.
+  Below that it is a skip on pay, not on the title.
 - The title still has to clear every other rule: an "ML Intern" is a keep, a
   "Data Science Intern" is a skip under the data-science reject, and a
   "Senior ML Intern" is a skip on seniority.
@@ -378,10 +378,9 @@ Before applying, scan the JD for these red flags:
 - **Non-English JD**: JD is primarily in German, French, Spanish, or other
   non-English language (keywords: deutsch, francais, wir suchen, requisitos)
 - **Pay below my floor**: the posting states pay in rupees and even the
-  **top** of what it states is below the floor for that kind of role —
-  **₹6 LPA / ₹50,000 a month for a job**, or **₹40,000 a month
-  (₹4.8 LPA) for an internship**. See PAY FLOOR below for how to read the
-  figures and which floor applies.
+  **top** of what it states is below **₹40,000 a month** (**₹4.8 LPA** for a
+  yearly figure). The same floor applies to a job and to an internship. See
+  PAY FLOOR below for how to read the figures.
 - **MNC employer**: the company is a multinational corporation. See MNCs —
   HOW TO TELL below.
 
@@ -398,37 +397,29 @@ Before applying, scan the JD for these red flags:
 Apply this as soon as you can see the pay. When the search results or listing
 card already show it, skip the job from there without opening the posting.
 
-**There are two floors. Which one applies is decided by the role, not the
-wording of the pay.**
+**One floor, ₹40,000 a month, for everything.** A job and an internship are
+measured against the same figure — there is no separate, higher bar for a
+full-time role, and nothing is judged by what kind of posting it is.
 
-| Role | Floor |
-|---|---|
-| **Job** (full-time, permanent) | **₹6 LPA a year**, or **₹50,000 a month** |
-| **Internship** (incl. trainee, apprentice, co-op) | **₹40,000 a month**, or **₹4.8 LPA** |
+| Floor | Stated monthly | Stated yearly |
+|---|---|---|
+| **₹40,000 a month** | ₹40,000 | **₹4.8 LPA** (₹4,80,000 a year) |
 
-- **Decide the role first, then read the pay.** An internship is not held to
-  the job floor and a job is not let through on the internship floor. If the
-  posting is a job paying ₹45,000 a month, that is below ₹50,000 and a skip,
-  even though ₹45,000 would clear the internship floor.
-- **Compare the top of the stated range**, not the bottom. For a **job**: skip
-  "₹4 LPA", "3.5–5.5 LPA", "up to 5.5 LPA", "₹35k–45k per month"; keep
-  "4–6 LPA" and "₹40,000–50,000 a month", because their top reaches ₹50,000.
-  For an **internship**: skip "₹15,000/month stipend", "₹20k–30k per month",
-  "up to 35k"; keep "₹30,000–40,000 a month", because its top reaches
-  ₹40,000.
-- **Exactly on the floor is in, not out.** ₹6 LPA or ₹50,000 a month for a
-  job; ₹40,000 a month or ₹4.8 LPA for an internship.
-- **The boundary cases**, because they look close enough to pass. Job:
-  "5 LPA", "5.5 LPA" and "₹45,000 per month" are all **below** ₹50,000 and
-  are skips. Internship: "₹35,000 per month", "35k stipend" and "₹4 LPA" are
-  all **below** ₹40,000 and are skips.
-- **Each floor's two figures are the same money**, so nothing clears a floor by
-  being stated monthly instead of yearly: ₹6 LPA is ₹50,000 a month, and
-  ₹40,000 a month is ₹4.8 LPA.
+- **Compare the top of the stated range**, not the bottom. Skip "₹3 LPA",
+  "2.5–4.5 LPA", "up to 4.5 LPA", "₹15,000/month stipend", "₹25k–35k per
+  month". Keep "3–5 LPA" and "₹30,000–40,000 a month", because their top
+  reaches the floor.
+- **Exactly on the floor is in, not out.** ₹4.8 LPA, or ₹40,000 a month.
+- **The boundary cases**, because they look close enough to pass: "4 LPA",
+  "4.5 LPA", "₹35,000 per month" and "35k stipend" are all **below** the floor
+  and are skips. Nothing under ₹4.8 LPA or ₹40,000 a month clears it.
+- **The two figures are the same money**: ₹40,000 a month is ₹4.8 LPA. A
+  posting quoting either way is held to the same bar, so nothing clears the
+  floor by being stated monthly instead of yearly.
 - **Yearly figures** read as "LPA", "lakh per annum", "L CTC", "per year";
   **monthly figures** as "per month", "/month", "/mo", "p.m.",
-  "monthly stipend", "45k pm". A **stipend** is still pay — an internship
-  quoting a stipend is measured against ₹40,000 like any other figure.
+  "monthly stipend", "35k pm". A **stipend** is still pay — a posting quoting
+  one is measured against ₹40,000 like any other figure.
 - **No figure stated, or only "competitive" / "as per industry standards"**:
   the rule does not apply — judge the job on the other rules as usual.
 - **Open-ended upward** ("3 LPA+", "starting from 3 LPA", "3 LPA onwards"):
