@@ -672,7 +672,7 @@ class DesktopPromptTests(unittest.TestCase):
         owner has through. It is 1 year now, and the same on every portal."""
         rules = self.prompt.split("## EXPERIENCE RULES", 1)[1].split("## RED FLAGS", 1)[0]
         for required in ("**I have 1 year of experience, so 1 year is the ceiling.**",
-                         'Any mandatory requirement above 1 year (12 months): "2+ years"',
+                         '**Any figure of 2 years or more, however it is worded**',
                          'JD says 0-1 years, "1+ year"',
                          "This ceiling is the same on every portal, and the same for an internship",
                          # Freshers are named in their own words now.
@@ -686,6 +686,31 @@ class DesktopPromptTests(unittest.TestCase):
                      "requirement above 2 years (24 months)"):
             with self.subTest(gone=gone):
                 self.assertNotIn(gone, self.prompt)
+
+    def test_preferred_does_not_rescue_a_figure_of_two_years_or_more(self):
+        """The widest hole in the ceiling: a figure marked "preferred" was kept
+        "even where the number exceeds 1 year", so a 5-years-preferred senior
+        role passed every check. A posting that names 2 years is asking for 2
+        years whatever word sits beside the number.
+
+        What survives is a band whose BOTTOM admits the owner -- "0-2 years"
+        asks for 0 -- which is a different thing from a soft 2."""
+        rules = self.prompt.split("## EXPERIENCE RULES", 1)[1].split("## RED FLAGS", 1)[0]
+        for required in ('**"Preferred" does not rescue a figure of 2 years or more.**',
+                         '"3 years\n  preferred", "5+ years desirable", "2 years nice to have" are all skips',
+                         'A figure of 1 year or less marked "preferred" or "nice to have"',
+                         "**Bands whose bottom is 0 or 1**",
+                         '"0-2 years", "1-2 years", "0-3 years"',
+                         "**The test is the bottom of what the posting demands, against 1 year.**",
+                         '"2-4 years" demands 2 and is out. "0-2 years" demands 0 and is in.'):
+            with self.subTest(required=required):
+                self.assertIn(required, rules)
+        self.assertNotIn("even where the number exceeds 1 year", self.prompt)
+        # Wellfound's own meta line carried the same carve-out.
+        wellfound = self.prompt.split("### 1. WELLFOUND", 1)[1].split("### 2.", 1)[0]
+        self.assertIn('a figure\n      of 1 year or less marked preferred', wellfound)
+        self.assertIn('"3+ years preferred" in\n      that field is a skip', wellfound)
+        self.assertNotIn("marked preferred rather than required", self.prompt)
 
     def test_wellfound_searches_the_country_not_the_home_city(self):
         """Noida is where the owner lives, not the search area; a city filter
