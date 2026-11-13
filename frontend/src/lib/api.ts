@@ -250,20 +250,6 @@ export async function getApplicationPromptSettings(): Promise<ApplicationPromptS
   return apiFetch<ApplicationPromptSettings>("/api/profile/application-settings");
 }
 
-// The user's own exclusion list — the only employers the agent skips.
-export interface CompanyExclusions { companies: string[] }
-
-export async function getCompanyExclusions(): Promise<CompanyExclusions> {
-  return apiFetch<CompanyExclusions>("/api/profile/company-exclusions");
-}
-
-export async function updateCompanyExclusions(companies: string[]): Promise<CompanyExclusions> {
-  return apiFetch<CompanyExclusions>("/api/profile/company-exclusions", {
-    method: "PUT",
-    body: JSON.stringify({ companies }),
-  });
-}
-
 export async function updateApplicationPromptSettings(
   data: Partial<ApplicationPromptSettings>,
 ): Promise<ApplicationPromptSettings> {

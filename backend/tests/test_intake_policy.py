@@ -2,38 +2,12 @@ import ast
 import pathlib
 import sys
 import unittest
-from unittest.mock import patch
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "modules"))
-from intake_policy import excluded_employer, experience_exclusion, filter_jobs
+from intake_policy import experience_exclusion, filter_jobs
 
 class IntakePolicyTests(unittest.TestCase):
-    def test_no_hardcoded_exclusions(self):
-        for company in ["TCS", "Infosys", "Amazon", "Google", "Microsoft", "HCLTech"]:
-            with self.subTest(company=company):
-                self.assertFalse(excluded_employer(company))
-
-    def test_unknown_and_similar_companies_are_kept(self):
-        for company in ["Global AI Startup", "VisaBuddy", "Amazonia AI", "TCS Labs Startup", "", None]:
-            with self.subTest(company=company):
-                self.assertFalse(excluded_employer(company))
-
-    def test_settings_company_names_match_exact_employer_and_legal_suffixes(self):
-        names = ["Blue Harbor AI", "ReveonAI Lifesciences Solutions"]
-        for company in ["Blue Harbor AI Pvt. Ltd.", "BLUE-HARBOR AI", "ReveonAI Lifesciences Solutions LLP"]:
-            with self.subTest(company=company):
-                self.assertTrue(excluded_employer(company, names))
-        for company in ["Blue Harbor AI Labs", "Blue Harbor Analytics", "ReveonAI Partner", ""]:
-            with self.subTest(company=company):
-                self.assertFalse(excluded_employer(company, names))
-        kept, removed = filter_jobs([
-            {"company": "Blue Harbor AI Ltd", "description": ""},
-            {"company": "Small Startup", "description": "Blue Harbor AI Python experience"},
-        ], names)
-        self.assertEqual([job["company"] for job in kept], ["Small Startup"])
-        self.assertEqual(removed[0][1], "excluded by Settings company list")
-
     def test_required_experience(self):
         for text in ["3+ years of experience required", "2.5 years experience",
                      "Experience: 2-4 years", "30 months of relevant experience",
@@ -103,20 +77,27 @@ class IntakePolicyTests(unittest.TestCase):
         self.assertIsNotNone(experience_exclusion(
             "Preferred qualifications:\n3 years experience\nRequired qualifications:\n3 years experience"))
 
-    def test_filter_uses_employer_not_technologies(self):
+    def test_no_employer_is_filtered_out_any_more(self):
+        """Employers used to be excluded by a Settings list; that list is gone,
+        so the only thing that can drop a posting is its experience band.
+
+        The big Indian employers are the test: each was on the user's list at
+        some point, and each is eligible now."""
         jobs = [{"company": "Small Startup", "description": "Experience with Amazon Web Services"},
                 {"company": "TCS", "description": ""},
+                {"company": "Infosys", "description": "0-1 years"},
+                {"company": "Accenture", "description": ""},
                 {"company": "Small Startup", "description": "3 years experience"}]
         kept, removed = filter_jobs(jobs)
-        self.assertEqual(kept, jobs[:2])
+        self.assertEqual(kept, jobs[:4])
         self.assertEqual(len(removed), 1)
+        self.assertIn("experience band", removed[0][1])
 
     def test_the_job_scrapers_are_gone_and_nothing_imports_them(self):
         """Job discovery moved to the Claude Desktop agent entirely.
 
         The LinkedIn/Indeed scrapers and the hourly pipeline that drove them
-        were removed; the exclusion list they used now reaches the agent
-        through the desktop prompt instead. Nothing may import them back.
+        were removed. Nothing may import them back.
         """
         for gone in ("scraper.py", "hourly.py"):
             with self.subTest(gone=gone):
@@ -130,11 +111,6 @@ class IntakePolicyTests(unittest.TestCase):
         requirements = (ROOT / "requirements.txt").read_text()
         self.assertNotIn("jobspy", requirements)
 
-    def test_company_exclusions_still_reach_the_desktop_agent(self):
-        """Removing the scraper must not orphan the Settings exclusion list."""
-        prompt = (ROOT.parent / "prompts" / "job-agent-desktop.md").read_text()
-        self.assertIn("{{excluded_companies}}", prompt)
-
     def test_persistence_guard_before_database_access(self):
         source = (ROOT / "modules" / "tracker.py").read_text()
         node = next(n for n in ast.parse(source).body
@@ -145,10 +121,6 @@ class IntakePolicyTests(unittest.TestCase):
         exec(compile(ast.Module(body=[node], type_ignores=[]), "<persistence>", "exec"), env)
         env["save_scraped_job"]("AI Engineer", "Startup", "", "", "https://example.test",
                                 description="3 years experience")
-        env["save_scraped_job"]("AI Engineer", "Blue Harbor AI Ltd", "", "", "https://example.test",
-                                company_exclusions=["Blue Harbor AI"])
-        with patch("profile.get_company_exclusions", return_value=["Blue Harbor AI"]):
-            env["save_scraped_job"]("AI Engineer", "Blue Harbor AI Ltd", "", "", "https://example.test")
 
 if __name__ == "__main__":
     unittest.main()

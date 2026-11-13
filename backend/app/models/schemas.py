@@ -57,17 +57,6 @@ class ApplicationPromptSettings(BaseModel):
     cold_dm_template: str = Field(default="", max_length=12_000)
 
 
-class CompanyExclusionsSettings(BaseModel):
-    """User-managed employer names omitted from future scraped job intake."""
-    model_config = ConfigDict(extra="forbid")
-    companies: list[str] = Field(default_factory=list, max_length=100)
-
-
-class CompanyExclusionsResponse(BaseModel):
-    """The user's own exclusions — the only employers the agent skips."""
-    companies: list[str]
-
-
 class RenderedApplicationPrompt(BaseModel):
     """A fixed, ready-to-paste browser-agent batch assembled by the backend."""
     prompt: str

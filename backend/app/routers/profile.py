@@ -10,8 +10,6 @@ from pypdf import PdfReader
 
 from ..models.schemas import (
     ApplicationPromptSettings,
-    CompanyExclusionsResponse,
-    CompanyExclusionsSettings,
     RenderedApplicationPrompt,
     ResumeProfileResponse,
     ResumeProfileReviewRequest,
@@ -25,13 +23,11 @@ from profile import (
     create_resume_profile,
     get_active_profile_snapshot,
     get_application_prompt_settings,
-    get_company_exclusions,
     get_latest_profile_snapshot,
     get_profile,
     get_resume_profile,
     prune_obsolete_resume_profiles,
     save_application_prompt_settings,
-    save_company_exclusions,
     upsert_profile,
 )
 from resume_profile import extract_profile_facts, reviewed_experience_months, profile_text
@@ -172,34 +168,6 @@ def update_application_settings(body: ApplicationPromptSettings):
     if saved is None:
         raise HTTPException(status_code=500, detail="Application prompt settings could not be saved.")
     return ApplicationPromptSettings(**saved)
-
-
-def _company_exclusions():
-    """The user's own exclusion list, and nothing else.
-
-    Applying to a company no longer excludes it. A second role at a company
-    already in the Tracker is a job worth having, so the only employers skipped
-    are the ones named here deliberately.
-    """
-    return get_company_exclusions(_DEFAULT_USERNAME)
-
-
-@router.get("/company-exclusions", response_model=CompanyExclusionsResponse)
-def read_company_exclusions():
-    try:
-        companies = _company_exclusions()
-    except Exception:
-        companies = []
-    return CompanyExclusionsResponse(companies=companies)
-
-
-@router.put("/company-exclusions", response_model=CompanyExclusionsResponse)
-def update_company_exclusions(body: CompanyExclusionsSettings):
-    """Save the user's own list — the only exclusions there are."""
-    if any(len(name.strip()) > 120 for name in body.companies):
-        raise HTTPException(status_code=422, detail="Each company name must be at most 120 characters.")
-    save_company_exclusions(_DEFAULT_USERNAME, body.companies)
-    return CompanyExclusionsResponse(companies=_company_exclusions())
 
 
 def _render_application_prompt(template, settings, jobs, resume, page_url, resume_url):
@@ -612,22 +580,6 @@ def read_outreach_prompt(request: Request, page_url: str,
                                      issues=issues, unresolved_placeholders=unresolved)
 
 
-def _excluded_company_lines():
-    """The user's excluded companies as prompt bullets.
-
-    The desktop agent is the only thing that searches the portals, so this list
-    reaches it one way only: written into its prompt. Nothing else filters
-    these employers out any more.
-    """
-    try:
-        companies = _company_exclusions()
-    except Exception:
-        companies = []
-    if not companies:
-        return "- (No companies are excluded.)"
-    return "\n".join(f"- {name}" for name in companies)
-
-
 @router.get("/desktop-prompt")
 def read_desktop_prompt(request: Request, page_url: str = "",
                         kind: str = "applications"):
@@ -677,7 +629,6 @@ def read_desktop_prompt(request: Request, page_url: str = "",
         "resume_url": str(request.url_for("download_application_resume")),
         "resume_filename": (resume or {}).get("filename") or "Resume.pdf",
         "resume_sha256": (resume or {}).get("sha256") or "unavailable",
-        "excluded_companies": _excluded_company_lines(),
         "page_url": page_url,
     }
     content = _PROMPT_PLACEHOLDER.sub(
