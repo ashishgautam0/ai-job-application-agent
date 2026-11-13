@@ -1989,6 +1989,28 @@ class ColdDmTests(unittest.TestCase):
         self.assertIn('onClick={(e) => e.stopPropagation()}', dashboard)
         self.assertIn('rel="noopener noreferrer"', dashboard)
 
+    def test_a_tracker_card_opens_its_job_in_a_new_tab(self):
+        """Navigating away costs more on the Tracker than anywhere else: the
+        list carries a status filter, a platform filter and a page number, and
+        going back returns to page 1 with both filters reset, so the record
+        just looked at is no longer on screen.
+
+        Same handler for pointer and keyboard, so the two cannot drift apart,
+        and a record with no scraped job still says so rather than opening a
+        blank tab."""
+        tracker = (ROOT.parent / "frontend/src/app/(app)/tracker/page.tsx").read_text()
+        self.assertIn(
+            'window.open(`/jobs/${app.scraped_job_id}`, "_blank", "noopener,noreferrer")',
+            tracker)
+        self.assertNotIn("router.push(`/jobs/${app.scraped_job_id}", tracker)
+        # The import has to go with the call, or the build fails on an unused
+        # binding before anyone sees the new tab.
+        self.assertNotIn("useRouter", tracker)
+        self.assertIn("A new tab, so the list you are working through", tracker)
+        # Pointer and keyboard both route through the one handler.
+        self.assertEqual(tracker.count("openJobPage(app)"), 2)
+        self.assertIn("has no matching scraped-job detail page", tracker)
+
     def test_a_due_follow_up_card_opens_that_job_s_tracker_section(self):
         """Clicking the card should land on the record that holds this
         follow-up's draft and its recording form, not the top of the page —
