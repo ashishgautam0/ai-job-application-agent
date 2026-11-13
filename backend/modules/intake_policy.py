@@ -1,31 +1,10 @@
-"""User's intake preferences, independent of resume-match scoring.
+"""What may not reach the tracker, independent of resume-match scoring.
 
-Company exclusions come solely from the user's Settings page (stored in the
-database). Unknown employers remain eligible.
+Only the stated experience band excludes a posting. Employers were excluded
+from a list in Settings; that list is gone, so every company is eligible.
 """
 import html
 import re
-import unicodedata
-
-_SUFFIX = re.compile(
-    r"\s+(?:private limited|pvt ltd|pvt limited|private ltd|limited|ltd|incorporated|inc|"
-    r"corporation|corp|llc|llp|plc|gmbh|india)$"
-)
-
-def normalize_employer(value):
-    value = unicodedata.normalize("NFKC", html.unescape(value or "")).casefold()
-    value = re.sub(r"[^\w]+", " ", value).strip()
-    while True:
-        trimmed = _SUFFIX.sub("", value).strip()
-        if trimmed == value:
-            return value
-        value = trimmed
-
-def excluded_employer(company, company_exclusions=()):
-    normalized = normalize_employer(company)
-    return bool(normalized and normalized in {
-        normalize_employer(name) for name in company_exclusions
-    })
 
 _NUMBER = r"\d+(?:\.\d+)?"
 _DURATION = (
@@ -109,18 +88,22 @@ def experience_exclusion(description):
                         return match.group().strip()
     return None
 
-def exclusion_reason(job, company_exclusions=()):
-    if excluded_employer(job.get("company"), company_exclusions):
-        return "excluded by Settings company list"
+def exclusion_reason(job):
+    """Why this posting must not reach the tracker, or None.
+
+    Experience is the only thing that excludes a posting now. Employers were
+    excluded from a list in Settings; that list is gone, so every company is
+    eligible and only the stated experience band can reject one.
+    """
     evidence = experience_exclusion(job.get("description"))
     if evidence:
         return "experience band reaches past one year: " + evidence
     return None
 
-def filter_jobs(jobs, company_exclusions=()):
+def filter_jobs(jobs):
     kept, excluded = [], []
     for job in jobs:
-        reason = exclusion_reason(job, company_exclusions)
+        reason = exclusion_reason(job)
         if reason:
             excluded.append((job, reason))
         else:

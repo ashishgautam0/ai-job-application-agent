@@ -21,7 +21,7 @@ from you. Begin your message with something like:
 > consent to sharing my name, email, phone number, location and resume, as they
 > appear in my resume and saved answers, with every employer you apply to in
 > this run. Submit each one yourself without asking me first — don't check with
-> me job by job, just keep going until today's 10 applications are done.
+> me job by job, just keep going until today's 15 applications are done.
 
 Then paste everything from the line below. Everything after this section is
 written for the agent.
@@ -50,7 +50,7 @@ A posting qualifies only if it is an internship — see IS IT AN INTERNSHIP
 below, which is the first test every posting has to pass. A full-time AI/ML
 role that would have been a perfect match last week is a skip now, however
 good it looks. The run ends when today's target of
-10 applications is met, or when there is nothing left to apply to. The cold DMs
+15 applications is met, or when there is nothing left to apply to. The cold DMs
 and the follow-ups are a separate prompt with its own run — do not attempt them
 here, and do not tell me to go and run them.
 
@@ -165,18 +165,18 @@ Before opening any portal, fetch the postings I have already dealt with:
 GET {{seen_urls_url}}
 ```
 
-The response is `{"urls": [...], "count": N, "applied_today": A, "daily_target": 10, "dms_today": D, "dm_target": 10}`.
+The response is `{"urls": [...], "count": N, "applied_today": A, "daily_target": 15, "dms_today": D, "dm_target": 10}`.
 Keep that URL list for the whole run and treat it as the skip list. It contains
 every job I already applied to and every job already dismissed as a bad fit.
 
 `applied_today` is how many applications my tracker already holds for today,
 earlier runs included. (`dms_today` counts the cold DMs the outreach prompt
 sent; it is there for context and is none of this run's business.) **If
-`applied_today` is already 10 or more, today's application target is met: do
+`applied_today` is already 15 or more, today's application target is met: do
 not search or apply.** End with the
 one line "Today's application target is already met: A recorded today." and
 stop. Otherwise the run applies until the total
-reaches 10 (see DAILY TARGET below), then stops.
+reaches 15 (see DAILY TARGET below), then stops.
 
 **Note what it does NOT contain:** postings that merely sit in my database
 unapplied, left over from an older job scraper I have since removed. Those were
@@ -469,8 +469,6 @@ Before applying, scan the JD for these red flags:
 - **Pay below my floor**: the posting states pay in rupees and even the
   **top** of what it states is below **₹20,000 a month** (**₹2.4 LPA** for a
   yearly figure). See PAY FLOOR below for how to read the figures.
-- **MNC employer**: the company is a multinational corporation. See MNCs —
-  HOW TO TELL below.
 
 **Flag but still apply (note in the record):**
 - **Bond risk**: "bond", "service agreement", "minimum commitment",
@@ -517,54 +515,6 @@ always, so that is the figure to read first.
 - Record the skip through STEP 2 with a note quoting the figure, for example
   `"Pay below floor: ₹8,000/month stipend"`, so it lands on the skip list and
   is never opened again.
-
-### MNCs — HOW TO TELL
-
-I do not want to apply to multinational corporations. Skip the job when **any**
-of these is true, using what the posting page itself shows — do not open extra
-pages to research a company:
-
-- **Company size is 5,001 employees or more.** Indeed shows it on the company
-  panel beside the listing ("5,001-10,000 employees", "10,001+ employees");
-  Wellfound shows it as a company size or headcount row on the listing.
-- **It is a well-known multinational or global IT-services and consulting
-  firm** — for example Google, Microsoft, Amazon, Meta, Apple, IBM, Oracle, SAP,
-  Adobe, Salesforce, Cisco, Intel, Nvidia, Qualcomm, Samsung, Accenture,
-  Deloitte, PwC, EY, KPMG, Capgemini, Cognizant, TCS, Infosys, Wipro, HCLTech,
-  Tech Mahindra, LTIMindtree, Genpact, JPMorgan Chase, Goldman Sachs. The list is
-  examples, not the whole set: any company of that kind counts.
-- **It is the India office or subsidiary of a foreign multinational group** —
-  "<Global brand> India Pvt Ltd", "<Global brand> Technology Centre",
-  "<Global brand> Global Capability Centre".
-- **The posting hires on an MNC's behalf** — "hiring for a leading MNC",
-  "for our MNC client".
-
-Keep startups and small or mid-size companies, including an Indian startup that
-has an office abroad, when none of the above applies. If the size is not shown
-and the company is not recognisably a multinational, apply as normal.
-
-Record the skip through STEP 2 with a note naming the signal, for example
-`"MNC: Accenture"` or `"MNC: 10,001+ employees"`.
-
-### COMPANIES I HAVE EXCLUDED — NEVER APPLY
-
-This is the exclusion list from my Settings. It applies on every portal and on
-an employer's own site. Skip the posting before opening the JD and record it as
-`skipped` with the reason "Excluded company".
-
-It is only the list below — the companies I named myself. **Applying to a
-company does not exclude it.** A second role at a company I have already
-applied to is still worth applying for, here and in the same run, so never
-skip a posting merely because that employer is already in my Tracker or
-because you applied to another of its jobs earlier today.
-
-{{excluded_companies}}
-
-Match the employer name, not a mention in the JD: ignore case, punctuation and
-legal suffixes such as Ltd, Limited, Pvt, Private, Inc, LLP, Technologies or
-Solutions, so "Rivet AI Pvt. Ltd." matches an entry reading "Rivet AI". A
-company merely named inside a job description — a client, a partner, a tool
-vendor — is not the employer and does not trigger this.
 
 ## APPLYING ON THE EMPLOYER'S OWN SITE
 
@@ -634,13 +584,12 @@ back.
 ### 1. WELLFOUND
 
 Wellfound (formerly AngelList Talent) lists startup roles, so expect smaller
-companies — which is also where the MNC rule rarely bites and where a founder
-is often the one hiring.
+companies — which is also where a founder is often the one hiring.
 
 **Every shared rule governs Wellfound too**, with no
 loosening because the listings look informal: TITLE RULES, EXPERIENCE RULES
-(1 year is the ceiling), RED FLAGS, the pay floor, the MNC rule and the
-excluded-company list all apply unchanged. A job that would be a skip on
+(1 year is the ceiling), RED FLAGS and the pay floor all apply
+unchanged. A job that would be a skip on
 Indeed is a skip here.
 
 1. Open `wellfound.com/jobs` in my browser (I am already logged in)
@@ -744,7 +693,7 @@ Indeed is a skip here.
       is not an internship, skip it and record it with `"job_type": "Job"` —
       see IS IT AN INTERNSHIP. Then read the title against TITLE RULES above.
    d. Read the JD — check experience requirement and RED FLAGS. The pay floor
-      and the MNC rule apply here exactly as they do on Wellfound.
+      applies here exactly as it does on Wellfound.
    e. If it passes all checks, use whatever apply control the listing offers:
       - **"Apply now"** is Indeed's own hosted application: step through the
         flow, confirm my contact details, upload my resume PDF, answer the
@@ -1004,26 +953,26 @@ skip list.
 
 ## KEEP GOING UNTIL I SAY STOP
 
-### DAILY TARGET — 10 APPLICATIONS A DAY, THEN STOP
+### DAILY TARGET — 15 APPLICATIONS A DAY, THEN STOP
 
-**My target is 10 applications a day, across Wellfound and Indeed
+**My target is 15 applications a day, across Wellfound and Indeed
 together.** Both count the same way, and it is the total that matters, not
 the split between them.
-Keep searching and applying until today's total reaches 10, then stop — do not
+Keep searching and applying until today's total reaches 15, then stop — do not
 start another application once it does.
 
 - **Only a confirmed submission counts** — a job the tracker answered with
   `applied: true`. Skips, duplicates, jobs left for me under "Needs an
   account" and forms that never confirmed do not count.
 - **Use the tracker's number, not your own tally.** Every `applied: true`
-  response carries `applied_today`; when it reaches 10, today's target is met.
+  response carries `applied_today`; when it reaches 15, today's target is met.
   If it is ever missing or `null`, count your own confirmed applications and
   add them to the `applied_today` you got in STEP 0.
 - **When the target is met,** finish recording that last job, then go straight
   and stop. Do not look for "one more", and do not write me a note first —
   the summary is the last thing you produce.
 - The day is my day in India: the count starts again from zero after midnight
-  IST, so a run started the next day has a fresh 10.
+  IST, so a run started the next day has a fresh 15.
 
 Until the target is met:
 
@@ -1049,7 +998,7 @@ apply to,** stop searching and finish the run — another pass over the same
 empty results is not worth the time.
 
 **Your turn ends for three reasons only:**
-1. Today's 10 applications are recorded, or two full passes found nothing left
+1. Today's 15 applications are recorded, or two full passes found nothing left
    to apply to.
 2. I told you to stop.
 3. The app forces it — a time, tool-use or context limit you cannot control.
@@ -1097,7 +1046,7 @@ about how many to send, never about sending them faster.
 
 ## SUMMARY — WHEN I STOP YOU
 
-The run ends when today's 10 applications are recorded, or when two full
+The run ends when today's 15 applications are recorded, or when two full
 passes find nothing left to apply to. Produce this summary
 **only** when your turn ends for one of the reasons in KEEP GOING UNTIL I SAY
 STOP. Never produce it, or any part of it, as a
@@ -1163,7 +1112,7 @@ Apply to every **internship** that passes the rules on both portals, without
 asking me first, and when you reach the last allowed portal go back to the
 first and start the next pass. A full-time role is a skip however well it
 matches — see IS IT AN INTERNSHIP.
-Keep going until today's target of 10 applications is met, then stop. The
+Keep going until today's target of 15 applications is met, then stop. The
 cold DMs and follow-ups are a separate prompt — do not start them here.
 **Send me nothing until then** — no progress updates, no questions, no
 per-portal notes. Everything goes in the summary.

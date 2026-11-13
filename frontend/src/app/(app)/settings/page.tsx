@@ -3,9 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   activateResumeProfile,
-  getCompanyExclusions,
   getResumeProfileStatus,
-  updateCompanyExclusions,
   uploadResumePdf,
 } from "@/lib/api";
 import type { ResumeFact, ResumeProfile, ResumeProfileReview } from "@/lib/types";
@@ -38,19 +36,11 @@ export default function SettingsPage() {
   const [loadError, setLoadError] = useState(false);
   const [pending, setPending] = useState<ResumeProfile | null>(null);
   const [busy, setBusy] = useState(false);
-  const [excludedCompaniesText, setExcludedCompaniesText] = useState("");
-  const [exclusionsLoaded, setExclusionsLoaded] = useState(false);
-  const [exclusionsDirty, setExclusionsDirty] = useState(false);
-  const [savingExclusions, setSavingExclusions] = useState(false);
   const [active, setActive] = useState<ResumeProfile | null>(null);
   const [candidate, setCandidate] = useState<ResumeProfile | null>(null);
   const [review, setReview] = useState<ResumeProfileReview | null>(null);
 
   useEffect(() => {
-    getCompanyExclusions().then(({ companies }) => {
-      setExcludedCompaniesText(companies.join("\n"));
-      setExclusionsLoaded(true);
-    }).catch(() => toast.error("Could not load excluded companies. Retry Settings before saving changes."));
   }, []);
 
   useEffect(() => {
@@ -90,25 +80,6 @@ export default function SettingsPage() {
     finally { setBusy(false); }
   }
 
-  async function saveCompanyExclusions() {
-    const companies = excludedCompaniesText.split(/\r?\n/).map((name) => name.trim()).filter(Boolean);
-    if (companies.length > 100 || companies.some((name) => name.length > 120)) {
-      toast.error("Use at most 100 company names, one per line, each up to 120 characters.");
-      return;
-    }
-    setSavingExclusions(true);
-    try {
-      const saved = await updateCompanyExclusions(companies);
-      setExcludedCompaniesText(saved.companies.join("\n"));
-      setExclusionsDirty(false);
-      toast.success("Company exclusions saved — they reach the agent on the next Generate.");
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not save company exclusions");
-    } finally {
-      setSavingExclusions(false);
-    }
-  }
-
   if (loading) return <div className="flex h-[60vh] items-center justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div>;
   return <div className={`${styles.settings} mx-auto w-full min-w-0 max-w-5xl space-y-6`}>
     <div>
@@ -117,16 +88,6 @@ export default function SettingsPage() {
     </div>
     <DesktopPrompt kind="applications" />
     <DesktopPrompt kind="outreach" />
-    <Card>
-      <CardHeader><CardTitle>Exclude companies from scraped jobs</CardTitle><p className="text-sm text-muted-foreground">This list is written into the Claude Desktop prompt above, so the agent never applies to these companies. Add one employer per line. Only the companies you name here are skipped — applying to a company does not exclude it, so the agent is free to apply to a second role at a company already in your Tracker.</p></CardHeader>
-      <CardContent className="space-y-3">
-        <label htmlFor="excluded-company-names" className="text-sm font-medium">Your companies to skip</label>
-        <Textarea id="excluded-company-names" value={excludedCompaniesText} rows={8} disabled={!exclusionsLoaded || savingExclusions} onChange={(event) => { setExcludedCompaniesText(event.target.value); setExclusionsDirty(true); }} placeholder="Example Company\nAnother Company" />
-        <p className="text-xs text-muted-foreground">Matches the employer name after normalizing punctuation and common legal suffixes. It does not match companies merely mentioned in the job description. Existing large-company and experience filters still apply.</p>
-        <Button type="button" disabled={!exclusionsLoaded || !exclusionsDirty || savingExclusions} onClick={saveCompanyExclusions}>{savingExclusions && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Save excluded companies</Button>
-        {!exclusionsLoaded && <p role="status" className="text-xs text-amber-600">Company list unavailable. Reload Settings to retry.</p>}
-      </CardContent>
-    </Card>
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div><h1 className="text-2xl font-bold">Resume profile</h1><p className="mt-1 text-sm text-muted-foreground">Upload a text-based PDF, then verify extracted facts and evidence. DOCX, text, and LaTeX input are not accepted.</p></div>
       <div className="shrink-0">

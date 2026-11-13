@@ -253,37 +253,6 @@ def save_application_prompt_settings(username="subidh", data=None):
     return served
 
 
-def get_company_exclusions(username="subidh"):
-    """Return the Settings exclusion list; propagate database errors to the scraper."""
-    rows = (_get_client().table("user_profile").select("scoring_weights")
-            .eq("username", username).limit(1).execute()).data or []
-    weights = (rows[0].get("scoring_weights") or {}) if rows else {}
-    names = weights.get("company_exclusions", []) if isinstance(weights, dict) else []
-    return names if isinstance(names, list) else []
-
-
-def save_company_exclusions(username="subidh", companies=None):
-    """Persist exact employer names alongside the existing profile settings."""
-    from intake_policy import normalize_employer
-
-    rows = (_get_client().table("user_profile").select("scoring_weights")
-            .eq("username", username).limit(1).execute()).data or []
-    weights = (rows[0].get("scoring_weights") or {}) if rows else {}
-    if not isinstance(weights, dict):
-        weights = {}
-    names, seen = [], set()
-    for raw in companies or []:
-        name = str(raw).strip()
-        normalized = normalize_employer(name)
-        if normalized and normalized not in seen:
-            names.append(name)
-            seen.add(normalized)
-    saved = upsert_profile(username, {"scoring_weights": {**weights, "company_exclusions": names}})
-    if not saved:
-        raise RuntimeError("Company exclusions could not be saved")
-    return names
-
-
 # ===================== VERSIONED PDF PROFILE =====================
 
 def create_resume_profile(username, filename, pdf_bytes, raw_text, extraction):

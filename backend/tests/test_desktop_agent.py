@@ -286,88 +286,6 @@ class RecordJobTests(unittest.TestCase):
         self.assertEqual(len(calls["scraped"]), 1)
 
 
-class CompanyExclusionsAreTheUsersOwnTests(unittest.TestCase):
-    """Only the companies the user names are skipped.
-
-    Every Tracker company used to be excluded automatically, so a second role
-    at a company already applied to could never be applied for. That is gone:
-    applying to a company no longer excludes it, here or within a run.
-    """
-
-    TRACKER = ROOT / "modules" / "tracker.py"
-    ROUTER = ROOT / "app/routers/profile.py"
-
-    def test_recording_an_application_no_longer_rewrites_the_settings_list(self):
-        source = self.TRACKER.read_text()
-        body = source.split("def add_application(", 1)[1].split("\n\n\n", 1)[0]
-        self.assertNotIn("exclusion", body)
-        self.assertNotIn("_exclude_applied_company", source)
-
-    def test_applying_to_a_company_no_longer_excludes_it(self):
-        """The auto-exclusion is gone from every layer that carried it: the
-        tracker read, the API response and the prompt the agent actually
-        obeys."""
-        self.assertNotIn("def get_tracked_companies", self.TRACKER.read_text())
-        router = self.ROUTER.read_text()
-        self.assertNotIn("get_tracked_companies", router)
-        self.assertNotIn("_company_exclusion_lists", router)
-        response = (ROOT / "app/models/schemas.py").read_text() \
-            .split("class CompanyExclusionsResponse", 1)[1].split("\nclass ", 1)[0]
-        self.assertNotIn("tracked", response)
-
-    def test_the_prompt_tells_the_agent_a_tracked_company_is_still_fair_game(self):
-        """Dropping the list is not enough — the prompt said the list "includes
-        every company I have already applied to" and told the agent to exclude
-        a company the moment it applied. Both had to go, or the agent keeps
-        skipping on its own."""
-        prompt = profile_data.default_desktop_prompt()
-        section = " ".join(prompt.split("### COMPANIES I HAVE EXCLUDED", 1)[1]
-                           .split("## APPLYING ON", 1)[0].split())
-        self.assertIn("**Applying to a company does not exclude it.**", section)
-        self.assertIn("already in my Tracker", section)
-        for gone in ("includes **every company I have already applied to**",
-                     "treat that company as excluded"):
-            with self.subTest(gone=gone):
-                self.assertNotIn(gone, section)
-
-    def test_only_the_saved_list_reaches_the_agent(self):
-        lines = function(self.ROUTER, "_excluded_company_lines", {
-            "_company_exclusions": lambda: ["Rivet AI", "Small Startup"]})
-        self.assertEqual(lines(), "- Rivet AI\n- Small Startup")
-        empty = function(self.ROUTER, "_excluded_company_lines", {
-            "_company_exclusions": lambda: []})
-        self.assertEqual(empty(), "- (No companies are excluded.)")
-
-    def test_a_saved_name_is_served_back_whether_or_not_it_is_tracked(self):
-        """The old code hid a saved name that matched a tracker company. With
-        no tracker list, every saved name must come back."""
-        read = function(self.ROUTER, "read_company_exclusions", {
-            "_company_exclusions": lambda: ["Rivet AI", "Acme AI"],
-            "CompanyExclusionsResponse": lambda **kw: kw})
-        self.assertEqual(read(), {"companies": ["Rivet AI", "Acme AI"]})
-
-    def test_saving_stores_and_returns_only_the_users_own_list(self):
-        saved = []
-        update = function(self.ROUTER, "update_company_exclusions", {
-            "save_company_exclusions": lambda username, companies: saved.append(companies),
-            "_company_exclusions": lambda: ["Rivet AI"],
-            "_DEFAULT_USERNAME": "subidh", "HTTPException": StubHTTPException,
-            "CompanyExclusionsResponse": lambda **kw: kw,
-            "CompanyExclusionsSettings": SimpleNamespace})
-        result = update(SimpleNamespace(companies=["Rivet AI"]))
-        self.assertEqual(saved, [["Rivet AI"]])
-        self.assertEqual(result, {"companies": ["Rivet AI"]})
-
-    def test_settings_no_longer_shows_the_tracker_list(self):
-        page = (ROOT.parent / "frontend/src/app/(app)/settings/page.tsx").read_text()
-        for gone in ("Already in your Tracker", "trackedCompanies", "excluded automatically"):
-            with self.subTest(gone=gone):
-                self.assertNotIn(gone, page)
-        self.assertNotIn("tracked", (ROOT.parent / "frontend/src/lib/api.ts").read_text()
-                         .split("interface CompanyExclusions", 1)[1].split("\n", 1)[0])
-
-
-
 class StubHTTPException(RuntimeError):
     """FastAPI's HTTPException takes keyword arguments; bare RuntimeError does
     not, so every raise in the endpoint used to blow up as a TypeError in the
@@ -401,13 +319,10 @@ class DesktopPromptTests(unittest.TestCase):
         # Unrelated settings are still persisted.
         self.assertIn("Mine.", saved["automation_rules"])
 
-    def render(self, resume=None, excluded=(), page_url="https://app.test/dashboard",
+    def render(self, resume=None, page_url="https://app.test/dashboard",
                kind="applications"):
         """Call the endpoint with the data layer stubbed, as the CI lane has no DB."""
         module, _ = stub_tracker()
-        lines = function(ROOT / "app/routers/profile.py", "_excluded_company_lines", {
-            "_company_exclusions": lambda: list(excluded),
-        })
         with patch.dict(sys.modules, {"tracker": module}):
             endpoint = function(ROOT / "app/routers/profile.py", "read_desktop_prompt", {
                 "_PROMPT_PLACEHOLDER": re.compile(r"{{([a-z_][a-z0-9_]*)}}"),
@@ -415,7 +330,6 @@ class DesktopPromptTests(unittest.TestCase):
                 "_application_pdf_metadata": lambda: resume,
                 "_clean_text": function(ROOT / "app/routers/profile.py", "_clean_text",
                                         {"HTTPException": StubHTTPException}),
-                "_excluded_company_lines": lines,
                 "HTTPException": StubHTTPException,
                 "Request": SimpleNamespace,
             })
@@ -522,7 +436,7 @@ class DesktopPromptTests(unittest.TestCase):
                          "STEP 2 — RECORD EVERY JOB THROUGH THE API",
                          "RULES THAT APPLY TO EVERY PORTAL",
                          "KEEP GOING UNTIL I SAY STOP",
-                         "### DAILY TARGET — 10 APPLICATIONS A DAY, THEN STOP"):
+                         "### DAILY TARGET — 15 APPLICATIONS A DAY, THEN STOP"):
             self.assertIn(required, self.prompt)
         # The one limit is the user's daily target. Nothing may reintroduce a
         # per-portal or per-session ceiling that quietly ends a run early.
@@ -749,25 +663,48 @@ class DesktopPromptTests(unittest.TestCase):
         self.assertNotIn("apply to these yourself", summary)
         self.assertNotIn("Nothing here is recorded or applied to", summary)
 
-    def test_excluded_companies_reach_the_agent(self):
-        """The exclusion list only filtered the hourly scraper's intake. The
-        desktop agent searches the portals itself, so it never saw the list
-        until the prompt carried it."""
-        section = self.prompt.split("### COMPANIES I HAVE EXCLUDED", 1)[1] \
-                             .split("## APPLYING ON THE EMPLOYER", 1)[0]
-        self.assertIn("{{excluded_companies}}", section)
-        self.assertIn("Excluded company", section)
-        # Employer name, not a mention inside the JD.
-        self.assertIn("is not the employer and does not trigger this", section)
+    def test_no_employer_is_excluded_anywhere_any_more(self):
+        """The exclusion list ran on two gates at once: the prompt told the
+        agent to skip those employers, and intake dropped any record naming
+        one. Removing only the prompt half would have been worse than keeping
+        both -- the agent would submit the application and the tracker would
+        silently discard it, leaving the posting off the skip list for a later
+        run to find and apply to all over again.
 
-        result = self.render(resume={"filename": "r.pdf"},
-                             excluded=["Rivet AI Ltd", "Small Startup"])
-        self.assertIn("- Rivet AI Ltd\n- Small Startup", result["content"])
-        self.assertNotIn("{{", result["content"])
-
-        empty = self.render(resume={"filename": "r.pdf"})
-        self.assertIn("(No companies are excluded.)", empty["content"])
-        self.assertNotIn("{{", empty["content"])
+        So the list is gone from the prompt, from intake, from Settings and
+        from the API, and none of it may come back piecemeal."""
+        # The prompt no longer carries the list, the placeholder, or the MNC
+        # rule that sat beside it.
+        for gone in ("{{excluded_companies}}", "COMPANIES I HAVE EXCLUDED",
+                     "Excluded company", "MNC", "multinational"):
+            with self.subTest(gone=gone):
+                self.assertNotIn(gone, self.prompt)
+        # Intake rejects on experience alone.
+        policy = (ROOT / "modules/intake_policy.py").read_text()
+        self.assertNotIn("excluded_employer", policy)
+        self.assertNotIn("company_exclusions", policy)
+        self.assertIn("def exclusion_reason(job):", policy)
+        self.assertIn("every company is eligible", policy)
+        # ...and the recorder no longer consults a list before saving.
+        save = (ROOT / "modules/tracker.py").read_text() \
+            .split("def save_scraped_job(", 1)[1].split("\ndef ", 1)[0]
+        self.assertNotIn("get_company_exclusions", save)
+        self.assertNotIn("company_exclusions", save)
+        self.assertIn("No employer is excluded any more", save)
+        # The Settings card and its endpoints went with it: a control that
+        # silently does nothing is worse than no control.
+        for path, token in (("app/routers/profile.py", "company-exclusions"),
+                            ("app/routers/profile.py", "_excluded_company_lines"),
+                            ("app/models/schemas.py", "CompanyExclusions"),
+                            ("modules/profile.py", "company_exclusions")):
+            with self.subTest(path=path, token=token):
+                self.assertNotIn(token, (ROOT / path).read_text())
+        for path, token in (("frontend/src/lib/api.ts", "CompanyExclusions"),
+                            ("frontend/src/app/(app)/settings/page.tsx", "excludedCompaniesText"),
+                            ("frontend/src/app/(app)/settings/page.tsx", "Exclude companies"),
+                            ("frontend/src/app/(app)/settings/desktop-prompt.tsx", "excluded_companies")):
+            with self.subTest(path=path, token=token):
+                self.assertNotIn(token, (ROOT.parent / path).read_text())
 
     def test_nothing_mid_run_waits_on_the_user(self):
         """The run is meant to be pasted once and left alone: every gap has to
@@ -843,7 +780,7 @@ class DesktopPromptTests(unittest.TestCase):
                          "never leave one just\n        because it is not an Indeed-hosted apply",
                          # Same screening bar as Wellfound.
                          "TITLE RULES", "RED FLAGS",
-                         "pay floor\n      and the MNC rule apply here exactly",
+                         "pay floor\n      applies here exactly as it does on Wellfound",
                          "Check the posting URL against the skip list",
                          # Recorded like any other application now.
                          '`"source": "Indeed"`',
@@ -922,9 +859,9 @@ class DesktopPromptTests(unittest.TestCase):
         self.assertNotIn("three phases", self.prompt)
         keep_going = self.prompt.split("## KEEP GOING UNTIL I SAY STOP", 1)[1] \
                                 .split("## SAFETY RULES", 1)[0]
-        self.assertIn("1. Today's 10 applications are recorded", keep_going)
+        self.assertIn("1. Today's 15 applications are recorded", keep_going)
         summary = self.prompt.split("## SUMMARY — WHEN I STOP YOU", 1)[1]
-        self.assertIn("The run ends when today's 10 applications are recorded", summary)
+        self.assertIn("The run ends when today's 15 applications are recorded", summary)
         # Neither prompt may carry the other's work.
         self.assertNotIn("## PART 1", self.prompt)
         self.assertNotIn("## PHASE 2", self.prompt)
@@ -1115,28 +1052,6 @@ class DesktopPromptTests(unittest.TestCase):
         self.assertIn("Never skip a job just because it was already in my database", step0)
         self.assertIn("only an applied or", step0)
         self.assertNotIn("Today Todo", step0)
-
-    def test_mnc_employers_are_skipped_on_signals_the_posting_shows(self):
-        """The user does not want to apply to multinationals. The rule has to
-        be checkable from the posting page — size band, recognisable name,
-        India arm of a foreign group, or hiring on an MNC's behalf — and must
-        keep startups and unknown-size companies."""
-        red_flags = self.prompt.split("## RED FLAGS — CHECK EVERY JD", 1)[1] \
-                               .split("### COMPANIES I HAVE EXCLUDED", 1)[0]
-        skip_list = red_flags.split("**SKIP immediately if any of these appear:**", 1)[1] \
-                             .split("**Flag but still apply", 1)[0]
-        self.assertIn("**MNC employer**", skip_list)
-        mnc = red_flags.split("### MNCs — HOW TO TELL", 1)[1]
-        for required in ("**Company size is 5,001 employees or more.**",
-                         "Accenture", "TCS", "Infosys",
-                         "**It is the India office or subsidiary of a foreign multinational group**",
-                         "hiring for a leading MNC",
-                         "do not open extra\npages to research a company",
-                         "Keep startups and small or mid-size companies",
-                         "If the size is not shown",
-                         '"MNC: Accenture"'):
-            with self.subTest(required=required):
-                self.assertIn(required, mnc)
 
     def test_gen_ai_engineer_is_searched_first_under_every_spelling(self):
         search = self.prompt.split("## WHAT TO SEARCH", 1)[1].split("## TITLE RULES", 1)[0]
@@ -1441,7 +1356,7 @@ class DesktopPromptTests(unittest.TestCase):
         tracker so earlier runs that day count, then stop."""
         keep_going = self.prompt.split("## KEEP GOING UNTIL I SAY STOP", 1)[1] \
                                 .split("## SAFETY RULES", 1)[0]
-        for required in ("**My target is 10 applications a day, across Wellfound and Indeed\ntogether.**",
+        for required in ("**My target is 15 applications a day, across Wellfound and Indeed\ntogether.**",
                          # Neither portal is counted differently from the other.
                          "Both count the same way",
                          "do not\nstart another application once it does",
@@ -1452,7 +1367,7 @@ class DesktopPromptTests(unittest.TestCase):
             with self.subTest(required=required):
                 self.assertIn(required, keep_going)
         step0 = self.prompt.split("STEP 0 — LOAD THE SKIP LIST", 1)[1].split("## WHAT TO SEARCH", 1)[0]
-        self.assertIn('"applied_today": A, "daily_target": 10', step0)
+        self.assertIn('"applied_today": A, "daily_target": 15', step0)
         self.assertIn('"dms_today": D, "dm_target": 10', step0)
         # A met application target ends this run; the outreach prompt is a
         # separate paste, so nothing here hands off to it.
@@ -1463,8 +1378,8 @@ class DesktopPromptTests(unittest.TestCase):
     def test_the_prompt_target_matches_the_backend_constant(self):
         source = (ROOT / "modules" / "tracker.py").read_text()
         line = next(l for l in source.splitlines() if l.startswith("DAILY_APPLICATION_TARGET"))
-        self.assertEqual(line.split("=", 1)[1].strip(), "10")
-        self.assertIn("DAILY TARGET — 10 APPLICATIONS A DAY", self.prompt)
+        self.assertEqual(line.split("=", 1)[1].strip(), "15")
+        self.assertIn("DAILY TARGET — 15 APPLICATIONS A DAY", self.prompt)
 
     def test_todays_applications_are_counted_in_the_users_timezone(self):
         from datetime import datetime

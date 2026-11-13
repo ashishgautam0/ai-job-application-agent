@@ -109,32 +109,6 @@ class SettingsProfileTests(unittest.TestCase):
         self.assertNotIn("unknown", captured["scoring_weights"]["application_prompt"])
         self.assertNotIn("notice_period", captured["scoring_weights"]["application_prompt"])
 
-    def test_company_exclusions_roundtrip_without_erasing_profile_settings(self):
-        rows = [{"scoring_weights": {"skill": 44, "application_prompt": {"prompt_template": "old"}}}]
-        db = MagicMock()
-        db.table.return_value.select.return_value.eq.return_value.limit.return_value.execute.return_value.data = rows
-
-        def upsert(_username, data):
-            rows[0] = data
-            return data
-
-        with patch.object(profile_data, "_get_client", return_value=db), patch.object(
-            profile_data, "upsert_profile", side_effect=upsert
-        ):
-            self.assertEqual(profile_data.get_company_exclusions(), [])
-            saved = profile_data.save_company_exclusions(companies=[
-                " Rivet AI Ltd ", "RIVET AI", "Small Startup", "",
-            ])
-            self.assertEqual(profile_data.get_company_exclusions(), saved)
-        self.assertEqual(saved, ["Rivet AI Ltd", "Small Startup"])
-        self.assertEqual(rows[0]["scoring_weights"]["skill"], 44)
-        self.assertEqual(rows[0]["scoring_weights"]["application_prompt"]["prompt_template"], "old")
-
-    def test_company_exclusion_read_errors_stop_intake(self):
-        with patch.object(profile_data, "_get_client", side_effect=RuntimeError("service unavailable")):
-            with self.assertRaisesRegex(RuntimeError, "service unavailable"):
-                profile_data.get_company_exclusions()
-
     def test_malformed_application_prompt_settings_are_treated_as_empty(self):
         with patch.object(profile_data, "get_profile", return_value={
             "scoring_weights": {"application_prompt": ["not", "a", "mapping"]},
@@ -348,7 +322,6 @@ class SettingsProfileTests(unittest.TestCase):
         order = [
             '<DesktopPrompt kind="applications" />',
             '<DesktopPrompt kind="outreach" />',
-            "Exclude companies from scraped jobs",
             '<h1 className="text-2xl font-bold">Resume profile</h1>',
             "Active backend resume",
         ]
@@ -360,7 +333,10 @@ class SettingsProfileTests(unittest.TestCase):
         # a second way to send the same message twice.
         for retired in ('kind="cold_dm"', "Cold DM prompt",
                         'kind="followup"', "LinkedIn follow-up prompt",
-                        "OutreachPrompt"):
+                        "OutreachPrompt",
+                        # No employer is excluded now, so the card that managed
+                        # that list is gone rather than left doing nothing.
+                        "Exclude companies from scraped jobs"):
             with self.subTest(retired=retired):
                 self.assertNotIn(retired, page)
         self.assertFalse(

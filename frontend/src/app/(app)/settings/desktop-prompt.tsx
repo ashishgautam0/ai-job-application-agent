@@ -22,7 +22,7 @@ const STARTER_MESSAGES: Record<DesktopPromptKind, string> = {
     "I consent to sharing " +
     "my name, email, phone number, location and resume, as they appear in my resume and saved answers, with every " +
     "employer you apply to in this run. Submit each one yourself without asking me first — don't check with " +
-    "me job by job, just keep going until today's 10 applications are done.",
+    "me job by job, just keep going until today's 15 applications are done.",
   outreach:
     "Send my LinkedIn outreach for me, using the instructions that follow. You " +
     "have my authorisation to send up to 10 LinkedIn connection invitations a day, " +
@@ -43,10 +43,10 @@ const COPY: Record<DesktopPromptKind, {
     title: "Claude Desktop prompt — applications",
     label: "Applications prompt",
     blurb: <>
-      Searches and applies, and nothing else. One paste into Claude Desktop (Cowork) browses <strong>Wellfound</strong> and <strong>Indeed</strong> with Computer Use, skips jobs you already handled, applies to matching entry-level AI/ML roles — including the ones that redirect to the company&apos;s own site — and records each in your tracker. It stops when today&apos;s 10 applications are met. This agent is the only thing that finds jobs; nothing scrapes on your behalf.
+      Searches and applies, and nothing else. One paste into Claude Desktop (Cowork) browses <strong>Wellfound</strong> and <strong>Indeed</strong> with Computer Use, skips jobs you already handled, applies to matching entry-level AI/ML roles — including the ones that redirect to the company&apos;s own site — and records each in your tracker. It stops when today&apos;s 15 applications are met. This agent is the only thing that finds jobs; nothing scrapes on your behalf.
     </>,
     footer: <>
-      Log into Wellfound and Indeed in your browser before starting. LinkedIn is not used by this prompt. Generate resolves the live tracker API, Dashboard and resume links. It applies until today&apos;s 10 applications are met — counting earlier runs that day — then stops. Placeholders: {"{{page_url}}"}, {"{{seen_urls_url}}"}, {"{{record_url}}"}, {"{{resume_url}}"}, {"{{resume_filename}}"}, {"{{resume_sha256}}"}, {"{{excluded_companies}}"}.
+      Log into Wellfound and Indeed in your browser before starting. LinkedIn is not used by this prompt. Generate resolves the live tracker API, Dashboard and resume links. It applies until today&apos;s 15 applications are met — counting earlier runs that day — then stops. Placeholders: {"{{page_url}}"}, {"{{seen_urls_url}}"}, {"{{record_url}}"}, {"{{resume_url}}"}, {"{{resume_filename}}"}, {"{{resume_sha256}}"}.
     </>,
   },
   outreach: {
