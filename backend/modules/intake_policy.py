@@ -49,10 +49,12 @@ _WORD_NUMBERS = {"one": "1", "two": "2", "three": "3", "four": "4",
                  "nine": "9", "ten": "10"}
 
 def experience_exclusion(description):
-    """Return evidence for a required experience band above 24 months, otherwise None.
+    """Return evidence for a required experience floor above 12 months, else None.
 
-    Unknown experience is retained. Preferred sections are optional unless an
-    individual clause explicitly says required. Upper bounds do not exclude.
+    The floor is the bottom of the stated band, so "0-2 years" and "1-2 years"
+    stay eligible while "2+ years" and "2-4 years" do not. Unknown experience
+    is retained. Preferred sections are optional unless an individual clause
+    explicitly says required. Upper bounds do not exclude.
     """
     text = html.unescape(description or "")
     text = re.sub(r"<[^>]+>", "\n", text)
@@ -85,8 +87,12 @@ def experience_exclusion(description):
                         continue
                     if (_OPTIONAL.search(local) or section_optional) and not _REQUIRED.search(local):
                         continue
-                    months = float(match["high"] or match["low"]) * (12 if match["unit"].lower().startswith(("year", "yr")) else 1)
-                    if months > 24 or (months == 24 and match["strict"]):
+                    # The bottom of a band is what it actually demands: "2-4
+                    # years" asks for 2, "0-2 years" asks for 0 and a one-year
+                    # candidate sits inside it. One year is the ceiling, so a
+                    # floor above 12 months is out -- "2+ years" included.
+                    months = float(match["low"]) * (12 if match["unit"].lower().startswith(("year", "yr")) else 1)
+                    if months > 12 or (months == 12 and match["strict"]):
                         return match.group().strip()
     return None
 
@@ -95,7 +101,7 @@ def exclusion_reason(job, company_exclusions=()):
         return "excluded by Settings company list"
     evidence = experience_exclusion(job.get("description"))
     if evidence:
-        return "experience requirement above two years: " + evidence
+        return "experience requirement above one year: " + evidence
     return None
 
 def filter_jobs(jobs, company_exclusions=()):

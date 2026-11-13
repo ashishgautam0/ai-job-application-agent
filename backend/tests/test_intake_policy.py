@@ -44,10 +44,30 @@ class IntakePolicyTests(unittest.TestCase):
             with self.subTest(text=text):
                 self.assertIsNotNone(experience_exclusion(text))
 
+    def test_a_demanded_floor_of_two_years_is_excluded(self):
+        """One year is the ceiling, so anything demanding more than 12 months
+        is out even when it never says "required".
+
+        "2+ years" used to survive intake: the band's top was measured against
+        a 24-month ceiling, and an open-ended "2+" has no top, so it scored
+        exactly 24 and slipped under. Months-phrased demands above a year had
+        the same escape.
+        """
+        for text in ["2+ years experience", "2 years experience",
+                     "24 months experience", "18 months experience",
+                     "more than 1 year of experience",
+                     "Experience: 2+ years"]:
+            with self.subTest(text=text):
+                self.assertIsNotNone(experience_exclusion(text))
+
     def test_eligible_or_unknown_experience(self):
+        # A band whose bottom is 0 or 1 still admits a one-year candidate, so
+        # its top is not a demand: these stay eligible.
         for text in ["1+ years experience", "0-2 years of experience",
-                     "1–2 years experience", "12 months experience", "24 months experience", "18 months experience", "2+ years experience", "Fresher",
-                     "3 years experience preferred", "Up to 2 years experience", "No more than 2 years experience",
+                     "1–2 years experience", "0-3 years experience",
+                     "12 months experience", "1 year of experience", "Fresher",
+                     "3 years experience preferred", "Up to 2 years experience",
+                     "No more than 2 years experience",
                      "Company founded 10 years ago. Python required.",
                      "Preferred qualifications:\n3 years experience",
                      "", None]:
