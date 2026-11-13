@@ -81,8 +81,8 @@ Key facts to match against (verify these exist in the PDF):
   Cloud AI/ML Engineer, MLOps Engineer, Applied AI Engineer
 - **Core skills**: Python, FastAPI, PyTorch, TensorFlow, LangChain, RAG,
   LLM, NLP, AWS, Docker, Supabase, PostgreSQL
-- **Experience level**: Entry-level / Junior — 1 year is my ceiling for any
-  mandatory requirement (see EXPERIENCE RULES)
+- **Experience level**: Fresher / Entry-level — a posting qualifies only if
+  every experience figure it prints stays inside 1 year (see EXPERIENCE RULES)
 - **Location**: India or Remote
 
 ## RULES THAT APPLY TO EVERY PORTAL
@@ -345,33 +345,43 @@ infrastructure, devops, platform engineer, data engineer.
 
 ## EXPERIENCE RULES
 
-**I have 1 year of experience, so 1 year is the ceiling.** Before applying,
-read the full job description. **SKIP if**:
-- **Any figure of 2 years or more, however it is worded** — "2+ years",
-  "2 years", "minimum 2 years", "2-4 years", "3+ years", "5-7 years",
-  "5+ years", "18 months", "24 months" and anything higher
-- **"Preferred" does not rescue a figure of 2 years or more.** "3 years
-  preferred", "5+ years desirable", "2 years nice to have" are all skips. A
-  posting that names 2 years is asking for 2 years, whatever word sits beside
-  the number
-- JD says "senior level required", "more than 1 year required", or similar
+**Freshers and 0-1 years only.** Every figure the posting names has to stay
+inside one year. Before applying, read the full job description.
+
+**SKIP if the posting names any figure past one year — anywhere, in any
+wording.** It does not matter whether the number is a floor, a ceiling, the top
+of a range or merely "preferred": if 2 years is printed, this is not my role.
+- **A plain figure of 2 years or more**: "2 years", "2+ years",
+  "minimum 2 years", "2-4 years", "3+ years", "5-7 years", "18 months",
+  "24 months", "30 months" and anything higher
+- **A range that reaches past a year**, even one a fresher would fit —
+  **"0-2 years", "1-2 years", "0-3 years", "1 to 3 years" are all skips.** The
+  top of the range is a figure the posting named, and that is enough
+- **An upper bound of more than a year**: "up to 2 years", "at most 2 years",
+  "no more than 2 years", "less than 2 years". Capping the experience at 2
+  years still prints 2 years
+- **Anything open-ended upward from a year**: **"1+ years", "minimum 1 year",
+  "at least 1 year", "more than 1 year"**. These have no top at all, so they
+  reach past the ceiling however little they ask for
+- **"Preferred" rescues nothing.** "3 years preferred", "5+ years desirable",
+  "2 years nice to have" are skips. A posting that prints 2 years is naming 2
+  years, whatever word sits beside the number
+- JD says "senior level required" or similar
 
 **KEEP if**:
-- JD says 0-1 years, "1+ year", "fresher welcome", or no years mentioned
+- **No years are mentioned at all** — much the commonest case, and still
+  eligible. Silence is not a requirement
 - JD is open to freshers in any wording: "freshers", "fresher can apply",
   "no prior experience required", "entry level", "0 years", "new grad"
+- **An explicit 0-1 band**: "0-1 years", "0-1 year", "1 year", "up to 1 year",
+  "less than a year", "6 months", "12 months"
 - It is an internship with no experience bar, which is the usual case
-- A figure of 1 year or less marked "preferred" or "nice to have" — the number
-  has to be inside the ceiling for the softer wording to matter at all
-- **Bands whose bottom is 0 or 1**, which admit me rather than demand more:
-  "0-2 years", "1-2 years", "0-3 years". The bottom of a band is what it asks
-  for; the top is the room above me, not a bar I have to clear
-- Upper-bound phrases, which cap rather than demand: "up to 2 years",
-  "at most 2 years", "no more than 2 years"
+- A figure of 1 year or less marked "preferred" or "nice to have"
 
-**The test is the bottom of what the posting demands, against 1 year.**
-"2-4 years" demands 2 and is out. "0-2 years" demands 0 and is in. The
-difference is not the number 2 — it is whether 2 is the floor or the ceiling.
+**The test is the highest number the posting prints, against one year.**
+"0-1 years" prints 1 and is in. "0-2 years" prints 2 and is out, even though I
+would sit inside that range. "1+ years" prints no top and is out. I am not
+arguing my way into a range any more — if the posting has 2 in it, I move on.
 
 This ceiling is the same on every portal, and the same for an internship as
 for a job. A role asking for 2 mandatory years is a skip on Wellfound exactly
@@ -591,14 +601,14 @@ Indeed is a skip here.
       below never repeats it. Reading only the paragraphs is how a 3+ years
       role gets applied to.
 
-      **More than 1 mandatory year is a skip, with no exceptions here.** 2+,
-      3+, 5+ in that field: skip it and record it as `skipped` with the reason
-      ("Requires 3+ years"). A startup listing that sounds welcoming, a
-      founder-written post, or a stack I happen to know does not lower the
-      ceiling — EXPERIENCE RULES apply unchanged, and only the KEEP cases
-      there (0-1 years, "1+ year", a range whose bottom is 0 or 1, or a figure
-      of 1 year or less marked preferred) survive it. "3+ years preferred" in
-      that field is a skip: the word preferred does not shrink the number.
+      **Any figure past one year in that field is a skip, with no exceptions
+      here.** "1+", "2+", "3+", "5+", "0-2 years", "1-2 years": skip it and
+      record it as `skipped` with the reason ("Requires 1+ years"). A startup
+      listing that sounds welcoming, a founder-written post, or a stack I
+      happen to know does not lower the ceiling — EXPERIENCE RULES apply
+      unchanged, and only the KEEP cases there (an explicit 0-1 band, or no
+      figure at all) survive it. "3+ years preferred" in that field is a skip:
+      the word preferred does not shrink the number.
 
       Then check RED FLAGS. **The pay floor applies here as much as
       anywhere**: startup listings often quote equity alongside a low cash

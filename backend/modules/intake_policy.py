@@ -30,7 +30,7 @@ def excluded_employer(company, company_exclusions=()):
 _NUMBER = r"\d+(?:\.\d+)?"
 _DURATION = (
     rf"(?P<strict>more than|over|greater than|>)?\s*"
-    rf"(?P<low>{_NUMBER})\s*(?:\+|(?:-|–|—|to)\s*(?P<high>{_NUMBER}))?\s*"
+    rf"(?P<low>{_NUMBER})\s*(?:(?P<plus>\+)|(?:-|–|—|to)\s*(?P<high>{_NUMBER}))?\s*"
     r"(?P<unit>years?|yrs?|months?|mos?)"
 )
 # Work/technical modifiers allowed, but do not span another sentence or number.
@@ -43,18 +43,27 @@ _BEFORE = re.compile(
 )
 _OPTIONAL = re.compile(r"\b(?:preferred|preferably|desirable|nice to have|optional|a plus)\b", re.I)
 _REQUIRED = re.compile(r"\b(?:must|required|mandatory|minimum|at least|essential)\b", re.I)
-_UPPER = re.compile(r"(?:up to|at most|maximum|less than|under|no more than)\s*$", re.I)
+# "minimum 1 year" and "at least 1 year" are "1+ years" in other words: open
+# ended upward, so they name no top at all.
+_AT_LEAST = re.compile(r"\b(?:minimum|at ?least|min\.?)\s*(?:of\s*)?$", re.I)
+# A section heading names no span of time. "mandatory 5 years experience" is a
+# requirement that happens to open with a heading word, and reading it as a
+# heading skipped the line whole.
+_HAS_DURATION = re.compile(
+    r"\d[\d.\s+\-–—]*(?:to\s+\d[\d.\s]*)?(?:years?|yrs?|months?|mos?)\b", re.I
+)
 _WORD_NUMBERS = {"one": "1", "two": "2", "three": "3", "four": "4",
                  "five": "5", "six": "6", "seven": "7", "eight": "8",
                  "nine": "9", "ten": "10"}
 
 def experience_exclusion(description):
-    """Return evidence for a required experience floor above 12 months, else None.
+    """Return evidence for a stated experience band reaching past 12 months.
 
-    The floor is the bottom of the stated band, so "0-2 years" and "1-2 years"
-    stay eligible while "2+ years" and "2-4 years" do not. Unknown experience
-    is retained. Preferred sections are optional unless an individual clause
-    explicitly says required. Upper bounds do not exclude.
+    Only a band that stays inside a year is eligible: "0-1 years" and "1 year"
+    survive, while "0-2 years", "1-2 years", "up to 2 years" and "1+ years" do
+    not, because each names a figure beyond the ceiling. Unknown experience is
+    retained. Preferred sections are optional unless an individual clause
+    explicitly says required.
     """
     text = html.unescape(description or "")
     text = re.sub(r"<[^>]+>", "\n", text)
@@ -65,12 +74,12 @@ def experience_exclusion(description):
         line = line.strip()
         if not line:
             continue
-        if len(line) < 85 and re.fullmatch(
+        if len(line) < 85 and not _HAS_DURATION.search(line) and re.fullmatch(
             r"(?:preferred|desired|desirable|nice.to.have|optional)(?:\s+\w+){0,4}\s*:?", line, re.I
         ):
             section_optional = True
             continue
-        if len(line) < 85 and re.fullmatch(
+        if len(line) < 85 and not _HAS_DURATION.search(line) and re.fullmatch(
             r"(?:required|minimum|basic|essential|mandatory)(?:\s+\w+){0,4}\s*:?", line, re.I
         ):
             section_optional = False
@@ -83,16 +92,20 @@ def experience_exclusion(description):
                     tail = clause[match.end():]
                     local = clause[max(0, match.start()-35):match.end()]
                     local += re.split(r",|\band\b", tail, maxsplit=1)[0]
-                    if _UPPER.search(clause[:match.start()]) or re.search(r"\bno\s*$", clause[:match.start()], re.I):
-                        continue
                     if (_OPTIONAL.search(local) or section_optional) and not _REQUIRED.search(local):
                         continue
-                    # The bottom of a band is what it actually demands: "2-4
-                    # years" asks for 2, "0-2 years" asks for 0 and a one-year
-                    # candidate sits inside it. One year is the ceiling, so a
-                    # floor above 12 months is out -- "2+ years" included.
-                    months = float(match["low"]) * (12 if match["unit"].lower().startswith(("year", "yr")) else 1)
-                    if months > 12 or (months == 12 and match["strict"]):
+                    unit = 12 if match["unit"].lower().startswith(("year", "yr")) else 1
+                    # Only a band that stays inside a year is eligible, so the
+                    # TOP of what the posting names is what counts. "0-2 years"
+                    # reaches 2 and is out, even though a fresher fits its
+                    # floor, and so is "up to 2 years" -- an upper bound is a
+                    # figure the posting named, not a reason to ignore it.
+                    top = float(match["high"] or match["low"]) * unit
+                    # Open ended upward names no top: "1+ years", "more than 1
+                    # year", "minimum 1 year" all reach past the ceiling.
+                    open_ended = bool(match["strict"] or match["plus"]) or bool(
+                        _AT_LEAST.search(clause[:match.start()]))
+                    if top > 12 or (open_ended and float(match["low"]) * unit >= 12):
                         return match.group().strip()
     return None
 
@@ -101,7 +114,7 @@ def exclusion_reason(job, company_exclusions=()):
         return "excluded by Settings company list"
     evidence = experience_exclusion(job.get("description"))
     if evidence:
-        return "experience requirement above one year: " + evidence
+        return "experience band reaches past one year: " + evidence
     return None
 
 def filter_jobs(jobs, company_exclusions=()):

@@ -44,32 +44,57 @@ class IntakePolicyTests(unittest.TestCase):
             with self.subTest(text=text):
                 self.assertIsNotNone(experience_exclusion(text))
 
-    def test_a_demanded_floor_of_two_years_is_excluded(self):
-        """One year is the ceiling, so anything demanding more than 12 months
-        is out even when it never says "required".
+    def test_any_figure_past_one_year_is_excluded(self):
+        """Freshers and 0-1 years only, so the highest figure a posting prints
+        is what decides it -- floor, ceiling or top of a range alike.
 
-        "2+ years" used to survive intake: the band's top was measured against
-        a 24-month ceiling, and an open-ended "2+" has no top, so it scored
-        exactly 24 and slipped under. Months-phrased demands above a year had
-        the same escape.
+        Each of these used to survive intake. A band was judged by its bottom,
+        so "0-2 years" and "1-2 years" passed on a floor a fresher fits; an
+        upper bound was treated as no demand at all, so "up to 2 years"
+        passed; and "1+ years" scored its floor of exactly 12 months and tied
+        rather than exceeded.
         """
-        for text in ["2+ years experience", "2 years experience",
-                     "24 months experience", "18 months experience",
+        for text in ["0-2 years of experience", "1-2 years experience",
+                     "1–2 years experience", "0-3 years experience",
+                     "Experience: 1 to 3 years",
+                     "Up to 2 years experience", "No more than 2 years experience",
+                     "less than 2 years experience",
+                     "1+ years experience", "Experience: 1+ years",
+                     "minimum 1 year of experience", "at least 1 year experience",
                      "more than 1 year of experience",
-                     "Experience: 2+ years"]:
+                     "2+ years experience", "2 years experience",
+                     "24 months experience", "18 months experience"]:
             with self.subTest(text=text):
                 self.assertIsNotNone(experience_exclusion(text))
 
+    def test_a_heading_word_does_not_swallow_a_requirement_line(self):
+        """A short line opening with a heading word was read as a section
+        heading and skipped whole, so "mandatory 5 years experience" on its own
+        line asked for five years and passed intake. A heading names no span of
+        time, so a line carrying one is never a heading.
+
+        The headings themselves must still work: they set whether the figures
+        under them are required or merely preferred.
+        """
+        for text in ["mandatory 5 years experience", "required 2 years of experience",
+                     "minimum 3 years experience", "minimum 1 year of experience"]:
+            with self.subTest(text=text):
+                self.assertIsNotNone(experience_exclusion(text))
+        self.assertIsNone(experience_exclusion("Preferred qualifications:\n3 years experience"))
+        self.assertIsNotNone(experience_exclusion("Required qualifications:\n3 years experience"))
+
     def test_eligible_or_unknown_experience(self):
-        # A band whose bottom is 0 or 1 still admits a one-year candidate, so
-        # its top is not a demand: these stay eligible.
-        for text in ["1+ years experience", "0-2 years of experience",
-                     "1–2 years experience", "0-3 years experience",
-                     "12 months experience", "1 year of experience", "Fresher",
-                     "3 years experience preferred", "Up to 2 years experience",
-                     "No more than 2 years experience",
+        # Silence is not a requirement, and an explicit 0-1 band stays inside
+        # the ceiling. Both remain eligible.
+        for text in ["0-1 years of experience", "0-1 year experience",
+                     "Experience: 0-1 years", "1 year of experience",
+                     "up to 1 year of experience", "0 years experience",
+                     "12 months experience", "6 months experience",
+                     "Fresher", "freshers welcome",
+                     "3 years experience preferred",
                      "Company founded 10 years ago. Python required.",
                      "Preferred qualifications:\n3 years experience",
+                     "Required qualifications:", "Minimum qualifications",
                      "", None]:
             with self.subTest(text=text):
                 self.assertIsNone(experience_exclusion(text))
