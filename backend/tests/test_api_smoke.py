@@ -203,9 +203,9 @@ ENDPOINTS = (
 class DeployedDependencyTests(unittest.TestCase):
     """The deployed API installs the ROOT requirements.txt, not backend's.
 
-    vercel.json rewrites /api/(.*) to /api/index.py, which imports
-    backend.app.main, but the Vercel project builds from the repository root —
-    so a package added only to backend/requirements.txt is simply absent in
+    api/index.py imports backend.app.main and Vercel serves that app from the
+    repository root, so the root requirements.txt is what gets installed — a
+    package added only to backend/requirements.txt is simply absent in
     production. That is not a build error: the import fails at request time,
     inside whichever handler needs it. It is how `anthropic` shipped missing
     and every mini demo's model call answered 502, and how pywebpush went
