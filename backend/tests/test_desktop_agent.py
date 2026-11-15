@@ -1245,6 +1245,53 @@ class DesktopPromptTests(unittest.TestCase):
         self.assertIn("**Trainer is not Trainee.**", self.prompt)
         self.assertIn("A Trainer teaches other people and is a skip", self.prompt)
 
+    def test_the_aws_pass_is_the_one_full_time_opening_and_stays_narrow(self):
+        """The owner holds two AWS certifications, so an AWS machine-learning
+        role is worth more to them than the stipend on it. That buys this pass
+        two exceptions nothing else in the run gets: full-time roles, and no
+        pay floor.
+
+        The danger is the test for it. Almost every backend posting lists AWS
+        somewhere, so a loose reading would quietly reopen the full-time job
+        market the run just closed -- the exception has to name what counts
+        AND what does not, or it swallows the rule it is an exception to.
+
+        What does NOT move: the experience ceiling, the seniority and
+        data-science rejects, and unpaid, which is a red flag rather than a
+        pay figure and so is not covered by waiving the floor."""
+        search = self.prompt.split("## WHAT TO SEARCH", 1)[1] \
+                            .split("## IS IT AN INTERNSHIP", 1)[0]
+        for required in ("**Then run the AWS pass, with the job-type filter OFF — and this one takes\nfull-time jobs too.**",
+                         # Both certifications, named as the resume states them.
+                         "**AWS Certified Machine Learning Engineer – Associate (MLA-C01)**",
+                         "**AWS Certified AI Practitioner (AIF-C01)**",
+                         '"AWS Machine Learning Engineer", "AWS AI Engineer", "SageMaker"',
+                         # The narrowness, stated as such.
+                         '**"AWS is specifically valuable" is a narrow test, and it has to stay narrow.**',
+                         "would quietly reopen the full-time job market this run deliberately\nclosed",
+                         "It names **SageMaker** or **Bedrock**",
+                         "It asks for an **AWS certification**",
+                         # ...and what fails it, which is the half that matters.
+                         "**Not enough**", "stack dump", '"cloud experience a plus"',
+                         "a DevOps or infrastructure role with no ML",
+                         # The two exceptions, and their limits.
+                         '`"job_type": "Job"`',
+                         "**The pay floor does not apply.**",
+                         "**unpaid is still a skip**",
+                         "EXPERIENCE RULES (freshers and 0-1\n  years only)",
+                         'A "Senior AWS ML Engineer" or one wanting 3+\n  years is a skip here',
+                         "count toward today's 15"):
+            with self.subTest(required=required):
+                self.assertIn(required, search)
+        # The two rules it bends have to point at it, or they read as a ban.
+        scope = self.prompt.split("## IS IT AN INTERNSHIP", 1)[1].split("## TITLE RULES", 1)[0]
+        self.assertIn("**The one exception: a full-time role where my AWS certifications are\nspecifically valuable.**", scope)
+        self.assertIn("the only way a full-time posting gets applied to in this run", scope)
+        floor = self.prompt.split("### PAY FLOOR", 1)[1].split("### COMPANIES", 1)[0] \
+                           .split("## APPLYING ON", 1)[0]
+        self.assertIn("**The AWS pass is exempt**", floor)
+        self.assertIn("Unpaid is still a skip under RED FLAGS.", floor)
+
     def test_the_search_pass_hunts_internships_not_full_time_roles(self):
         """Rescoping the rules alone would be inert: ten full-time role
         queries return full-time results, every one of them a skip, and the
@@ -1290,8 +1337,9 @@ class DesktopPromptTests(unittest.TestCase):
         # carries the value every application sends.
         self.assertIn('"job_type": "Internship"', step2)
         self.assertIn("- **job_type**: exactly `Job` or `Internship`", step2)
-        self.assertIn('a `Job` with `status: "applied"` is a bug', step2)
-        self.assertIn("`Job` is for a **skip** of a\n  full-time posting", step2)
+        self.assertIn('A `Job` with `status: "applied"` is right in exactly\n  one case', step2)
+        self.assertIn("a full-time role from the AWS pass", step2)
+        self.assertIn('`Job` with\n  `status: "skipped"` is the ordinary full-time rejection', step2)
         self.assertIn("left out it defaults to `Job`", step2)
         # The API accepts exactly this field name and maps it to the column.
         schemas = (ROOT / "app/models/schemas.py").read_text()
@@ -1303,6 +1351,7 @@ class DesktopPromptTests(unittest.TestCase):
         # And the summary reports the split, so a run that found only jobs is
         # visible as such rather than looking like the internship pass worked.
         summary = self.prompt.split("## SUMMARY — WHEN I STOP YOU", 1)[1]
+        self.assertIn("Of those applied: I internships, A full-time AWS roles", summary)
         self.assertIn("Of those skipped: F were full-time roles, not internships", summary)
         self.assertIn("### Applied Internships", summary)
 

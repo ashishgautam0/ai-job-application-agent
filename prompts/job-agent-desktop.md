@@ -254,6 +254,47 @@ nothing else loosens: a result whose title carries neither trainee,
 apprentice nor intern is a full-time job and a skip, and every other rule
 applies unchanged. Turn the filter back on for the next query.
 
+**Then run the AWS pass, with the job-type filter OFF — and this one takes
+full-time jobs too.** My resume carries two AWS certifications, so a role
+built on AWS machine learning is worth more to me than the pay on it:
+
+- **AWS Certified Machine Learning Engineer – Associate (MLA-C01)**
+- **AWS Certified AI Practitioner (AIF-C01)**
+
+Search **"AWS Machine Learning Engineer", "AWS AI Engineer", "SageMaker",
+"AWS Bedrock", "AWS GenAI", "MLOps AWS"**, and the Intern spelling of each.
+Filter off, because a full-time AWS ML role counts on this pass.
+
+**"AWS is specifically valuable" is a narrow test, and it has to stay narrow.**
+Almost every backend posting lists AWS somewhere, and treating those as a
+match would quietly reopen the full-time job market this run deliberately
+closed. The posting qualifies only if **AWS machine learning is central to
+the role**, shown by at least one of:
+- It names **SageMaker** or **Bedrock**.
+- It asks for an **AWS certification**, in any wording.
+- The **title** is an AWS or cloud ML title: "AWS ML Engineer", "AWS AI
+  Engineer", "SageMaker Engineer", "AWS GenAI Engineer".
+- The work described is building or deploying ML on AWS — "train and deploy
+  models on SageMaker", "LLM serving on Bedrock", "ML pipelines on AWS".
+
+**Not enough**, and each of these is a skip: AWS listed among ten other tools
+in a stack dump; "cloud experience a plus"; AWS used only to host a web app
+with no ML in sight; a DevOps or infrastructure role with no ML.
+
+**What changes on this pass, and nothing else does:**
+- **Full-time jobs are in**, for these postings only. Record them with
+  `"job_type": "Job"`.
+- **The pay floor does not apply.** I will take less for one of these. But
+  **unpaid is still a skip** — that is a red flag, not a pay figure, and no
+  certification makes unpaid worth it.
+- **Everything else holds unchanged**: EXPERIENCE RULES (freshers and 0-1
+  years only), the seniority rejects, the data-science reject, the trainer
+  reject, and the skip list. A "Senior AWS ML Engineer" or one wanting 3+
+  years is a skip here exactly as anywhere else.
+- These count toward today's 15 like any other application.
+
+Turn the filter back on afterwards.
+
 **Never run a data-science search on any portal.** Do not type "Data
 Scientist", "Data Science", "Data Analyst" or "Data Science Intern" into
 Indeed or
@@ -312,6 +353,12 @@ jobs at all.
 - It is a full-time offer with an internship-to-hire path — "intern first,
   then full-time", "6-month probation then permanent". The posting is for the
   full-time role; skip it.
+
+**The one exception: a full-time role where my AWS certifications are
+specifically valuable.** That is the AWS pass in WHAT TO SEARCH, and it is
+the only way a full-time posting gets applied to in this run. It is narrow on
+purpose — AWS machine learning has to be central to the role, not merely
+mentioned — and everything outside that test is still a skip.
 
 Record a skip on this test through STEP 2 with `"job_type": "Job"` and a note
 saying so, for example `"Full-time role, not an internship"`, so it lands on
@@ -512,6 +559,9 @@ always, so that is the figure to read first.
 - **Open-ended upward** ("₹20,000+", "starting from ₹20,000", "₹20,000
   onwards"): the top is not stated, so the rule does not apply.
 - **Pay in another currency**: the rule does not apply.
+- **The AWS pass is exempt**: a posting that passes the AWS test in WHAT TO
+  SEARCH is judged without this floor, because the certification is worth
+  more to me than the stipend. Unpaid is still a skip under RED FLAGS.
 - Record the skip through STEP 2 with a note quoting the figure, for example
   `"Pay below floor: ₹8,000/month stipend"`, so it lands on the skip list and
   is never opened again.
@@ -909,10 +959,11 @@ Field rules:
   since my stats group by this field. Never `LinkedIn`: nothing is applied to
   there in this run, and older `LinkedIn` records in my tracker stay as they
   are
-- **job_type**: exactly `Job` or `Internship`. Everything **applied** to in
-  this run is an `Internship` — a `Job` with `status: "applied"` is a bug,
-  since full-time roles are out of scope. `Job` is for a **skip** of a
-  full-time posting, which is what IS IT AN INTERNSHIP rejects. Send it on
+- **job_type**: exactly `Job` or `Internship`. Nearly everything applied to
+  is an `Internship`. A `Job` with `status: "applied"` is right in exactly
+  one case — a full-time role from the AWS pass — and wrong everywhere else,
+  since full-time roles are otherwise out of scope. `Job` with
+  `status: "skipped"` is the ordinary full-time rejection. Send the field on
   every record: left out it defaults to `Job`, which would file every
   internship I applied to as a job and make my stats wrong.
 - **status**: `applied` when the application was actually submitted and you saw
@@ -1063,6 +1114,7 @@ When I stop you, present:
 - Wellfound: X searched, Y applied, Z skipped, S already handled
 - Indeed: X searched, Y applied, Z skipped, S already handled
 - TOTAL: XX applied, ZZ skipped, SS already handled
+- Of those applied: I internships, A full-time AWS roles
 - Of those skipped: F were full-time roles, not internships
 - Passes completed over the portal list: N
 - Portals not reached this run: [none, or which ones]
@@ -1072,6 +1124,7 @@ When I stop you, present:
 |---|--------|---------|-------|---------|----------|-----|
 | 1 | Wellfound | Acme AI | AI/ML Intern | ₹25,000/mo | Bangalore | [link] |
 | 2 | Indeed | Beta Labs | ML Intern | ₹20,000/mo | Remote | [link] |
+| 3 | Indeed | Gamma | AWS ML Engineer (AWS pass, full-time) | ₹18,000/mo | Remote | [link] |
 | ... |
 
 ### Skipped Postings (with reasons)
