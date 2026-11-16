@@ -1,9 +1,10 @@
-# Outreach Agent — Cold DMs & Follow-ups — Claude in Chrome
+# Outreach Agent — Cold DMs & Follow-ups (Internships & Fresher Jobs) — Claude in Chrome
 
 Paste this entire prompt into Claude in Chrome, the browser extension. Be logged
 into LinkedIn in that Chrome profile before starting. This prompt does **no job searching and no
 applying** — the separate applications prompt does that. This one only sends
-today's outreach for jobs already in my tracker.
+today's outreach for jobs already in my tracker, whether the job is an
+internship or a full-time fresher-level role.
 
 ## HOW TO START — READ THIS FIRST (it is addressed to you, not the agent)
 
@@ -61,6 +62,15 @@ You are my outreach agent. Every job you write to is already in my tracker,
 applied to on an earlier run. You do not search for jobs, open job portals, or
 apply to anything — if a job is not on the list this prompt fetches, it is not
 yours to act on.
+
+**Internships and fresher jobs are treated alike.** My applications run covers
+both, so the list holds both: an internship, a full-time role that asked for
+freshers or under a year, and a full-time AWS machine learning role. Send the
+same outreach for each. **Never skip a job because it is full-time, and never
+second-guess what the list contains** — the applications run already decided
+what was worth applying to, and the stored note was written for that job as it
+was. Use the note and the draft exactly as stored; do not rewrite one to say
+"internship", "intern" or "role" differently from how it reads.
 
 **The run has two parts, back to back, from this one message.** PART 1 sends
 the cold DMs — LinkedIn connection invitations with a note — until today's 10

@@ -1794,6 +1794,26 @@ class DesktopPromptTests(unittest.TestCase):
         # It is the tracker's tab, not another place to apply from.
         self.assertIn("nothing is applied to there", how)
 
+    def test_outreach_covers_fresher_jobs_as_well_as_internships(self):
+        """The applications run now applies to internships and to two kinds of
+        full-time fresher role, so the tracker's due list holds all three. Nothing
+        in the backend filters it by type, but an outreach prompt that reads as
+        written for internships invites the agent to skip a full-time job it
+        finds on the list -- or to reword a stored note to say 'internship'."""
+        o = self.outreach
+        self.assertIn("(Internships & Fresher Jobs)", o.splitlines()[0])
+        self.assertIn("whether the job is an\ninternship or a full-time fresher-level role", o)
+        self.assertIn("**Internships and fresher jobs are treated alike.**", o)
+        self.assertIn("**Never skip a job because it is full-time", o)
+        self.assertIn("Use the note and the draft exactly as stored", o)
+        # The list endpoint is the single source of who is eligible: it must
+        # not grow a type filter that would quietly undo this.
+        source = (ROOT / "app/routers/desktop_agent.py").read_text()
+        ready = source.split("def _ready_cold_dms", 1)[1].split("\ndef ", 1)[0]
+        for banned in ("job_type", '"Internship"', "'Internship'", '["type"]'):
+            with self.subTest(banned=banned):
+                self.assertNotIn(banned, ready)
+
     def test_the_outreach_prompt_is_written_for_the_chrome_extension_too(self):
         """Both prompts are pasted into Claude in Chrome now. The outreach one
         still said Claude Desktop (Cowork) and Computer Use, and called its two
