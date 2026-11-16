@@ -295,6 +295,43 @@ with no ML in sight; a DevOps or infrastructure role with no ML.
 
 Turn the filter back on afterwards.
 
+**Then run the fresher pass, with the job-type filter OFF — this one takes
+full-time jobs too.** A posting that asks for freshers is one I am exactly
+qualified for, so it is worth having whether it is an internship or a job.
+Search **"AI ML fresher", "Machine Learning fresher", "AI Engineer fresher",
+"fresher AI ML jobs", "Gen AI fresher"**, and run "fresher" alongside the
+role queries where the portal supports it.
+
+**"Explicitly fresher" means the posting uses the word, and that is a
+narrow test on purpose.** Portals tag a great many jobs "Entry Level" —
+Indeed's own filter does it by default — and counting those would reopen the
+full-time market this run deliberately closed, which is the same trap the
+AWS pass has to avoid. The posting qualifies only if its own text says so:
+- **"fresher", "freshers", "freshers welcome", "fresher can apply",
+  "fresher friendly", "open to freshers"**
+- **"0 years of experience"**, **"no prior experience required"**,
+  **"no experience necessary"**
+
+**Not enough**, and each of these is a skip: the portal's **Entry Level**
+filter or badge, on its own; "junior"; "early career"; "graduate"; a stated
+band like "0-1 years" with no fresher wording. Those make a job eligible on
+experience, which is a different question from whether it invites freshers.
+
+**What changes on this pass, and nothing else does:**
+- **Full-time jobs are in**, for these postings only. Record them with
+  `"job_type": "Job"`.
+- **The ₹20,000 floor still applies here**, unlike the AWS pass. A full-time
+  fresher job paying under ₹20,000 a month is not worth taking, and nothing
+  about the word "fresher" changes that.
+- **Everything else holds unchanged**: the seniority rejects, the
+  data-science reject, the trainer reject, and the skip list. A posting
+  saying "freshers welcome" under a "Senior ML Engineer" title is still a
+  skip on seniority, and the word fresher rescues no title the TITLE RULES
+  reject.
+- These count toward today's 15 like any other application.
+
+Turn the filter back on afterwards.
+
 **Never run a data-science search on any portal.** Do not type "Data
 Scientist", "Data Science", "Data Analyst" or "Data Science Intern" into
 Indeed or
@@ -331,6 +368,10 @@ jobs at all.
 - The **title** says Intern or Internship.
 - The **description** calls it an internship — "internship programme",
   "6-month internship", "summer intern", "this internship".
+- It offers a **PPO** — a pre-placement offer, "full-time conversion",
+  "intern to full-time", "PPO on performance". A PPO internship is an
+  internship, and one of the best kinds: it is a job offer at the end of it.
+  Keep it.
 - The **title says Trainee or Apprentice**. In India these are routinely used
   for the same thing an internship is, so they count here — "AI/ML Trainee",
   "ML Apprentice", "Graduate Trainee" are all in. This is a deliberate
@@ -350,15 +391,24 @@ jobs at all.
   — early-career, but a job — so they are skips. "Graduate Engineer" is out;
   "Graduate Trainee" and "Graduate Intern" are in, because trainee and intern
   are the words that carry the meaning.
-- It is a full-time offer with an internship-to-hire path — "intern first,
-  then full-time", "6-month probation then permanent". The posting is for the
-  full-time role; skip it.
+- It is a **full-time offer** that merely begins with a probation or training
+  period — "6-month probation then permanent", "training period then
+  confirmed". The role on offer is the full-time one, so it is a skip unless
+  it clears the fresher test below.
+  **This is not the PPO case.** A PPO posting hires an intern and may convert
+  them later; this one hires an employee and calls the first months training.
+  Read what is being offered, not what follows it.
 
-**The one exception: a full-time role where my AWS certifications are
-specifically valuable.** That is the AWS pass in WHAT TO SEARCH, and it is
-the only way a full-time posting gets applied to in this run. It is narrow on
-purpose — AWS machine learning has to be central to the role, not merely
-mentioned — and everything outside that test is still a skip.
+**Two exceptions, and only these two, let a full-time posting be applied to:**
+
+1. **My AWS certifications are specifically valuable** — the AWS pass in
+   WHAT TO SEARCH. Narrow on purpose: AWS machine learning has to be central
+   to the role, not merely mentioned.
+2. **The posting explicitly says it wants freshers** — the fresher pass in
+   WHAT TO SEARCH. Also narrow on purpose: the posting has to use the word,
+   not merely be tagged entry level.
+
+Everything outside those two tests is still a skip.
 
 Record a skip on this test through STEP 2 with `"job_type": "Job"` and a note
 saying so, for example `"Full-time role, not an internship"`, so it lands on
@@ -959,13 +1009,15 @@ Field rules:
   since my stats group by this field. Never `LinkedIn`: nothing is applied to
   there in this run, and older `LinkedIn` records in my tracker stay as they
   are
-- **job_type**: exactly `Job` or `Internship`. Nearly everything applied to
-  is an `Internship`. A `Job` with `status: "applied"` is right in exactly
-  one case — a full-time role from the AWS pass — and wrong everywhere else,
-  since full-time roles are otherwise out of scope. `Job` with
-  `status: "skipped"` is the ordinary full-time rejection. Send the field on
-  every record: left out it defaults to `Job`, which would file every
-  internship I applied to as a job and make my stats wrong.
+- **job_type**: exactly `Job` or `Internship`. Most of what is applied to is
+  an `Internship`. A `Job` with `status: "applied"` is right in exactly two
+  cases — a full-time role from the AWS pass, or one from the fresher pass —
+  and wrong everywhere else, since full-time roles are otherwise out of
+  scope. `Job` with `status: "skipped"` is the ordinary full-time rejection.
+  Send the field on every record: left out it defaults to `Job`, which would
+  file every internship I applied to as a job and make my stats wrong.
+  A PPO internship is an `Internship`: the offer on the table is the
+  internship, whatever it converts into later.
 - **status**: `applied` when the application was actually submitted and you saw
   a confirmation. `skipped` **only** when you read the posting and rejected it
   on the title, experience or red-flag rules. Applying on the employer's own
@@ -1114,7 +1166,8 @@ When I stop you, present:
 - Wellfound: X searched, Y applied, Z skipped, S already handled
 - Indeed: X searched, Y applied, Z skipped, S already handled
 - TOTAL: XX applied, ZZ skipped, SS already handled
-- Of those applied: I internships, A full-time AWS roles
+- Of those applied: I internships (P of them with a PPO), A full-time AWS
+  roles, F full-time fresher roles
 - Of those skipped: F were full-time roles, not internships
 - Passes completed over the portal list: N
 - Portals not reached this run: [none, or which ones]

@@ -1188,7 +1188,7 @@ class DesktopPromptTests(unittest.TestCase):
                          "**It says Graduate Engineer or New Grad but never says internship, intern,\n  trainee or apprentice.**",
                          "permanent headcount on a full salary",
                          '"Graduate Engineer" is out;\n  "Graduate Trainee" and "Graduate Intern" are in',
-                         "internship-to-hire path",
+                         "that merely begins with a probation or training\n  period",
                          '`"job_type": "Job"`'):
             with self.subTest(required=required):
                 self.assertIn(required, scope)
@@ -1285,12 +1285,74 @@ class DesktopPromptTests(unittest.TestCase):
                 self.assertIn(required, search)
         # The two rules it bends have to point at it, or they read as a ban.
         scope = self.prompt.split("## IS IT AN INTERNSHIP", 1)[1].split("## TITLE RULES", 1)[0]
-        self.assertIn("**The one exception: a full-time role where my AWS certifications are\nspecifically valuable.**", scope)
-        self.assertIn("the only way a full-time posting gets applied to in this run", scope)
+        self.assertIn("**Two exceptions, and only these two, let a full-time posting be applied to:**",
+                      scope)
+        self.assertIn("**My AWS certifications are specifically valuable**", scope)
+        self.assertIn("Everything outside those two tests is still a skip.", scope)
         floor = self.prompt.split("### PAY FLOOR", 1)[1].split("### COMPANIES", 1)[0] \
                            .split("## APPLYING ON", 1)[0]
         self.assertIn("**The AWS pass is exempt**", floor)
         self.assertIn("Unpaid is still a skip under RED FLAGS.", floor)
+
+    def test_a_ppo_internship_is_kept_not_read_as_a_full_time_offer(self):
+        """A PPO internship was already in scope on paper and skipped in
+        practice. The scope test rejected "a full-time offer with an
+        internship-to-hire path -- intern first, then full-time", which is
+        the literal description of a PPO, so the single best kind of
+        internship here -- one that ends in a job offer -- read as a
+        full-time posting and got skipped.
+
+        What the rule was reaching for is a full-time hire whose first months
+        are called training. The test is what the posting OFFERS, so the rule
+        now says that and names PPO as evidence of an internship."""
+        scope = self.prompt.split("## IS IT AN INTERNSHIP", 1)[1].split("## TITLE RULES", 1)[0]
+        for required in ("It offers a **PPO**",
+                         '"intern to full-time", "PPO on performance"',
+                         "it is a job offer at the end of it.\n  Keep it.",
+                         # The narrowed skip, and why it is not the PPO case.
+                         "that merely begins with a probation or training\n  period",
+                         "**This is not the PPO case.**",
+                         "Read what is being offered, not what follows it."):
+            with self.subTest(required=required):
+                self.assertIn(required, scope)
+        # The wording that skipped PPO must not come back.
+        self.assertNotIn("It is a full-time offer with an internship-to-hire path", self.prompt)
+        # And a PPO is recorded as the internship it is.
+        step2 = self.prompt.split("STEP 2 — RECORD EVERY JOB", 1)[1].split("## KEEP GOING", 1)[0]
+        self.assertIn("A PPO internship is an `Internship`", step2)
+
+    def test_the_fresher_pass_needs_the_word_not_an_entry_level_badge(self):
+        """Full-time roles that ask for freshers are in scope now. This is the
+        second full-time opening, and it carries the same danger as the AWS
+        pass: portals tag enormous numbers of jobs "Entry Level" -- Indeed's
+        filter does it by default -- so accepting that as "explicitly
+        fresher" would reopen the full-time market wholesale.
+
+        The posting has to use the word. Unlike the AWS pass, the pay floor
+        still applies: a full-time job under 20,000 a month is not worth
+        taking, and the word fresher does not change that."""
+        search = self.prompt.split("## WHAT TO SEARCH", 1)[1] \
+                            .split("## IS IT AN INTERNSHIP", 1)[0]
+        for required in ("**Then run the fresher pass, with the job-type filter OFF — this one takes\nfull-time jobs too.**",
+                         '"AI ML fresher", "Machine Learning fresher"',
+                         '**"Explicitly fresher" means the posting uses the word, and that is a\nnarrow test on purpose.**',
+                         "Indeed's own filter does it by default",
+                         '**"fresher", "freshers", "freshers welcome", "fresher can apply",',
+                         '**"0 years of experience"**',
+                         # The half that keeps it narrow.
+                         "**Not enough**", "**Entry Level**\nfilter or badge, on its own",
+                         '"junior"', '"early career"',
+                         "a stated\nband like \"0-1 years\" with no fresher wording",
+                         # Pay floor is NOT waived here, unlike the AWS pass.
+                         "**The ₹20,000 floor still applies here**, unlike the AWS pass.",
+                         "the word fresher rescues no title the TITLE RULES\n  reject",
+                         "count toward today's 15"):
+            with self.subTest(required=required):
+                self.assertIn(required, search)
+        # The scope test has to list it as the second exception.
+        scope = self.prompt.split("## IS IT AN INTERNSHIP", 1)[1].split("## TITLE RULES", 1)[0]
+        self.assertIn("**The posting explicitly says it wants freshers**", scope)
+        self.assertIn("not merely be tagged entry level", scope)
 
     def test_the_search_pass_hunts_internships_not_full_time_roles(self):
         """Rescoping the rules alone would be inert: ten full-time role
@@ -1337,9 +1399,11 @@ class DesktopPromptTests(unittest.TestCase):
         # carries the value every application sends.
         self.assertIn('"job_type": "Internship"', step2)
         self.assertIn("- **job_type**: exactly `Job` or `Internship`", step2)
-        self.assertIn('A `Job` with `status: "applied"` is right in exactly\n  one case', step2)
-        self.assertIn("a full-time role from the AWS pass", step2)
-        self.assertIn('`Job` with\n  `status: "skipped"` is the ordinary full-time rejection', step2)
+        self.assertIn('A `Job` with `status: "applied"` is right in exactly two\n  cases', step2)
+        self.assertIn("a full-time role from the AWS pass, or one from the fresher pass —", step2)
+        # A PPO internship is still an internship, whatever it converts into.
+        self.assertIn("A PPO internship is an `Internship`", step2)
+        self.assertIn('`Job` with `status: "skipped"` is the ordinary full-time rejection', step2)
         self.assertIn("left out it defaults to `Job`", step2)
         # The API accepts exactly this field name and maps it to the column.
         schemas = (ROOT / "app/models/schemas.py").read_text()
@@ -1351,7 +1415,8 @@ class DesktopPromptTests(unittest.TestCase):
         # And the summary reports the split, so a run that found only jobs is
         # visible as such rather than looking like the internship pass worked.
         summary = self.prompt.split("## SUMMARY — WHEN I STOP YOU", 1)[1]
-        self.assertIn("Of those applied: I internships, A full-time AWS roles", summary)
+        self.assertIn("Of those applied: I internships (P of them with a PPO), A full-time AWS",
+                      summary)
         self.assertIn("Of those skipped: F were full-time roles, not internships", summary)
         self.assertIn("### Applied Internships", summary)
 
