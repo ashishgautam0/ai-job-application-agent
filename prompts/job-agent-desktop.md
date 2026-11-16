@@ -93,8 +93,7 @@ Key facts to match against (verify these exist in the PDF):
 These three rules apply identically on all three portals — Wellfound,
 Indeed and Naukri:
 
-1. **Let the portal's "Applied" badge be the duplicate check** (STEP 0) —
-   there is no skip list to consult before opening a posting.
+1. **Check the skip list before opening any posting** (STEP 0).
 2. **Record every posting you handle, applied or skipped** (STEP 2).
 3. **Where the application lives is never a reason to skip a job.** A posting
    that hands you off to the employer's own site or an ATS gets applied to
@@ -159,58 +158,54 @@ If a form needs something you do not have, close it, record nothing, note the
 question under Issues, and go to the next job. I will answer the whole Issues
 list at once when I stop you, and add the answers to this prompt for next time.
 
-## STEP 0 — READ TODAY'S COUNT (DO THIS FIRST)
+## STEP 0 — LOAD THE SKIP LIST (DO THIS FIRST)
 
-Before opening any portal, fetch my progress for the day:
+Before opening any portal, fetch the postings I have already dealt with:
 
 ```
 GET {{seen_urls_url}}
 ```
 
 The response is `{"urls": [...], "count": N, "applied_today": A, "daily_target": 20, "dms_today": D, "dm_target": 10}`.
+Keep that URL list for the whole run and treat it as the skip list. It contains
+every job I already applied to and every job already dismissed as a bad fit.
 
-**What this call is for: `applied_today`.** It is how many applications my
-tracker already holds for today, earlier runs included. (`dms_today` counts
-the cold DMs the outreach prompt sent; it is there for context and is none of
-this run's business.) **If `applied_today` is already 20 or more, today's
-application target is met: do not search or apply.** End with the
+`applied_today` is how many applications my tracker already holds for today,
+earlier runs included. (`dms_today` counts the cold DMs the outreach prompt
+sent; it is there for context and is none of this run's business.) **If
+`applied_today` is already 20 or more, today's application target is met: do
+not search or apply.** End with the
 one line "Today's application target is already met: A recorded today." and
 stop. Otherwise the run applies until the total
 reaches 20 (see DAILY TARGET below), then stops.
 
-**Ignore `urls`.** It lists what I have already applied to or dismissed, and
-it used to be a skip list checked before opening every posting. It is not
-used that way any more: **the portals themselves tell you what you have
-already applied to**, with an "Applied" badge on the listing, and that is the
-signal to use. Do not pre-filter results against this list, and do not spend
-the run's time comparing against it.
+**Note what it does NOT contain:** postings that merely sit in my database
+unapplied, left over from an older job scraper I have since removed. Those were
+never applied to, so they are not on the skip list and they are not off-limits.
+Never skip a job just because it was already in my database — only an applied or
+dismissed URL on the list above is a skip.
 
-**So the duplicate check happens at the listing, not before it:**
+**Deduplication rules — this is what stops the same jobs reappearing:**
 
-1. **The portal's own "Applied" state is the check.** When a listing shows as
-   already applied — Indeed's "Applied" label, Wellfound's applied state,
-   Naukri's — treat it as handled and move on without applying again. Count
-   it as "already handled" in the summary.
-2. **Within a single run, do not handle the same posting twice.** Keep your
-   own list as you go: after recording a job (STEP 2), add its URL and its
-   **company + title** so the same role cannot be handled again on a later
-   portal or a later pass. Portals repost the same role under several URLs,
-   and the same role appears on more than one portal.
-3. Compare URLs after stripping tracking query parameters (anything after `?`
+1. Before opening or applying to any posting, compare its URL against the skip
+   list. If it is in the list, **skip it immediately** — do not open the JD, do
+   not apply, do not spend any time on it. Note it as
+   "already handled" in the summary count only.
+2. Compare URLs after stripping tracking query parameters (anything after `?`
    such as `?src=`, `?utm_source=`, `?refId=`, `?trackingId=`, `?vjk=`). Two
    URLs whose paths match are the same job.
-4. **One case the portal badge cannot cover**: an application finished on the
-   employer's own site or ATS. The portal never learns about it, so it shows
-   no badge. If you recognise a posting as one you already applied to earlier
-   in this run, skip it; across runs, a rare duplicate here is accepted — it
-   is the cost of not pre-filtering, and I would rather have that than a run
-   that re-reads thousands of postings before finding a new one.
+3. Also skip a posting if the same **company + title** pair already appeared
+   earlier in this run, even when the URL differs — portals repost the same role
+   under several URLs, and the same role appears on several portals.
+4. After you record a job (STEP 2 below), add its URL **and** its company+title
+   to your in-memory skip list so it cannot be handled twice in the same run or
+   re-applied to on the next portal.
 
 If the request fails, retry it twice, waiting a few seconds between tries. If
 it still fails, **stop and tell me** — this is the second and last thing that
-may stop the run before it starts. Without `applied_today` the run does not
-know how many applications today already holds, and would overshoot the
-target.
+may stop the run before it starts. Running without the skip list would re-apply
+to jobs I have already applied to, which is worse for me than a run that did
+not start.
 
 **Once the run is going, nothing stops it except an account lockout.** Every
 other problem — a missing answer, an unclear question, a CAPTCHA of any
@@ -295,7 +290,7 @@ with no ML in sight; a DevOps or infrastructure role with no ML.
   certification makes unpaid worth it.
 - **Everything else holds unchanged**: EXPERIENCE RULES (freshers and 0-1
   years only), the seniority rejects, the data-science reject, the trainer
-  reject, and the excluded titles. A "Senior AWS ML Engineer" or one wanting 3+
+  reject, and the skip list. A "Senior AWS ML Engineer" or one wanting 3+
   years is a skip here exactly as anywhere else.
 - These count toward today's 20 like any other application.
 
@@ -335,7 +330,7 @@ not a statement about what the job needs.
   fresher job paying under ₹20,000 a month is not worth taking, and nothing
   about the word "fresher" changes that.
 - **Everything else holds unchanged**: the seniority rejects, the
-  data-science reject and the trainer reject. A posting
+  data-science reject, the trainer reject, and the skip list. A posting
   saying "freshers welcome" under a "Senior ML Engineer" title is still a
   skip on seniority, and the word fresher rescues no title the TITLE RULES
   reject.
@@ -366,10 +361,9 @@ paging.
 
 **Set no date filter, on any portal.** A posting being a week or a month old
 is not a reason to skip it: it is still open, and applying late beats not
-applying. This makes the result lists far longer than they were. Nothing pre-filters
-them any more, so the cost of a later pass is real: work them in order, let
-the portal's "Applied" badge carry the duplicates, and stop when the target
-is met rather than trying to exhaust the list.
+applying. This makes the result lists far longer than they were, which is
+the point — the skip list from STEP 0 is what keeps the later passes cheap,
+since a posting already handled is skipped without being opened.
 
 ## IS IT AN INTERNSHIP — THE FIRST TEST
 
@@ -430,8 +424,8 @@ jobs at all.
 Everything outside those two tests is still a skip.
 
 Record a skip on this test through STEP 2 with `"job_type": "Job"` and a note
-saying so, for example `"Full-time role, not an internship"`, so my tracker
-shows why it was passed over.
+saying so, for example `"Full-time role, not an internship"`, so it lands on
+the skip list and is never opened again.
 
 ## TITLE RULES — WHAT TO KEEP vs SKIP
 
@@ -632,8 +626,8 @@ always, so that is the figure to read first.
   SEARCH is judged without this floor, because the certification is worth
   more to me than the stipend. Unpaid is still a skip under RED FLAGS.
 - Record the skip through STEP 2 with a note quoting the figure, for example
-  `"Pay below floor: ₹8,000/month stipend"`, so my tracker shows why it was
-  passed over.
+  `"Pay below floor: ₹8,000/month stipend"`, so it lands on the skip list and
+  is never opened again.
 
 ## APPLYING ON THE EMPLOYER'S OWN SITE
 
@@ -673,8 +667,8 @@ The procedure is the same wherever the hand-off comes from:
    to this role.
 5. **Submit and wait for the confirmation screen.** Only then is it applied.
 6. **Record it through the API** (STEP 2) with the portal you found it on as
-   `source` and the portal's posting URL as `url` — not the ATS URL — so my
-   tracker holds it under the URL I would meet it at again.
+   `source` and the portal's posting URL as `url` — not the ATS URL — so the
+   skip list matches it next time.
 
 A longer form, a multi-step wizard and a sign-in step are all normal parts of
 this and none of them is a reason to abandon the job. What does end an
@@ -687,8 +681,8 @@ that one application, not the run.
 Work them in this order: Indeed → Wellfound → Naukri. All three are browser
 portals you apply on, worked the same way and by the same rules; the order is
 just the order of the passes.
-On every portal, treat a listing the portal already shows as applied as
-handled, and record every posting you handle.
+On every portal, check each posting's URL against the skip list from
+STEP 0 before opening it, and record every posting you handle.
 
 **Only these three portals.** Wellfound, Indeed and Naukri, and no others:
 do not search Instahyre, Cutshort, Foundit, Shine or any other job board.
@@ -710,9 +704,9 @@ back.
    first one to set. Then set **Experience level = Entry Level**, and set
    **no date filter**: work the whole list however far back it goes.
 3. For each result:
-   a. **If Indeed shows the listing as already applied, it is handled** —
-      move on without opening it. Indeed result URLs carry a `?vjk=` job
-      key; strip query parameters and record the canonical
+   a. Check the posting URL against the skip list — skip immediately if
+      present. Indeed result URLs carry a `?vjk=` job key; strip query
+      parameters before comparing, and record the canonical
       `in.indeed.com/viewjob?jk=<id>` form.
    b. Click the result to open the JD pane
    c. **Is it an internship?** Indeed shows the job type on the listing. If it
@@ -777,10 +771,9 @@ Indeed is a skip here.
    a0. **Is it an internship?** Check Wellfound's job-type row on the listing.
       If it is not an internship, skip it and record it with
       `"job_type": "Job"` — see IS IT AN INTERNSHIP.
-   a. **If Wellfound shows the listing as already applied, it is handled** —
-      move on without opening it. Wellfound job URLs look like
-      `wellfound.com/jobs/<id>-<slug>`; strip query parameters and keep that
-      canonical form when recording.
+   a. Check the posting URL against the skip list — skip immediately if
+      present. Wellfound job URLs look like `wellfound.com/jobs/<id>-<slug>`;
+      strip query parameters and keep that canonical form when recording.
    b. Open the listing
    c. Read the title — check against TITLE RULES above
    d. **Read the experience requirement off the listing itself, not just the
@@ -849,8 +842,8 @@ test and the title rules do the filtering, and they do it unchanged.
    queries, and clear it for the AWS and fresher-or-under-a-year passes, the
    same way the other portals are worked.
 3. For each result:
-   a. **If Naukri shows the listing as already applied, it is handled** —
-      move on without opening it. Naukri job URLs look like
+   a. Check the posting URL against the skip list — skip immediately if
+      present. Naukri job URLs look like
       `naukri.com/job-listings-<slug>-<id>`; strip query parameters and keep
       that canonical form when recording.
    b. Open the listing.
@@ -1109,8 +1102,8 @@ The response is `{"saved": true, "applied": true, "dismissed": false, "duplicate
 - `applied: true` means the job is now in my tracker and on the next run's skip
   list. That response also carries `applied_today` and `daily_target` — stop
   once `applied_today` reaches `daily_target` (see DAILY TARGET).
-- `dismissed: true` comes back for a skip — the job is recorded as dismissed
-  and stays out of my Tracker's active list.
+- `dismissed: true` comes back for a skip — the job is hidden and will be on the
+  next run's skip list, so you never re-read that JD.
 - `duplicate: true` means I had already applied to this job, so nothing was
   double-recorded. Note it and move on.
 - **Send `status: "applied"` only after you have seen an explicit submission
@@ -1119,13 +1112,13 @@ The response is `{"saved": true, "applied": true, "dismissed": false, "duplicate
   submission.
 - **If this POST fails after the application went through, retry only the POST —
   never re-submit the application.** A duplicate application is worse than a
-  missing record. If it still fails, keep that job on your in-run list so it
-  cannot be applied to twice this run, list it under Not Recorded in
+  missing record. If it still fails, keep that job on your in-memory skip list
+  so it can never be applied to twice this run, list it under Not Recorded in
   the summary so I can add it by hand, and carry on applying — do not stop to
   tell me.
 
-After a successful record, add the URL and the company+title to your in-run
-list, so the same posting is not handled again later in this run.
+After a successful record, add the URL and the company+title to your in-memory
+skip list.
 
 ## KEEP GOING UNTIL I SAY STOP
 
@@ -1155,9 +1148,9 @@ Until the target is met:
 - Work each portal until you run out of matching jobs there, then move to the
   next one.
 - When you reach the end of the list, **go back to the start and go round
-  again** — new postings appear through the day. A second pass is no longer
-  free, since nothing pre-filters the results, so go round only while the
-  target is unmet.
+  again** — new postings appear through the day, and the skip list means a
+  second pass costs almost nothing: already-handled jobs are skipped without
+  being opened.
 - Every pass already works every page of every query, so a later pass mostly
   finds jobs posted since the one before — that is the point of going round.
 - If a portal is down, not loading, or has nothing left, note it and move on —
@@ -1185,7 +1178,7 @@ them is worth a message.
 
 **If the app forces you to stop**, end with one line — "Paused by the app
 limit: N applied this session. Say *continue* to resume." —
-and nothing else. **When I say continue**, fetch today's count again (STEP 0) —
+and nothing else. **When I say continue**, fetch the skip list again (STEP 0) —
 it tells you how many of today's applications are already in — pick up
 where you left off, and keep going. Do not re-read my
 resume, re-verify the PDF, re-ask for authorisation or summarise what came
@@ -1235,7 +1228,7 @@ When I stop you, present:
 ## Internship Search Summary — [Date]
 
 ### Stats
-- Already applied today before this run: N
+- Skip list loaded: N already-handled postings
 - Wellfound: X searched, Y applied, Z skipped, S already handled
 - Indeed: X searched, Y applied, Z skipped, S already handled
 - Naukri: X searched, Y applied, Z skipped, S already handled
@@ -1280,9 +1273,10 @@ When I stop you, present:
 
 ## START
 
-Begin now. Read today's count (STEP 0), read my resume, then proceed through
+Begin now. Load the skip list (STEP 0), read my resume, then proceed through
 Indeed, then Wellfound, then Naukri. **Set each portal's job-type filter to Internship
-first.** Record every posting you apply to or skip, on all three.
+first.** Check the skip list on both, and record every posting you
+apply to or skip on both.
 
 If my message limited you to one of them ("only Indeed"), work only that
 one.
