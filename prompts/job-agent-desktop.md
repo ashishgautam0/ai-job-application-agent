@@ -920,7 +920,7 @@ question, use it verbatim rather than inferring one:
   up to 1.
 - Comfortable working onsite at any location (not work authorization): Yes
 - Notice period: 15
-- Current compensation: 120000
+- Current compensation: 240000
 - Expected compensation: 700000
 - Expected start date: 20/10/2026
 - Current location: Noida, Uttar Pradesh, India

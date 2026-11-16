@@ -749,7 +749,7 @@ class DesktopPromptTests(unittest.TestCase):
             "**Every one of these is 5 months, the same as my total experience.**",
             "- Comfortable working onsite at any location (not work authorization): Yes",
             "- Notice period: 15",
-            "- Current compensation: 120000",
+            "- Current compensation: 240000",
             "- Expected compensation: 700000",
             "- Expected start date: 20/10/2026",
             "- Current location: Noida, Uttar Pradesh, India",
