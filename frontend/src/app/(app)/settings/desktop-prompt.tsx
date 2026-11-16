@@ -16,7 +16,7 @@ import { toast } from "sonner";
 // prompt they belong to, which a test checks.
 const STARTER_MESSAGES: Record<DesktopPromptKind, string> = {
   applications:
-    "Apply to AI/ML internships for me on Indeed, Wellfound and Naukri, using the instructions that follow. " +
+    "Apply to AI/ML internships and fresher-level jobs for me on Indeed, Wellfound and Naukri, using the instructions that follow. " +
     "You have my authorisation to fill in and submit the application forms and to attach my resume — " +
     "Indeed Apply, Wellfound Apply, Naukri's apply flow, and the company's own site when a job redirects there. " +
     "I consent to sharing " +
@@ -43,7 +43,7 @@ const COPY: Record<DesktopPromptKind, {
     title: "Claude in Chrome prompt — applications",
     label: "Applications prompt",
     blurb: <>
-      Searches and applies, and nothing else. One paste into Claude in Chrome works <strong>Indeed</strong>, then <strong>Wellfound</strong>, then <strong>Naukri</strong> in your own tabs, skips jobs you already handled, applies to matching entry-level AI/ML roles — including the ones that redirect to the company&apos;s own site — and records each in your tracker. It stops when today&apos;s 20 applications are met. This agent is the only thing that finds jobs; nothing scrapes on your behalf.
+      Searches and applies, and nothing else. One paste into Claude in Chrome works <strong>Indeed</strong>, then <strong>Wellfound</strong>, then <strong>Naukri</strong> in your own tabs, skips jobs you already handled, and applies to three things: <strong>internships</strong>, <strong>full-time roles where your AWS certifications are central</strong>, and <strong>full-time roles asking for freshers or under a year</strong> — including the ones that redirect to the company&apos;s own site — recording each in your tracker. It stops when today&apos;s 20 applications are met. This agent is the only thing that finds jobs; nothing scrapes on your behalf.
     </>,
     footer: <>
       Log into Indeed, Wellfound and Naukri in that Chrome profile before starting. LinkedIn is not used by this prompt. Generate resolves the live tracker API and resume links. It applies until today&apos;s 20 applications are met — counting earlier runs that day — then stops. The resume is attached from each portal&apos;s saved CV, since the extension cannot open your disk. Placeholders: {"{{seen_urls_url}}"}, {"{{record_url}}"}, {"{{resume_url}}"}, {"{{resume_filename}}"}, {"{{resume_sha256}}"}.

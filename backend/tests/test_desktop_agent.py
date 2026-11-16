@@ -342,7 +342,7 @@ class DesktopPromptTests(unittest.TestCase):
         typo in the client would hand the user the wrong run's instructions."""
         applications = self.render(resume={"filename": "r.pdf", "sha256": "a"})
         self.assertEqual(applications["kind"], "applications")
-        self.assertIn("# Internship Auto-Apply Agent", applications["content"])
+        self.assertIn("# Internship & Fresher-Job Auto-Apply Agent", applications["content"])
         self.assertNotIn("## PART 1 — COLD DMs", applications["content"])
 
         outreach = self.render(resume={"filename": "r.pdf", "sha256": "a"}, kind="outreach")
@@ -860,14 +860,39 @@ class DesktopPromptTests(unittest.TestCase):
         headings = re.findall(r"^### (\d)\. (\w+)", self.prompt, flags=re.MULTILINE)
         self.assertEqual(headings, [("1", "INDEED"), ("2", "WELLFOUND"), ("3", "NAUKRI")])
 
+    def test_the_scope_is_internships_plus_two_full_time_passes(self):
+        """The run started as internships only, and the two full-time passes
+        were added later without the framing following them: the title, WHO YOU
+        ARE, the first test and the summary all still said internships only and
+        full-time out of scope. An agent reading that would drop both passes and
+        never apply to the fresher jobs they exist for -- so the scope is stated
+        once, as three lanes, and no absolute may contradict it."""
+        opening = self.prompt.split("## WHO YOU ARE", 1)[1].split("## MY PROFILE", 1)[0]
+        self.assertIn("**Three kinds of posting are in scope, and nothing else:**", opening)
+        self.assertIn("1. **Internships.** The main lane", opening)
+        self.assertIn("my AWS certifications are specifically valuable**", opening)
+        self.assertIn("requirement that stays inside a year**", opening)
+        # Narrow stays narrow: the passes are not a licence to widen.
+        self.assertIn("**A full-time posting that is neither 2 nor 3 is a skip**", opening)
+        self.assertIn("do not widen either one", opening)
+        # Both lanes are named where I read the run's output, too.
+        self.assertIn("# Internship & Fresher-Job Auto-Apply Agent", self.prompt)
+        self.assertIn("## Internship & Fresher-Job Search Summary", self.prompt)
+        self.assertIn("internships and fresher-level jobs", self.prompt)
+        # No surviving absolute may read as "internships only".
+        for gone in ("applies to internships only", "Full-time jobs are out of scope",
+                     "does not apply to full-time\njobs at all",
+                     "That is the\n  whole point of this run"):
+            with self.subTest(gone=gone):
+                self.assertNotIn(gone, self.prompt)
+
     def test_applications_and_outreach_are_two_prompts_and_two_runs(self):
         """Applications and outreach are separate Settings cards and separate
         pastes. Each prompt has to end on its own and say the other exists, or
         the agent either stops early waiting for a phase that is not there or
         tries to run the other half without its instructions."""
         opening = self.prompt.split("## WHO YOU ARE", 1)[1].split("## MY PROFILE", 1)[0]
-        self.assertIn("**This run applies to internships only. Full-time jobs are out of scope.**",
-                      opening)
+        self.assertIn("**Three kinds of posting are in scope, and nothing else:**", opening)
         self.assertIn("a separate prompt with its own run", opening)
         self.assertNotIn("three phases", self.prompt)
         keep_going = self.prompt.split("## KEEP GOING UNTIL I SAY STOP", 1)[1] \
@@ -956,7 +981,7 @@ class DesktopPromptTests(unittest.TestCase):
             with self.subTest(required=required):
                 self.assertIn(required, order)
         # The login is still needed, and the prompt says what for.
-        opening = self.prompt.split("# Internship Auto-Apply", 1)[1].split("## WHO YOU ARE", 1)[0]
+        opening = self.prompt.split("# Internship & Fresher-Job Auto-Apply", 1)[1].split("## WHO YOU ARE", 1)[0]
         self.assertIn("LinkedIn is not used here at all", opening)
         self.assertIn("separate outreach prompt", opening)
         # A new record must never claim LinkedIn as its source again.
@@ -1173,10 +1198,13 @@ class DesktopPromptTests(unittest.TestCase):
         self.assertIn("terms of service and privacy policy of any site you sign\ninto to apply",
                       terms)
 
-    def test_only_internships_are_applied_to_and_full_time_roles_are_skipped(self):
+    def test_the_internship_test_runs_first_and_routes_the_rest_to_the_passes(self):
         """Internships went from an unconditional reject, to in scope beside
-        jobs, to the whole run. A full-time AI/ML role is a skip now however
-        well it matches.
+        jobs, to the whole run, and now to the main lane of three: internships,
+        plus full-time roles that clear the AWS pass or the
+        fresher-or-under-a-year pass. So "not an internship" is no longer the
+        end of a posting -- it routes to those two -- but a full-time role that
+        clears neither is still a skip however well it matches.
 
         The scope test runs BEFORE the title rules, because a full-time "AI
         Engineer" passes every title rule there is -- the title cannot be what
@@ -1187,7 +1215,7 @@ class DesktopPromptTests(unittest.TestCase):
         scope = self.prompt.split("## IS IT AN INTERNSHIP \u2014 THE FIRST TEST", 1)[1] \
                            .split("## TITLE RULES", 1)[0]
         for required in ("is this posting an\ninternship?",
-                         "This run does not apply to full-time\njobs at all.",
+                         "it is a skip **unless it\nclears one of the two full-time passes**",
                          # The employer's own classification beats the title.
                          "The portal's **job type field**",
                          "better than the title, because it is the\n  employer's own classification",
@@ -1195,7 +1223,7 @@ class DesktopPromptTests(unittest.TestCase):
                          "This is the opposite of how the experience rule reads silence",
                          # The case that would otherwise sail through.
                          'The title is a plain engineering title \u2014 "AI Engineer"',
-                         "A\n  perfect AI/ML role at a company I would love is still a skip",
+                         "perfect AI/ML role at a company I would love is still a skip unless a pass\n  below picks it up",
                          # Trainee and apprentice are internship words here;
                          # graduate engineer and new grad are not.
                          "The **title says Trainee or Apprentice**",
@@ -1449,12 +1477,12 @@ class DesktopPromptTests(unittest.TestCase):
         self.assertIn("Of those applied: I internships (P of them with a PPO), A full-time AWS",
                       summary)
         self.assertIn("Of those skipped: F were full-time roles, not internships", summary)
-        self.assertIn("### Applied Internships", summary)
+        self.assertIn("### Applied Postings", summary)
 
     def test_the_stipend_floor_is_twenty_thousand_a_month(self):
         """The floor has moved with the scope: 5 LPA, then 6 LPA, then one
         40,000 figure covering jobs and internships, now 20,000 for a run that
-        applies to internships alone. A stipend is what internships quote, so
+        applies mainly to internships. A stipend is what internships quote, so
         the monthly figure leads.
 
         It compares the top of the stated range, so a range that reaches the
@@ -1744,7 +1772,7 @@ class DesktopPromptTests(unittest.TestCase):
         """It was a Claude Desktop (Cowork) prompt driving Computer Use. Every
         instruction that assumed that surface had to move, or the agent would
         be told to use a tool it does not have."""
-        self.assertIn("# Internship Auto-Apply Agent — Claude in Chrome", self.prompt)
+        self.assertIn("# Internship & Fresher-Job Auto-Apply Agent — Claude in Chrome", self.prompt)
         self.assertIn("Paste this entire prompt into Claude in Chrome, the browser extension",
                       self.prompt)
         self.assertIn("Be logged\ninto Indeed, Wellfound and Naukri in that Chrome profile",
@@ -1779,7 +1807,7 @@ class DesktopPromptTests(unittest.TestCase):
         for stale in ("hourly scraper", "Today Todo", "my scraper"):
             with self.subTest(stale=stale):
                 self.assertNotIn(stale, self.prompt)
-        self.assertIn("You are the only thing that finds internships", self.prompt)
+        self.assertIn("You are the only thing that finds any of these for me", self.prompt)
 
     def test_prompt_fits_the_saved_field_limit(self):
         """Nothing expands into the prompt now that the answers are inline, so
