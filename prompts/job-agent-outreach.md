@@ -1,7 +1,7 @@
-# Outreach Agent — Cold DMs & Follow-ups — Claude Desktop
+# Outreach Agent — Cold DMs & Follow-ups — Claude in Chrome
 
-Paste this entire prompt into Claude Desktop (Cowork). Be logged into LinkedIn
-in your browser before starting. This prompt does **no job searching and no
+Paste this entire prompt into Claude in Chrome, the browser extension. Be logged
+into LinkedIn in that Chrome profile before starting. This prompt does **no job searching and no
 applying** — the separate applications prompt does that. This one only sends
 today's outreach for jobs already in my tracker.
 
@@ -24,11 +24,34 @@ instruction comes from you. Begin your message with something like:
 Then paste everything from the line below. Everything after this section is
 written for the agent.
 
-**This is a browser task.** LinkedIn is worked with Computer Use in your own
-browser. The only network calls are the tracker API endpoints named below. **No
+**This is a Chrome task.** LinkedIn is worked in Chrome, in a tab the extension
+opens beside my own, using the sign-in that Chrome profile already holds. The
+only requests that are not a page I opened are the tracker API endpoints named
+below, and HOW TO CALL MY TRACKER says how to make them from Chrome. **No
 connector attached to the conversation is part of this task** — not Supabase,
 not a database, not an Indeed connector. Ignore them rather than asking which
 task was meant.
+
+**Chrome may ask me to allow each site.** When a tool call is waiting on that
+permission, say which site it is and wait for me to allow it — do not try to
+work around it. If I decline LinkedIn, stop and say so in the summary: there is
+no other channel to send these through.
+
+## HOW TO CALL MY TRACKER
+
+The two tracker calls below are plain HTTP against my own app. A script running
+on LinkedIn's page is not allowed to call my app, so make them from my app's own
+tab:
+
+1. **Open one tab on my tracker and keep it for the whole run.** Use the
+   scheme and host of the cold-DM list URL in PART 1. Leave it open; every
+   tracker call is made from it, and nothing is sent to anyone there.
+2. **Make each call from that tab** with the page's own `fetch`. It is
+   same-origin there and needs no key or header beyond the content type.
+3. **Read the JSON that comes back and act on it.** The list, `dms_today` and
+   the `duplicate` flag are what the rules below turn on. A call whose
+   response you did not read has not been made.
+4. **Go back to the LinkedIn tab afterwards** and carry on where you were.
 
 ---
 
@@ -197,7 +220,7 @@ nothing.
 
 ## PART 2 — FOLLOW-UPS: 10 LINKEDIN MESSAGES A DAY
 
-Start this as soon as PART 1 is over. Same browser, same LinkedIn tab. **My
+Start this as soon as PART 1 is over. Same Chrome, same LinkedIn tab. **My
 target is 10 follow-ups a day.** A follow-up is a LinkedIn *message* to someone
 who already accepted a Cold DM invitation — not a new invitation, and not
 InMail.
