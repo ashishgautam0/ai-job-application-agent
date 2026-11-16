@@ -725,7 +725,7 @@ class DesktopPromptTests(unittest.TestCase):
         # Only two pre-run stops remain, and each retries before stopping.
         self.assertIn("only two things that may stop the run before it", self.prompt)
         self.assertIn("second and last thing that", self.prompt)
-        self.assertIn("retry the download once", self.prompt)
+        self.assertIn("retry once, and only then stop and tell me", self.prompt)
         self.assertIn("retry it twice", self.prompt)
 
     def test_the_form_answers_live_in_the_prompt_not_in_settings(self):
@@ -771,8 +771,8 @@ class DesktopPromptTests(unittest.TestCase):
         apply controls, record, pace — or the run reaches Indeed and does
         nothing on it."""
         indeed = self.prompt.split("### 1. INDEED", 1)[1].split("\n### ", 1)[0]
-        for required in ("Open `in.indeed.com` in my browser",
-                         "worked in the browser and applied to, like every portal here",
+        for required in ("Open `https://in.indeed.com/` in a tab",
+                         "worked in Chrome and applied to, like every portal here",
                          # Both apply routes. "Apply on company site" is most
                          # of the good Indeed listings, so it must not be the
                          # one that gets left.
@@ -845,8 +845,8 @@ class DesktopPromptTests(unittest.TestCase):
         # The browser-only rule no longer has a connector carve-out to widen
         # it — Indeed is opened in the browser like every other job site.
         blockers = self.prompt.split("## CAPTCHA, OTP & BLOCKERS", 1)[1].split("## STEP 2", 1)[0]
-        self.assertIn("**Never fetch a portal page with a direct request.**", blockers)
-        self.assertIn("tracker\n  API endpoints and my resume download.", blockers)
+        self.assertIn("**Never fetch a portal page with a scripted request.**", blockers)
+        self.assertIn("endpoints and my resume download, and nothing else.", blockers)
         self.assertNotIn("Indeed connector", blockers)
 
     def test_the_portal_sections_are_ordered_and_all_apply(self):
@@ -1581,7 +1581,7 @@ class DesktopPromptTests(unittest.TestCase):
         blockers = self.prompt.split("## CAPTCHA, OTP & BLOCKERS", 1)[1].split("## STEP 2", 1)[0]
         self.assertIn("HTTP 429", blockers)
         self.assertIn("at least 15 minutes", blockers)
-        self.assertIn("**Never fetch a portal page with a direct request.**", blockers)
+        self.assertIn("**Never fetch a portal page with a scripted request.**", blockers)
         self.assertNotIn("STOP immediately", blockers)
         self.assertNotIn("ends the whole run", blockers)
 
@@ -1653,8 +1653,11 @@ class DesktopPromptTests(unittest.TestCase):
 
         # The applications sentence covers submitting forms and the resume, and
         # says nothing about outreach.
-        for phrase in ("Wellfound Apply", "Indeed Apply",
-                       "on Wellfound and Indeed",
+        for phrase in ("Indeed Apply", "Wellfound Apply", "Naukri's apply flow",
+                       "on Indeed, Wellfound and Naukri",
+                       # The extension cannot open a file picker, so the
+                       # resume is attached from the portal, not uploaded.
+                       "to attach my resume",
                        "the company's own site when a job redirects there",
                        "Submit each one yourself without asking me first",
                        # the tool asked per job before sending a phone number
@@ -1696,6 +1699,66 @@ class DesktopPromptTests(unittest.TestCase):
         self.assertIn("in your own words in the same message", opening)
         self.assertIn("You have my authorisation to fill in and submit", opening)
 
+    def test_the_resume_is_attached_from_the_portal_not_from_disk(self):
+        """The run moved from Claude Desktop to the Chrome extension, which has
+        no filesystem and cannot work Chrome's own file-upload dialog -- that
+        belongs to the OS, not the page. A prompt that still said to upload
+        ~/Documents/resume.pdf would stall every apply flow at the picker."""
+        profile = self.prompt.split("## MY PROFILE", 1)[1].split("## RULES THAT APPLY", 1)[0]
+        self.assertIn("**You cannot pick a file off my disk.**", profile)
+        self.assertIn("**Use the resume already saved on the portal.**", profile)
+        self.assertIn('"Needs a\n  file upload — do these yourself"', profile)
+        # ...and the summary has a place to list them.
+        self.assertIn("### Needs a file upload — do these yourself", self.prompt)
+        self.assertIn("Never submit an application with no resume on it", profile)
+        # The PDF is still read, so every form answer stays grounded in it.
+        self.assertIn("{{resume_url}}", profile)
+        self.assertIn("Open that URL in a tab and read it before starting", profile)
+        # No local path may survive anywhere, in any spelling.
+        for gone in ("~/Documents", "resume.pdf`", "Local copy",
+                     "upload the resume PDF", "upload my resume PDF"):
+            with self.subTest(gone=gone):
+                self.assertNotIn(gone, self.prompt)
+        answers = self.prompt.split("## FORM FILLING RULES", 1)[1].split("### MY SAVED ANSWERS", 1)[0]
+        self.assertIn("attach the resume saved on that portal's profile", answers)
+        self.assertIn("Never type or paste a file path", answers)
+
+    def test_the_tracker_calls_are_made_from_the_trackers_own_tab(self):
+        """A fetch from a job portal's page is cross-origin to the tracker and
+        is refused, so the prompt has to say where to run the two calls. It also
+        has to say to read the response: the counts and the duplicate flag are
+        what STEP 0 and STEP 2 turn on."""
+        how = self.prompt.split("## HOW TO CALL MY TRACKER", 1)[1].split("## STEP 0", 1)[0]
+        self.assertIn("**Open one tab on my tracker and keep it for the whole run.**", how)
+        self.assertIn("same-origin there", how)
+        self.assertIn("{{seen_urls_url}}", how)
+        self.assertIn("{{record_url}}", how)
+        self.assertIn('method: "POST"', how)
+        self.assertIn("**Read the JSON that comes back and act on it.**", how)
+        self.assertIn("A call whose response you did not read has not been made", how)
+        self.assertIn("**Go back to the portal tab afterwards**", how)
+        # It is the tracker's tab, not another place to apply from.
+        self.assertIn("nothing is applied to there", how)
+
+    def test_the_prompt_is_written_for_the_chrome_extension(self):
+        """It was a Claude Desktop (Cowork) prompt driving Computer Use. Every
+        instruction that assumed that surface had to move, or the agent would
+        be told to use a tool it does not have."""
+        self.assertIn("# Internship Auto-Apply Agent — Claude in Chrome", self.prompt)
+        self.assertIn("Paste this entire prompt into Claude in Chrome, the browser extension",
+                      self.prompt)
+        self.assertIn("Be logged\ninto Indeed, Wellfound and Naukri in that Chrome profile",
+                      self.prompt)
+        # Chrome gates each site, and a refusal is mine to make, not one to
+        # route around.
+        self.assertIn("**Chrome may ask me to allow each site.**", self.prompt)
+        self.assertIn("do not try to\nwork around it", self.prompt)
+        self.assertIn("If I decline a site, drop that portal for the rest of the run", self.prompt)
+        for gone in ("Claude Desktop", "Cowork", "Computer Use", "computer-use",
+                     "control my\nbrowser"):
+            with self.subTest(gone=gone):
+                self.assertNotIn(gone, self.prompt)
+
     def test_no_connector_is_part_of_the_task(self):
         """A Supabase or database connector on the conversation made the agent
         stop and ask which task was meant instead of browsing. Indeed is a
@@ -1703,12 +1766,12 @@ class DesktopPromptTests(unittest.TestCase):
         route rather than the intended one — and a connector search is not the
         user's logged-in session, so it cannot apply to anything."""
         opening = self.prompt.split("## HOW TO START", 1)[1].split("## WHO YOU ARE", 1)[0]
-        self.assertIn("This is a browser task", opening)
-        self.assertIn("**No connector\nattached to the conversation is part of this task**", opening)
-        self.assertIn("if an Indeed connector is\nattached, ignore it and work the site in the browser",
+        self.assertIn("This is a Chrome task", opening)
+        self.assertIn("**No connector attached to the conversation is part of this task**", opening)
+        self.assertIn("if an\nIndeed connector is attached, ignore it and work the site in Chrome",
                       opening)
         self.assertIn("cannot apply to anything", opening)
-        self.assertIn("Ignore the\nrest rather than asking which task was meant", opening)
+        self.assertIn("Ignore the rest rather than asking which task was meant", opening)
 
     def test_prompt_does_not_promise_a_scraper_that_no_longer_runs(self):
         """Job discovery is the desktop agent's alone; a prompt that says
