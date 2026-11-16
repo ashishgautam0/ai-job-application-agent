@@ -282,7 +282,9 @@ of leaving you to read and reject full-time postings one at a time. Set it on
 every search. If a portal will not take it, you still search — but then every
 result has to pass IS IT AN INTERNSHIP by hand.
 
-Search each portal for these queries, in this order (adapt to each site's
+**The internship queries.** These ten are the first lane; the fresher-job
+queries are a list of their own further down, and both get run on every
+portal. Search each portal for these, in this order (adapt to each site's
 search UI). **Start with "Gen AI Intern" — it is the role I most want.**
 Run each of these with the "Internship" spelling too where the portal matches
 it differently ("Gen AI Internship" as well as "Gen AI Intern"):
@@ -298,12 +300,14 @@ it differently ("Gen AI Internship" as well as "Gen AI Intern"):
 9. "Data Engineering Intern" (only if AI/ML is in the description)
 10. "Research Intern" or "Applied Science Intern"
 
-**A bare engineering query is worth running only with the job-type filter on.**
+**On this lane, a bare engineering query needs the job-type filter on.**
 Where the filter holds, also run "AI Engineer", "ML Engineer" and
 "Gen AI Engineer": some internships are titled like a full-time role and are
 marked internship only in the job-type field, and the filter is what surfaces
-them. Without the filter, do not run these — they return full-time jobs, every
-one of which is a skip, and reading them is time not spent on internships.
+them. Do not run them bare *on this lane* — the full-time results they return
+are not what the internship queries are for. Bare role titles belong to the
+AWS and fresher passes below, which have their own queries and their own
+tests for them.
 
 **Then run a trainee pass with the job-type filter OFF.** Trainee and
 apprentice postings count as internships here (see IS IT AN INTERNSHIP), but
@@ -361,9 +365,40 @@ this one takes full-time jobs too.** A posting that asks for freshers, or
 that states a requirement under a year, is one I am exactly qualified for, so
 it is worth having whether it is an internship or a job. I have 5 months of
 professional experience.
-Search **"AI ML fresher", "Machine Learning fresher", "AI Engineer fresher",
-"fresher AI ML jobs", "Gen AI fresher"**, and run "fresher" alongside the
-role queries where the portal supports it.
+This pass has its own ten queries, mirroring the internship list role for
+role. Run all of them on every portal, in this order — **start with the Gen AI
+one, for the same reason the internship list does**:
+
+1. "Gen AI Engineer fresher", then "GenAI fresher" and "Generative AI fresher"
+   as separate searches — portals match these spellings differently
+2. "AI Engineer fresher"
+3. "ML Engineer fresher" or "Machine Learning Engineer fresher"
+4. "AI/ML fresher"
+5. "NLP Engineer fresher"
+6. "LLM Engineer fresher"
+7. "Deep Learning Engineer fresher"
+8. "MLOps fresher" or "Cloud AI fresher"
+9. "Data Engineering fresher" (only if AI/ML is in the description)
+10. "Research Engineer fresher" or "Applied Scientist fresher"
+
+Then the bare-word searches, which catch postings whose title carries no role
+keyword at all: **"AI ML fresher jobs", "fresher AI ML jobs", "freshers AI
+ML"**.
+
+Then the under-a-year wordings as searches in their own right, since the
+figure is usually written in the description rather than the title:
+**"0-1 years AI ML", "less than 1 year experience AI ML",
+"6 months experience machine learning"**. Treat whatever they return the same
+way — the stated-text test below is what decides.
+
+**Where a portal does not use the word "fresher", search the plain role
+title and set its lowest experience band instead.** "Fresher" is standard on
+Naukri and Indeed India and almost unused on Wellfound, so on Wellfound run
+"AI Engineer", "ML Engineer", "Gen AI Engineer", "NLP Engineer" and
+"LLM Engineer" bare, with its most junior experience option set, and read the
+experience line on each listing. On Naukri set **Experience = 0 years**; on
+Indeed set **Experience level = Entry Level**. The filter only narrows the
+list — it never qualifies a posting on its own, as the next paragraph says.
 
 **A posting qualifies on its own stated text, and that is a narrow test on
 purpose.** Portals tag a great many jobs "Entry Level" — Indeed's own filter

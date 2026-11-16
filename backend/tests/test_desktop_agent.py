@@ -1389,7 +1389,22 @@ class DesktopPromptTests(unittest.TestCase):
                             .split("## IS IT AN INTERNSHIP", 1)[0]
         for required in ("**Then run the fresher-or-under-a-year pass, with the job-type filter OFF —\nthis one takes full-time jobs too.**",
                          "I have 5 months of\nprofessional experience.",
-                         '"AI ML fresher", "Machine Learning fresher"',
+                         # The pass has its own ten queries now, mirroring
+                         # the internship list role for role, so the fresher
+                         # lane is searched for rather than stumbled upon.
+                         '1. "Gen AI Engineer fresher"',
+                         '3. "ML Engineer fresher" or "Machine Learning Engineer fresher"',
+                         '10. "Research Engineer fresher" or "Applied Scientist fresher"',
+                         '**"AI ML fresher jobs", "fresher AI ML jobs", "freshers AI\nML"**',
+                         # The figure is written in the description, so it is
+                         # searched for as text too.
+                         '**"0-1 years AI ML", "less than 1 year experience AI ML",',
+                         # Wellfound does not use the word, so the role title
+                         # plus its lowest band stands in for it there.
+                         '**Where a portal does not use the word "fresher", search the plain role\ntitle',
+                         "almost unused on Wellfound",
+                         "On Naukri set **Experience = 0 years**",
+                         "The filter only narrows the\nlist — it never qualifies a posting on its own",
                          "**A posting qualifies on its own stated text, and that is a narrow test on\npurpose.**",
                          "Indeed's own filter\ndoes it by default",
                          # Either signal qualifies it.
@@ -1430,10 +1445,15 @@ class DesktopPromptTests(unittest.TestCase):
                       '"NLP Intern"', '"Research Intern" or "Applied Science Intern"'):
             with self.subTest(query=query):
                 self.assertIn(query, search)
-        # A bare engineering query is only worth running behind the filter.
-        self.assertIn("**A bare engineering query is worth running only with the job-type filter on.**",
+        # A bare engineering query belongs behind the filter on THIS lane; the
+        # full-time passes have their own queries and their own tests for it.
+        self.assertIn("**On this lane, a bare engineering query needs the job-type filter on.**",
                       search)
-        self.assertIn("Without the filter, do not run these", search)
+        self.assertIn("Do not run them bare *on this lane*", search)
+        self.assertIn("Bare role titles belong to the\nAWS and fresher passes below", search)
+        # The ten internship queries are named as one lane of the search.
+        self.assertIn("**The internship queries.** These ten are the first lane", search)
+        self.assertIn("both get run on every\nportal", search)
         self.assertIn("**Job type = Internship**", search)
         # Both portals set the filter in their own steps, not just here.
         wellfound = self.prompt.split("### 2. WELLFOUND", 1)[1].split("### 3.", 1)[0]
