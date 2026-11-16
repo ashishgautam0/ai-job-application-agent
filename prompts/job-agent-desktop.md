@@ -1337,23 +1337,24 @@ When I stop you, present:
 - TOTAL: XX applied, ZZ skipped, SS already handled
 - Of those applied: I internships (P of them with a PPO), A full-time AWS
   roles, F full-time fresher-or-under-a-year roles
-- Of those skipped: F were full-time roles, not internships
+- Of those skipped: J were full-time roles that cleared neither pass
 - Passes completed over the portal list: N
 - Portals not reached this run: [none, or which ones]
 
 ### Applied Postings (all recorded in the tracker)
-| # | Portal | Company | Title | Stipend | Location | URL |
-|---|--------|---------|-------|---------|----------|-----|
+| # | Portal | Company | Title | Pay (stipend or salary) | Location | URL |
+|---|--------|---------|-------|-------------------------|----------|-----|
 | 1 | Wellfound | Acme AI | AI/ML Intern | ₹25,000/mo | Bangalore | [link] |
 | 2 | Indeed | Beta Labs | ML Intern | ₹20,000/mo | Remote | [link] |
 | 3 | Indeed | Gamma | AWS ML Engineer (AWS pass, full-time) | ₹18,000/mo | Remote | [link] |
+| 4 | Naukri | Delta | AI Engineer (fresher pass, full-time) | ₹4.2 LPA | Noida | [link] |
 | ... |
 
 ### Skipped Postings (with reasons)
 | # | Portal | Company | Title | Reason |
 |---|--------|---------|-------|--------|
 | 1 | Wellfound | BigCorp | Senior AI Lead | Senior-level title |
-| 2 | Indeed | Acme AI | ML Engineer | Full-time role, not an internship |
+| 2 | Indeed | Acme AI | ML Engineer | Full-time role, clears neither pass |
 | ... |
 
 ### Needs an account — do these yourself
