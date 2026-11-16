@@ -1330,13 +1330,7 @@ class DesktopPromptTests(unittest.TestCase):
                          "It asks for an **AWS certification**",
                          # ...and what fails it, which is the half that matters.
                          "**Not enough**", "stack dump", '"cloud experience a plus"',
-                         # AWS being central is the test; ML is not required. This is
-                         # what lets "AWS Cloud Intern" and "AWS DevOps" through.
-                         "**AWS is central to the role** — ML or not",
-                         '"AWS Cloud Engineer", "AWS DevOps"', '"AWS Data Engineer"',
-                         "\"AWS Cloud Intern\"", "cloud infrastructure on AWS",
-                         "AWS used only to host a web app when the job is\nsomething else",
-                         "**The ML and domain gates do not apply.**",
+                         "a DevOps or infrastructure role with no ML",
                          # The two exceptions, and their limits.
                          '`"job_type": "Job"`',
                          "**The pay floor does not apply.**",
