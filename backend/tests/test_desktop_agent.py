@@ -13,8 +13,8 @@ import profile as profile_data
 # The prompt works LinkedIn, Indeed and Wellfound while those three are tuned.
 # The other portals are paused, not dropped: the recording endpoint still
 # accepts them, so they can return to the prompt without a backend change.
-PORTAL_SOURCES = ("Indeed", "Wellfound")
-PAUSED_SOURCES = ("Naukri", "Instahyre", "Cutshort", "Shine",
+PORTAL_SOURCES = ("Indeed", "Wellfound", "Naukri")
+PAUSED_SOURCES = ("Instahyre", "Cutshort", "Shine",
                   "Glassdoor", "FirstNaukri", "Unstop", "Apna")
 
 
@@ -426,7 +426,7 @@ class DesktopPromptTests(unittest.TestCase):
         self.assertIn("Resume.pdf", result["content"])
 
     # All three are browser portals the agent applies on.
-    APPLY_PORTALS = ("WELLFOUND", "INDEED")
+    APPLY_PORTALS = ("WELLFOUND", "INDEED", "NAUKRI")
     PORTALS = APPLY_PORTALS
 
     def test_prompt_covers_every_portal_dedup_tracker_and_no_caps(self):
@@ -481,7 +481,7 @@ class DesktopPromptTests(unittest.TestCase):
                              .split("## PORTAL-BY-PORTAL", 1)[0]
         for required in (
             "Follow it and finish the application there",
-            "This applies on **both apply portals**",
+            "This applies on **all three apply portals**",
             # what the off-site flow has to survive
             "If the site requires an account first:",
             "If a CAPTCHA appears, abandon this job immediately",
@@ -542,7 +542,7 @@ class DesktopPromptTests(unittest.TestCase):
         for portal in PORTAL_SOURCES:
             with self.subTest(portal=portal):
                 self.assertIn(portal, step2)
-        self.assertIn("both portals", step2)
+        self.assertIn("all three portals", step2)
         # Every source is recorded by the run itself — no portal is carved out
         # into something the user records by hand.
         self.assertNotIn("only ever used for", step2)
@@ -563,9 +563,9 @@ class DesktopPromptTests(unittest.TestCase):
                                       f"{name} relaxes a rule without deferring to TITLE RULES")
 
     def test_paused_portals_are_neither_searched_nor_recorded_as_skips(self):
-        """Only Indeed and Wellfound are worked for now. A posting that hands
-        off to another job board is left unrecorded, not skipped, so it stays
-        reachable once that portal returns to the prompt."""
+        """Three portals are worked now; every other board is still out. A
+        posting that hands off to one of those is left unrecorded, not
+        skipped, so it stays reachable if that portal is ever added."""
         order = self.prompt.split("Work them in this order:", 1)[1].split("###", 1)[0]
         step2 = self.prompt.split("STEP 2 — RECORD EVERY JOB", 1)[1].split("## KEEP GOING", 1)[0]
         summary = self.prompt.split("## SUMMARY — WHEN I STOP YOU", 1)[1]
@@ -575,8 +575,8 @@ class DesktopPromptTests(unittest.TestCase):
                                     re.compile(rf"^### \d+\. {portal.upper()}", re.M))
                 self.assertNotIn(portal, step2)
                 self.assertNotIn(portal, summary)
-        self.assertNotIn("Naukri", order.split("**Only these two portals", 1)[0])
-        self.assertIn("**Only these two portals for now.**", order)
+        self.assertIn("**Only these three portals.**", order)
+        self.assertIn("do not search Instahyre, Cutshort, Foundit, Shine", order)
         self.assertIn("*another job board* to apply, leave it unrecorded", order)
         self.assertIn("An employer's own site or ATS is\nstill fine", order)
         self.assertNotIn("eleven", self.prompt)
@@ -736,7 +736,7 @@ class DesktopPromptTests(unittest.TestCase):
         answers = self.prompt.split("### MY SAVED ANSWERS", 1)[1].split("Applying these answers", 1)[0]
         for line in (
             "- Submission authorization: Submit on all of the jobs",
-            "- Total work experience (years, user-provided): 1 year",
+            "- Total work experience (user-provided): 5 months",
             # Named per skill: forms ask "years of Python?" as its own field, and
             # a line covering skills in general left the agent inferring one.
             "- Python (years): 1",
@@ -799,31 +799,43 @@ class DesktopPromptTests(unittest.TestCase):
             with self.subTest(banned=banned):
                 self.assertNotIn(banned, indeed)
 
-    def test_no_section_counts_a_portal_that_is_no_longer_there(self):
-        """Indeed's section described itself three times as working "exactly
-        like the other two", left over from when LinkedIn made a third portal.
-        Wellfound plus Indeed is two, so "the other two" pointed at a portal
-        the run is explicitly fenced away from -- and the prompt names the one
-        it means now instead.
+    def test_the_stated_portal_count_matches_the_sections_that_exist(self):
+        """Indeed once described itself three times as working "exactly like
+        the other two", left over from when LinkedIn made a third portal, and
+        nothing tied that phrasing to the list it was counting. The guard used
+        to ban the phrase; that broke the moment Naukri made three portals
+        real and "the other two" correct again.
 
-        The count and the fence have to agree, or the agent is told to match a
-        portal it is forbidden to visit."""
-        for stale in ("the other two", "the other three", "all three portals",
-                      "three portals", "the third portal"):
+        So count instead of banning. The prose says how many portals there
+        are; the ### sections are how many there actually are; they have to
+        agree, whichever way the list moves next."""
+        sections = re.findall(r"^### \d+\. (\w+)", self.prompt, flags=re.MULTILINE)
+        self.assertEqual(len(sections), len(self.APPLY_PORTALS))
+        spelled = {2: "two", 3: "three", 4: "four"}[len(sections)]
+        order = self.prompt.split("## PORTAL-BY-PORTAL", 1)[1].split("### 1.", 1)[0]
+        self.assertIn(f"**Only these {spelled} portals", order)
+        # Every portal that exists is named in the run order, and no other is.
+        for name in sections:
+            with self.subTest(portal=name):
+                self.assertIn(name.title(), order)
+        for gone in PAUSED_SOURCES:
+            with self.subTest(gone=gone):
+                self.assertNotRegex(self.prompt, re.compile(rf"^### \d+\. {gone.upper()}", re.M))
+        # A count that no longer matches the sections is the bug this catches.
+        for stale in ("the other three", "all four portals", "both portals"):
             with self.subTest(stale=stale):
                 self.assertNotIn(stale, self.prompt)
-        self.assertIn("**Only these two portals for now.**", self.prompt)
-        self.assertIn("Work them in this order: Wellfound \u2192 Indeed", self.prompt)
 
     def test_indeed_jobs_are_recorded_like_any_other_application(self):
         """While Indeed was find-only, STEP 2, the source field and the daily
         target each carved it out. An apply portal with those carve-outs left
         in place would apply and then not record, or record and not count."""
         step2 = self.prompt.split("STEP 2 — RECORD EVERY JOB", 1)[1].split("## KEEP GOING", 1)[0]
-        self.assertIn("the same call on **both portals** — Wellfound and Indeed", step2)
+        self.assertIn("the same call on **all three portals** — Wellfound, Indeed and Naukri",
+                      step2)
         # A new record may never claim LinkedIn again, but the old ones stand.
         self.assertIn("Never `LinkedIn`", step2)
-        self.assertIn("older `LinkedIn` records in my tracker stay as they", step2)
+        self.assertIn("older `LinkedIn` records in my tracker", step2)
         self.assertNotIn("only once I have told you", step2)
         self.assertNotIn("`Indeed` is only ever used for", step2)
         target = self.prompt.split("### DAILY TARGET", 1)[1].split("###", 1)[0]
@@ -836,16 +848,16 @@ class DesktopPromptTests(unittest.TestCase):
         self.assertIn("tracker\n  API endpoints and my resume download.", blockers)
         self.assertNotIn("Indeed connector", blockers)
 
-    def test_the_portal_sections_are_ordered_and_both_apply(self):
+    def test_the_portal_sections_are_ordered_and_all_apply(self):
         """The order is just the order of the passes — no portal is the
         odd one out, so nothing may describe one as not applying."""
         order = self.prompt.split("Work them in this order:", 1)[1].split("###", 1)[0]
-        self.assertIn("Wellfound → Indeed", order)
+        self.assertIn("Wellfound → Indeed → Naukri", order)
         self.assertNotIn("LinkedIn →", order)
-        self.assertIn("Both are browser portals you\napply on", order)
+        self.assertIn("All three are browser\nportals you apply on", order)
         self.assertNotIn("never competes with the applications for time", order)
         headings = re.findall(r"^### (\d)\. (\w+)", self.prompt, flags=re.MULTILINE)
-        self.assertEqual(headings, [("1", "WELLFOUND"), ("2", "INDEED")])
+        self.assertEqual(headings, [("1", "WELLFOUND"), ("2", "INDEED"), ("3", "NAUKRI")])
 
     def test_applications_and_outreach_are_two_prompts_and_two_runs(self):
         """Applications and outreach are separate Settings cards and separate
@@ -949,8 +961,8 @@ class DesktopPromptTests(unittest.TestCase):
         self.assertNotIn("linkedin.com/jobs", self.prompt)
         self.assertNotIn("Easy Apply", self.prompt)
         order = self.prompt.split("## PORTAL-BY-PORTAL", 1)[1].split("### 1.", 1)[0]
-        for required in ("**LinkedIn is not a job\nportal in this run**",
-                         "do not search LinkedIn",
+        for required in ("**LinkedIn is not a job portal in this run**",
+                         "do not search its jobs",
                          "a separate prompt, not part of this run"):
             with self.subTest(required=required):
                 self.assertIn(required, order)
@@ -1321,38 +1333,49 @@ class DesktopPromptTests(unittest.TestCase):
         step2 = self.prompt.split("STEP 2 — RECORD EVERY JOB", 1)[1].split("## KEEP GOING", 1)[0]
         self.assertIn("A PPO internship is an `Internship`", step2)
 
-    def test_the_fresher_pass_needs_the_word_not_an_entry_level_badge(self):
-        """Full-time roles that ask for freshers are in scope now. This is the
-        second full-time opening, and it carries the same danger as the AWS
-        pass: portals tag enormous numbers of jobs "Entry Level" -- Indeed's
-        filter does it by default -- so accepting that as "explicitly
-        fresher" would reopen the full-time market wholesale.
+    def test_the_fresher_or_under_a_year_pass_needs_the_employers_own_words(self):
+        """Full-time roles are in scope when the employer says fresher, or
+        states a requirement that stays inside a year. This is the second of
+        two full-time openings and it carries the AWS pass's danger: portals
+        tag enormous numbers of jobs "Entry Level" -- Indeed's filter does it
+        by default -- so accepting a badge would reopen the full-time market
+        wholesale.
 
-        The posting has to use the word. Unlike the AWS pass, the pay floor
-        still applies: a full-time job under 20,000 a month is not worth
-        taking, and the word fresher does not change that."""
+        The line is who wrote it. A figure or the word fresher in the
+        posting's own text counts; a label the portal applied does not. That
+        is why a written "0-1 years" band qualifies while an Entry Level
+        badge does not, though both describe a similar job: one is the
+        employer stating what the role needs, the other is a filter.
+
+        Unlike the AWS pass, the pay floor still applies: a full-time job
+        under 20,000 a month is not worth taking, fresher or not."""
         search = self.prompt.split("## WHAT TO SEARCH", 1)[1] \
                             .split("## IS IT AN INTERNSHIP", 1)[0]
-        for required in ("**Then run the fresher pass, with the job-type filter OFF — this one takes\nfull-time jobs too.**",
+        for required in ("**Then run the fresher-or-under-a-year pass, with the job-type filter OFF —\nthis one takes full-time jobs too.**",
+                         "I have 5 months of\nprofessional experience.",
                          '"AI ML fresher", "Machine Learning fresher"',
-                         '**"Explicitly fresher" means the posting uses the word, and that is a\nnarrow test on purpose.**',
-                         "Indeed's own filter does it by default",
-                         '**"fresher", "freshers", "freshers welcome", "fresher can apply",',
-                         '**"0 years of experience"**',
-                         # The half that keeps it narrow.
+                         "**A posting qualifies on its own stated text, and that is a narrow test on\npurpose.**",
+                         "Indeed's own filter\ndoes it by default",
+                         # Either signal qualifies it.
+                         '**It says fresher**: "fresher", "freshers", "freshers welcome"',
+                         "**It states an experience requirement that stays inside a year**",
+                         '"less\n  than 1 year", "under 1 year", "6 months", "0-6 months", "0-1 years"',
+                         "because the posting itself named the figure",
+                         # The badge still does not.
                          "**Not enough**", "**Entry Level**\nfilter or badge, on its own",
                          '"junior"', '"early career"',
-                         "a stated\nband like \"0-1 years\" with no fresher wording",
+                         "labels the portal applies, not a figure the employer wrote",
                          # Pay floor is NOT waived here, unlike the AWS pass.
                          "**The ₹20,000 floor still applies here**, unlike the AWS pass.",
-                         "the word fresher rescues no title the TITLE RULES\n  reject",
                          "count toward today's 15"):
             with self.subTest(required=required):
                 self.assertIn(required, search)
         # The scope test has to list it as the second exception.
         scope = self.prompt.split("## IS IT AN INTERNSHIP", 1)[1].split("## TITLE RULES", 1)[0]
-        self.assertIn("**The posting explicitly says it wants freshers**", scope)
-        self.assertIn("not merely be tagged entry level", scope)
+        self.assertIn("**The posting says it wants freshers, or states a requirement that stays\n   inside a year**", scope)
+        self.assertIn("not merely be tagged entry level by the portal", scope)
+        # The old narrower wording must not survive alongside the new rule.
+        self.assertNotIn('a stated\nband like "0-1 years" with no fresher wording', self.prompt)
 
     def test_the_search_pass_hunts_internships_not_full_time_roles(self):
         """Rescoping the rules alone would be inert: ten full-time role
@@ -1400,7 +1423,7 @@ class DesktopPromptTests(unittest.TestCase):
         self.assertIn('"job_type": "Internship"', step2)
         self.assertIn("- **job_type**: exactly `Job` or `Internship`", step2)
         self.assertIn('A `Job` with `status: "applied"` is right in exactly two\n  cases', step2)
-        self.assertIn("a full-time role from the AWS pass, or one from the fresher pass —", step2)
+        self.assertIn("a full-time role from the AWS pass, or one from the\n  fresher-or-under-a-year pass", step2)
         # A PPO internship is still an internship, whatever it converts into.
         self.assertIn("A PPO internship is an `Internship`", step2)
         self.assertIn('`Job` with `status: "skipped"` is the ordinary full-time rejection', step2)

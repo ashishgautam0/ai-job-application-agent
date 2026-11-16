@@ -90,7 +90,8 @@ Key facts to match against (verify these exist in the PDF):
 
 ## RULES THAT APPLY TO EVERY PORTAL
 
-These three rules apply identically on both portals — Wellfound and Indeed:
+These three rules apply identically on all three portals — Wellfound,
+Indeed and Naukri:
 
 1. **Check the skip list before opening any posting** (STEP 0).
 2. **Record every posting you handle, applied or skipped** (STEP 2).
@@ -295,27 +296,32 @@ with no ML in sight; a DevOps or infrastructure role with no ML.
 
 Turn the filter back on afterwards.
 
-**Then run the fresher pass, with the job-type filter OFF — this one takes
-full-time jobs too.** A posting that asks for freshers is one I am exactly
-qualified for, so it is worth having whether it is an internship or a job.
+**Then run the fresher-or-under-a-year pass, with the job-type filter OFF —
+this one takes full-time jobs too.** A posting that asks for freshers, or
+that states a requirement under a year, is one I am exactly qualified for, so
+it is worth having whether it is an internship or a job. I have 5 months of
+professional experience.
 Search **"AI ML fresher", "Machine Learning fresher", "AI Engineer fresher",
 "fresher AI ML jobs", "Gen AI fresher"**, and run "fresher" alongside the
 role queries where the portal supports it.
 
-**"Explicitly fresher" means the posting uses the word, and that is a
-narrow test on purpose.** Portals tag a great many jobs "Entry Level" —
-Indeed's own filter does it by default — and counting those would reopen the
-full-time market this run deliberately closed, which is the same trap the
-AWS pass has to avoid. The posting qualifies only if its own text says so:
-- **"fresher", "freshers", "freshers welcome", "fresher can apply",
-  "fresher friendly", "open to freshers"**
-- **"0 years of experience"**, **"no prior experience required"**,
-  **"no experience necessary"**
+**A posting qualifies on its own stated text, and that is a narrow test on
+purpose.** Portals tag a great many jobs "Entry Level" — Indeed's own filter
+does it by default — and counting those would reopen the full-time market
+this run deliberately closed, which is the same trap the AWS pass has to
+avoid. It qualifies on either of:
+- **It says fresher**: "fresher", "freshers", "freshers welcome", "fresher
+  can apply", "fresher friendly", "open to freshers", "0 years of
+  experience", "no prior experience required", "no experience necessary".
+- **It states an experience requirement that stays inside a year**: "less
+  than 1 year", "under 1 year", "6 months", "0-6 months", "0-1 years",
+  "upto 1 year". A written band whose top is one year or less counts here,
+  because the posting itself named the figure.
 
 **Not enough**, and each of these is a skip: the portal's **Entry Level**
-filter or badge, on its own; "junior"; "early career"; "graduate"; a stated
-band like "0-1 years" with no fresher wording. Those make a job eligible on
-experience, which is a different question from whether it invites freshers.
+filter or badge, on its own; "junior"; "early career"; "graduate". Those are
+labels the portal applies, not a figure the employer wrote, and a label is
+not a statement about what the job needs.
 
 **What changes on this pass, and nothing else does:**
 - **Full-time jobs are in**, for these postings only. Record them with
@@ -404,9 +410,10 @@ jobs at all.
 1. **My AWS certifications are specifically valuable** — the AWS pass in
    WHAT TO SEARCH. Narrow on purpose: AWS machine learning has to be central
    to the role, not merely mentioned.
-2. **The posting explicitly says it wants freshers** — the fresher pass in
-   WHAT TO SEARCH. Also narrow on purpose: the posting has to use the word,
-   not merely be tagged entry level.
+2. **The posting says it wants freshers, or states a requirement that stays
+   inside a year** — the fresher-or-under-a-year pass in WHAT TO SEARCH.
+   Also narrow on purpose: the employer has to have written the word or the
+   figure, not merely be tagged entry level by the portal.
 
 Everything outside those two tests is still a skip.
 
@@ -626,7 +633,8 @@ careers page in a new tab.
 **Follow it and finish the application there.** These are not "portal jobs" and
 they are not optional extras — they are the majority of the real openings, and
 leaving them is how a run ends with far fewer applications than jobs it found.
-This applies on **both apply portals** — Wellfound as much as Indeed.
+This applies on **all three apply portals** — Wellfound and Naukri as much
+as Indeed.
 
 The procedure is the same wherever the hand-off comes from:
 
@@ -664,17 +672,16 @@ that one application, not the run.
 
 ## PORTAL-BY-PORTAL INSTRUCTIONS
 
-Work them in this order: Wellfound → Indeed. Both are browser portals you
-apply on, worked the same way and by the same rules; the order is just the
-order of the passes.
+Work them in this order: Wellfound → Indeed → Naukri. All three are browser
+portals you apply on, worked the same way and by the same rules; the order is
+just the order of the passes.
 On every portal, check each posting's URL against the skip list from
 STEP 0 before opening it, and record every posting you handle.
 
-**Only these two portals for now.** I am tuning the run on Wellfound and
-Indeed before adding any other job site back, so do not search LinkedIn,
-Naukri, Instahyre, Cutshort or any other job portal. **LinkedIn is not a job
-portal in this run** — do not search its jobs, open its postings to apply, or
-record anything from it. The cold DMs and follow-ups that do use LinkedIn are
+**Only these three portals.** Wellfound, Indeed and Naukri, and no others:
+do not search Instahyre, Cutshort, Foundit, Shine or any other job board.
+**LinkedIn is not a job portal in this run** — do not search its jobs, open
+its postings to apply, or record anything from it. The cold DMs and follow-ups that do use LinkedIn are
 a separate prompt, not part of this run. An employer's own site or ATS is
 still fine — that is where many applications finish. But if a posting sends you
 to *another job board* to apply, leave it unrecorded and note it under Issues;
@@ -819,6 +826,59 @@ Indeed is a skip here.
    at least 15 minutes, work the next allowed portal meanwhile, and note it
    under Issues. Do not solve it and do not message me about it.
 
+### 3. NAUKRI
+
+Naukri is India's largest job board, so expect the most results and the most
+noise: it carries far more full-time postings than internships, and a large
+share of them are consultancies reposting other companies' roles. The scope
+test and the title rules do the filtering, and they do it unchanged.
+
+1. Open `naukri.com` in my browser — I am already logged in.
+2. Type the first search query in the keyword box and `India` in the location
+   box. Then set **Experience = 0 years** (Naukri's fresher band) and
+   **Freshness = Last 1 day**. Naukri also has a **Work mode** and a
+   **Job type / Internship** filter — set Internship for the internship
+   queries, and clear it for the AWS and fresher-or-under-a-year passes, the
+   same way the other portals are worked.
+3. For each result:
+   a. Check the posting URL against the skip list — skip immediately if
+      present. Naukri job URLs look like
+      `naukri.com/job-listings-<slug>-<id>`; strip query parameters and keep
+      that canonical form when recording.
+   b. Open the listing.
+   c. **Is it an internship, or does it clear one of the two full-time
+      exceptions?** Naukri states experience as its own field — "0-1 Yrs",
+      "2-5 Yrs" — right at the top of the listing, which makes this quick:
+      anything whose band reaches past a year is a skip unless the posting
+      says fresher. Then read the title against TITLE RULES above.
+   d. Read the JD — check the experience requirement and RED FLAGS. The pay
+      floor applies here exactly as it does on the other two.
+   e. **Beware the consultancy repost**, which Naukri has more of than either
+      other portal: a listing whose employer is a staffing or recruitment
+      firm hiring "for our client" is already a skip under SAFETY RULES, and
+      Naukri's own "Consultant" badge on a listing is the easiest tell.
+   f. If it passes every check, use whatever apply control the listing offers:
+      - **"Apply"** is Naukri's own one-click application against my saved
+        profile: use it, and confirm the listing then shows as applied.
+      - **"Apply on company site"** leaves Naukri for the employer's site or
+        ATS. Follow it and finish there, per APPLYING ON THE EMPLOYER'S OWN
+        SITE, handling any sign-in step as its step 2 says.
+      - Naukri sometimes asks a few employer questions before submitting.
+        Answer them with the FORM FILLING RULES; skip the job rather than
+        guess at one my saved answers do not cover.
+      - If Naukri shows the job as already applied, treat it as already
+        handled and skip it.
+   g. Record the job through the API (see STEP 2 below) with
+      `"source": "Naukri"`, copying the posting's description text into
+      `description`.
+   h. Wait 20-30 seconds before the next application (avoid detection).
+4. When every result on the page is handled, go to the next page and repeat
+   step 3. Keep paging until there is none, then repeat for each query.
+5. Naukri shows a verification or rate-limit page when it suspects
+   automation. Treat it as any other rate limit (CAPTCHA, OTP & BLOCKERS):
+   rest Naukri for at least 15 minutes, work another allowed portal
+   meanwhile, and note it under Issues.
+
 ## FORM FILLING RULES
 
 When filling any application form:
@@ -841,7 +901,7 @@ These are authoritative for form fields. Where an answer below covers the
 question, use it verbatim rather than inferring one:
 
 - Submission authorization: Submit on all of the jobs
-- Total work experience (years, user-provided): 1 year
+- Total work experience (user-provided): 5 months
 - Python (years): 1
 - Docker (years): 1
 - Git (years): 1
@@ -974,7 +1034,8 @@ section above. Never pay a fee.
 ## STEP 2 — RECORD EVERY JOB THROUGH THE API
 
 This is how a job reaches my tracker and how later runs know to skip it. It is
-the same call on **both portals** — Wellfound and Indeed — with
+the same call on **all three portals** — Wellfound, Indeed and Naukri —
+with
 only `source` and `url` differing.
 
 Send it **immediately after each application is submitted**, and also for every
@@ -1005,13 +1066,14 @@ Field rules:
   to 20,000 characters). Do **not** send a summary or paraphrase — this text is
   what my cold DM and demo agents read to write about the role, and a summary
   makes both of them worse. Leave it empty rather than inventing one.
-- **source**: exactly `Wellfound` or `Indeed` — spelled exactly like that,
-  since my stats group by this field. Never `LinkedIn`: nothing is applied to
-  there in this run, and older `LinkedIn` records in my tracker stay as they
-  are
+- **source**: exactly `Wellfound`, `Indeed` or `Naukri` — spelled exactly
+  like that, since my stats group by this field. Never `LinkedIn`: nothing is
+  applied to there in this run, and older `LinkedIn` records in my tracker
+  stay as they are
 - **job_type**: exactly `Job` or `Internship`. Most of what is applied to is
   an `Internship`. A `Job` with `status: "applied"` is right in exactly two
-  cases — a full-time role from the AWS pass, or one from the fresher pass —
+  cases — a full-time role from the AWS pass, or one from the
+  fresher-or-under-a-year pass —
   and wrong everywhere else, since full-time roles are otherwise out of
   scope. `Job` with `status: "skipped"` is the ordinary full-time rejection.
   Send the field on every record: left out it defaults to `Job`, which would
@@ -1165,9 +1227,10 @@ When I stop you, present:
 - Skip list loaded: N already-handled postings
 - Wellfound: X searched, Y applied, Z skipped, S already handled
 - Indeed: X searched, Y applied, Z skipped, S already handled
+- Naukri: X searched, Y applied, Z skipped, S already handled
 - TOTAL: XX applied, ZZ skipped, SS already handled
 - Of those applied: I internships (P of them with a PPO), A full-time AWS
-  roles, F full-time fresher roles
+  roles, F full-time fresher-or-under-a-year roles
 - Of those skipped: F were full-time roles, not internships
 - Passes completed over the portal list: N
 - Portals not reached this run: [none, or which ones]
@@ -1214,7 +1277,8 @@ apply to or skip on both.
 If my message limited you to one of them ("only Indeed"), work only that
 one.
 
-Apply to every **internship** that passes the rules on both portals, without
+Apply to every **internship** that passes the rules on all three portals,
+without
 asking me first, and when you reach the last allowed portal go back to the
 first and start the next pass. A full-time role is a skip however well it
 matches — see IS IT AN INTERNSHIP.
