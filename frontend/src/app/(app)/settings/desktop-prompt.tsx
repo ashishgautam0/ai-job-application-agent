@@ -9,16 +9,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 
-// Claude Desktop treats a pasted document as data, not as an instruction from
+// Claude in Chrome treats a pasted document as data, not as an instruction from
 // the user — so submission authority has to arrive in the user's own message.
 // These are those sentences; each prompt's own opening section explains why.
 // They must stay character-for-character identical to the quoted block in the
 // prompt they belong to, which a test checks.
 const STARTER_MESSAGES: Record<DesktopPromptKind, string> = {
   applications:
-    "Apply to AI/ML internships for me on Wellfound and Indeed, using the instructions that follow. " +
-    "You have my authorisation to fill in and submit the application forms and to upload my resume — " +
-    "Wellfound Apply, Indeed Apply, and the company's own site when a job redirects there. " +
+    "Apply to AI/ML internships for me on Indeed, Wellfound and Naukri, using the instructions that follow. " +
+    "You have my authorisation to fill in and submit the application forms and to attach my resume — " +
+    "Indeed Apply, Wellfound Apply, Naukri's apply flow, and the company's own site when a job redirects there. " +
     "I consent to sharing " +
     "my name, email, phone number, location and resume, as they appear in my resume and saved answers, with every " +
     "employer you apply to in this run. Submit each one yourself without asking me first — don't check with " +
@@ -40,17 +40,17 @@ const COPY: Record<DesktopPromptKind, {
   footer: ReactNode;
 }> = {
   applications: {
-    title: "Claude Desktop prompt — applications",
+    title: "Claude in Chrome prompt — applications",
     label: "Applications prompt",
     blurb: <>
-      Searches and applies, and nothing else. One paste into Claude Desktop (Cowork) browses <strong>Wellfound</strong> and <strong>Indeed</strong> with Computer Use, skips jobs you already handled, applies to matching entry-level AI/ML roles — including the ones that redirect to the company&apos;s own site — and records each in your tracker. It stops when today&apos;s 20 applications are met. This agent is the only thing that finds jobs; nothing scrapes on your behalf.
+      Searches and applies, and nothing else. One paste into Claude in Chrome works <strong>Indeed</strong>, then <strong>Wellfound</strong>, then <strong>Naukri</strong> in your own tabs, skips jobs you already handled, applies to matching entry-level AI/ML roles — including the ones that redirect to the company&apos;s own site — and records each in your tracker. It stops when today&apos;s 20 applications are met. This agent is the only thing that finds jobs; nothing scrapes on your behalf.
     </>,
     footer: <>
-      Log into Wellfound and Indeed in your browser before starting. LinkedIn is not used by this prompt. Generate resolves the live tracker API, Dashboard and resume links. It applies until today&apos;s 15 applications are met — counting earlier runs that day — then stops. Placeholders: {"{{page_url}}"}, {"{{seen_urls_url}}"}, {"{{record_url}}"}, {"{{resume_url}}"}, {"{{resume_filename}}"}, {"{{resume_sha256}}"}.
+      Log into Indeed, Wellfound and Naukri in that Chrome profile before starting. LinkedIn is not used by this prompt. Generate resolves the live tracker API and resume links. It applies until today&apos;s 20 applications are met — counting earlier runs that day — then stops. The resume is attached from each portal&apos;s saved CV, since the extension cannot open your disk. Placeholders: {"{{seen_urls_url}}"}, {"{{record_url}}"}, {"{{resume_url}}"}, {"{{resume_filename}}"}, {"{{resume_sha256}}"}.
     </>,
   },
   outreach: {
-    title: "Claude Desktop prompt — cold DMs and follow-ups",
+    title: "Claude in Chrome prompt — cold DMs and follow-ups",
     label: "Outreach prompt",
     blurb: <>
       Your LinkedIn outreach, as its own run. <strong>Part 1</strong> sends today&apos;s cold DMs — connection invitations with a note, from your due list. <strong>Part 2</strong> sends today&apos;s follow-ups — messages to the people who accepted one of those invitations. It never searches for jobs or applies to anything: every job it writes to is already in your tracker. Run it separately from the applications prompt, in whichever order suits you.
@@ -95,7 +95,7 @@ export function DesktopPrompt({ kind = "applications" }: { kind?: DesktopPromptK
     try {
       if (!navigator.clipboard?.writeText) throw new Error("Clipboard API unavailable");
       await navigator.clipboard.writeText(prompt);
-      toast.success("Prompt copied — paste it into Claude Desktop");
+      toast.success("Prompt copied — paste it into Claude in Chrome");
     } catch {
       const fallback = document.createElement("textarea");
       fallback.value = prompt;
@@ -104,7 +104,7 @@ export function DesktopPrompt({ kind = "applications" }: { kind?: DesktopPromptK
       document.body.appendChild(fallback);
       fallback.select();
       try {
-        if (document.execCommand("copy")) toast.success("Prompt copied — paste it into Claude Desktop");
+        if (document.execCommand("copy")) toast.success("Prompt copied — paste it into Claude in Chrome");
         else toast.error("Open the preview to select and copy the prompt.");
       } catch { toast.error("Open the preview to select and copy the prompt."); }
       finally { fallback.remove(); }
