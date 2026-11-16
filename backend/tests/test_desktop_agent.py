@@ -298,7 +298,20 @@ class StubHTTPException(RuntimeError):
         self.detail = detail
 
 
+def _flat(text):
+    """Collapse every run of whitespace, so where a line happens to wrap is
+    never part of what a test pins. A prompt is re-wrapped whenever it is
+    edited, and a wrap position is not a rule."""
+    return " ".join(text.split()) if isinstance(text, str) else text
+
+
 class DesktopPromptTests(unittest.TestCase):
+    def assertIn(self, member, container, msg=None):
+        super().assertIn(_flat(member), _flat(container), msg)
+
+    def assertNotIn(self, member, container, msg=None):
+        super().assertNotIn(_flat(member), _flat(container), msg)
+
     def setUp(self):
         self.prompt = profile_data.default_desktop_prompt()
         self.outreach = profile_data.default_desktop_prompt("outreach")
@@ -1242,7 +1255,7 @@ class DesktopPromptTests(unittest.TestCase):
         self.assertIn("Nothing here rescues a full-time job.", title_rules)
         keep = title_rules.split("### KEEP (apply if JD also fits)", 1)[1] \
                           .split("### DOMAIN KEYWORD GATE", 1)[0]
-        self.assertIn("**Internship titles \u2014 this is the whole run:**", keep)
+        self.assertIn("**Internship titles:**", keep)
         self.assertIn("pays at least \u20b920,000 a\n  month", keep)
         self.assertIn("**Trainee and Apprentice count as internship titles**", keep)
         self.assertIn("**Graduate Engineer and New Grad do not.**", keep)
@@ -1556,8 +1569,8 @@ class DesktopPromptTests(unittest.TestCase):
         keep_going = self.prompt.split("## KEEP GOING UNTIL I SAY STOP", 1)[1] \
                                 .split("## SAFETY RULES", 1)[0]
         for required in ("**My target is 20 applications a day, across Indeed, Wellfound and Naukri\ntogether.**",
-                         # Neither portal is counted differently from the other.
-                         "Both count the same way",
+                         # One total across the three portals, not a split.
+                         "It is the total that matters, not the split between them",
                          "do not\nstart another application once it does",
                          "**Only a confirmed submission counts**",
                          "**Use the tracker's number, not your own tally.**",
@@ -1660,7 +1673,7 @@ class DesktopPromptTests(unittest.TestCase):
         section = self.prompt.split("### DO NOT ASK ME BEFORE SUBMITTING", 1)[1] \
                              .split("**Do not ask me anything mid-run.", 1)[0]
         for route in ("Indeed **Apply now**",
-                      "Either portal's **Apply on company site** → ATS",
+                      "Any portal's **Apply on company site** → ATS",
                       "Wellfound **Apply**"):
             with self.subTest(route=route):
                 self.assertIn(route, section)
@@ -1813,6 +1826,20 @@ class DesktopPromptTests(unittest.TestCase):
         for banned in ("job_type", '"Internship"', "'Internship'", '["type"]'):
             with self.subTest(banned=banned):
                 self.assertNotIn(banned, ready)
+
+    def test_no_line_still_says_the_run_covers_only_two_portals(self):
+        """Naukri was added as a third portal, but KEEP GOING still told the agent
+        "Only the two portals listed above: Wellfound and Indeed" -- an absolute
+        that reads as banning Naukri, and that no test noticed because every
+        other check was about what the prompt says, not what it forgot to
+        change. The portal count is stated once, correctly, in each place."""
+        keep_going = self.prompt.split("## KEEP GOING UNTIL I SAY STOP", 1)[1] \
+                                .split("## SAFETY RULES", 1)[0]
+        self.assertIn("**Only Indeed, Wellfound and Naukri.**", keep_going)
+        for gone in ("two portals listed above", "the two portals", "both portals",
+                     "Wellfound and Indeed, both applied"):
+            with self.subTest(gone=gone):
+                self.assertNotIn(gone, self.prompt)
 
     def test_the_outreach_prompt_is_written_for_the_chrome_extension_too(self):
         """Both prompts are pasted into Claude in Chrome now. The outreach one
