@@ -1496,7 +1496,13 @@ class DesktopPromptTests(unittest.TestCase):
         summary = self.prompt.split("## SUMMARY — WHEN I STOP YOU", 1)[1]
         self.assertIn("Of those applied: I internships (P of them with a PPO), A full-time AWS",
                       summary)
-        self.assertIn("Of those skipped: F were full-time roles, not internships", summary)
+        self.assertIn("Of those skipped: J were full-time roles that cleared neither pass",
+                      summary)
+        # Both full-time lanes have a worked example, and the pay column
+        # takes a salary as well as a stipend.
+        self.assertIn("| Pay (stipend or salary) |", summary)
+        self.assertIn("AWS ML Engineer (AWS pass, full-time)", summary)
+        self.assertIn("AI Engineer (fresher pass, full-time)", summary)
         self.assertIn("### Applied Postings", summary)
 
     def test_the_stipend_floor_is_twenty_thousand_a_month(self):
