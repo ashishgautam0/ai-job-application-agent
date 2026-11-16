@@ -21,7 +21,7 @@ from you. Begin your message with something like:
 > consent to sharing my name, email, phone number, location and resume, as they
 > appear in my resume and saved answers, with every employer you apply to in
 > this run. Submit each one yourself without asking me first — don't check with
-> me job by job, just keep going until today's 15 applications are done.
+> me job by job, just keep going until today's 20 applications are done.
 
 Then paste everything from the line below. Everything after this section is
 written for the agent.
@@ -50,7 +50,7 @@ A posting qualifies only if it is an internship — see IS IT AN INTERNSHIP
 below, which is the first test every posting has to pass. A full-time AI/ML
 role that would have been a perfect match last week is a skip now, however
 good it looks. The run ends when today's target of
-15 applications is met, or when there is nothing left to apply to. The cold DMs
+20 applications is met, or when there is nothing left to apply to. The cold DMs
 and the follow-ups are a separate prompt with its own run — do not attempt them
 here, and do not tell me to go and run them.
 
@@ -166,18 +166,18 @@ Before opening any portal, fetch the postings I have already dealt with:
 GET {{seen_urls_url}}
 ```
 
-The response is `{"urls": [...], "count": N, "applied_today": A, "daily_target": 15, "dms_today": D, "dm_target": 10}`.
+The response is `{"urls": [...], "count": N, "applied_today": A, "daily_target": 20, "dms_today": D, "dm_target": 10}`.
 Keep that URL list for the whole run and treat it as the skip list. It contains
 every job I already applied to and every job already dismissed as a bad fit.
 
 `applied_today` is how many applications my tracker already holds for today,
 earlier runs included. (`dms_today` counts the cold DMs the outreach prompt
 sent; it is there for context and is none of this run's business.) **If
-`applied_today` is already 15 or more, today's application target is met: do
+`applied_today` is already 20 or more, today's application target is met: do
 not search or apply.** End with the
 one line "Today's application target is already met: A recorded today." and
 stop. Otherwise the run applies until the total
-reaches 15 (see DAILY TARGET below), then stops.
+reaches 20 (see DAILY TARGET below), then stops.
 
 **Note what it does NOT contain:** postings that merely sit in my database
 unapplied, left over from an older job scraper I have since removed. Those were
@@ -292,7 +292,7 @@ with no ML in sight; a DevOps or infrastructure role with no ML.
   years only), the seniority rejects, the data-science reject, the trainer
   reject, and the skip list. A "Senior AWS ML Engineer" or one wanting 3+
   years is a skip here exactly as anywhere else.
-- These count toward today's 15 like any other application.
+- These count toward today's 20 like any other application.
 
 Turn the filter back on afterwards.
 
@@ -334,7 +334,7 @@ not a statement about what the job needs.
   saying "freshers welcome" under a "Senior ML Engineer" title is still a
   skip on seniority, and the word fresher rescues no title the TITLE RULES
   reject.
-- These count toward today's 15 like any other application.
+- These count toward today's 20 like any other application.
 
 Turn the filter back on afterwards.
 
@@ -348,18 +348,22 @@ under TITLE RULES.
 
 **Filters, on every search:**
 - **Indeed**: Where = India, **Job type = Internship**,
-  **Date posted = Last 24 hours**, Experience level = **Entry Level**.
-  Indeed's filter set varies by query — use whichever of these it offers and
-  do not hunt for ones that are not there, but the Job type filter is the one
-  to set first.
+  Experience level = **Entry Level**, and **no date filter** — see below.
+  Indeed's filter set
+  varies by query, so use whichever of these it offers and do not hunt for
+  ones that are not there, but the Job type filter is the one to set first.
 
 **Go through every results page, not just the first.** When you reach the last
 job on a page, open the next page (Wellfound's own paging, Indeed's "Next"
 arrow) and keep going until there is no next page. Only move to the next query when the current one has no pages left.
 Indeed buries many good listings on page 2 and beyond, so it is worth the
-paging. With the 24-hour filter
-the list is short enough to finish, and the jobs past page 1 are the ones
-nobody else has applied to yet.
+paging.
+
+**Set no date filter, on any portal.** A posting being a week or a month old
+is not a reason to skip it: it is still open, and applying late beats not
+applying. This makes the result lists far longer than they were, which is
+the point — the skip list from STEP 0 is what keeps the later passes cheap,
+since a posting already handled is skipped without being opened.
 
 ## IS IT AN INTERNSHIP — THE FIRST TEST
 
@@ -377,7 +381,9 @@ jobs at all.
 - It offers a **PPO** — a pre-placement offer, "full-time conversion",
   "intern to full-time", "PPO on performance". A PPO internship is an
   internship, and one of the best kinds: it is a job offer at the end of it.
-  Keep it.
+  Keep it. **A PPO is a bonus, not a requirement** — it is one of several
+  ways a posting shows it is an internship, and an internship that never
+  mentions a PPO is exactly as much in scope.
 - The **title says Trainee or Apprentice**. In India these are routinely used
   for the same thing an internship is, so they count here — "AI/ML Trainee",
   "ML Apprentice", "Graduate Trainee" are all in. This is a deliberate
@@ -672,7 +678,7 @@ that one application, not the run.
 
 ## PORTAL-BY-PORTAL INSTRUCTIONS
 
-Work them in this order: Wellfound → Indeed → Naukri. All three are browser
+Work them in this order: Indeed → Wellfound → Naukri. All three are browser
 portals you apply on, worked the same way and by the same rules; the order is
 just the order of the passes.
 On every portal, check each posting's URL against the skip list from
@@ -688,7 +694,52 @@ to *another job board* to apply, leave it unrecorded and note it under Issues;
 do not record it as skipped, so a later run can reach it once that portal is
 back.
 
-### 1. WELLFOUND
+### 1. INDEED INDIA
+
+1. Open `in.indeed.com` in my browser — I am already logged in. Indeed is
+   worked in the browser and applied to, like every portal here: nothing
+   here is listed for me to do by hand.
+2. Type the first search query in the "What" box and `India` in the "Where" box.
+   Then set **Job type = Internship** — that filter defines the run and is the
+   first one to set. Then set **Experience level = Entry Level**, and set
+   **no date filter**: work the whole list however far back it goes.
+3. For each result:
+   a. Check the posting URL against the skip list — skip immediately if
+      present. Indeed result URLs carry a `?vjk=` job key; strip query
+      parameters before comparing, and record the canonical
+      `in.indeed.com/viewjob?jk=<id>` form.
+   b. Click the result to open the JD pane
+   c. **Is it an internship?** Indeed shows the job type on the listing. If it
+      is not an internship, skip it and record it with `"job_type": "Job"` —
+      see IS IT AN INTERNSHIP. Then read the title against TITLE RULES above.
+   d. Read the JD — check experience requirement and RED FLAGS. The pay floor
+      applies here exactly as it does on the other two.
+   e. If it passes all checks, use whatever apply control the listing offers:
+      - **"Apply now"** is Indeed's own hosted application: step through the
+        flow, confirm my contact details, upload my resume PDF, answer the
+        employer questions using the FORM FILLING RULES, then submit on the
+        review step and wait for the confirmation.
+      - **"Apply on company site"** leaves Indeed for the employer's site or
+        ATS. Follow it and finish the application there, per APPLYING ON THE
+        EMPLOYER'S OWN SITE, handling any sign-in step as its step 2 says. On
+        Indeed these are most of the good listings — never leave one just
+        because it is not an Indeed-hosted apply.
+      - If Indeed shows the job as already applied, treat it as already
+        handled and skip it.
+   f. Record the job through the API (see STEP 2 below) with
+      `"source": "Indeed"`, copying the posting's description text into
+      `description` — the cold DM and demo agents read that text, so a record
+      without it is a job they cannot write about.
+   g. Wait 20-30 seconds before the next application (avoid detection)
+4. When every result on the page is handled, click Indeed's "Next" arrow and
+   repeat step 3. Keep paging until there is no next page, then repeat for each
+   search query.
+5. Indeed shows a verification page when it suspects automation. If one
+   appears, treat it as a rate limit (CAPTCHA, OTP & BLOCKERS): rest Indeed for
+   at least 15 minutes, work the next allowed portal meanwhile, and note it
+   under Issues. Do not solve it and do not message me about it.
+
+### 2. WELLFOUND
 
 Wellfound (formerly AngelList Talent) lists startup roles, so expect smaller
 companies — which is also where a founder is often the one hiring.
@@ -703,8 +754,8 @@ Indeed is a skip here.
 2. Enter the first search query. Set **Location = India** — the country, not a
    city. Do not type Noida or any other city here: that is where I live, not
    the search area, and a city narrows the results to almost nothing. Add
-   Remote alongside India where the filter allows both. Then set the most
-   recent date filter available.
+   Remote alongside India where the filter allows both. Set **no date filter**
+   — a posting's age is not a reason to skip it.
    **Set the job type to Internship** — whatever Wellfound offers for
    internship or co-op. This is the filter that defines the run: without it
    every full-time startup role comes back and each one has to be read and
@@ -776,56 +827,6 @@ Indeed is a skip here.
    rate limit (CAPTCHA, OTP & BLOCKERS): rest Wellfound for at least 15
    minutes, work the next allowed portal meanwhile, and note it under Issues.
 
-### 2. INDEED INDIA
-
-1. Open `in.indeed.com` in my browser — I am already logged in. Indeed is
-   worked in the browser and applied to, exactly like Wellfound: nothing
-   here is listed for me to do by hand.
-2. Type the first search query in the "What" box and `India` in the "Where" box.
-   Then set **Job type = Internship** — that filter defines the run and is the
-   first one to set. Then set **Date posted = Last 24 hours** and
-   **Experience level = Entry
-   Level**. The 24-hour cut is the same freshness bar Wellfound gets
-   and it is a hard cut: if the filter will not take, read the posted date off
-   each listing and drop anything older yourself. Most runs will find few
-   Indeed jobs this fresh, which is the expected result and not a failure —
-   never widen the window to fill the list.
-3. For each result:
-   a. Check the posting URL against the skip list — skip immediately if
-      present. Indeed result URLs carry a `?vjk=` job key; strip query
-      parameters before comparing, and record the canonical
-      `in.indeed.com/viewjob?jk=<id>` form.
-   b. Click the result to open the JD pane
-   c. **Is it an internship?** Indeed shows the job type on the listing. If it
-      is not an internship, skip it and record it with `"job_type": "Job"` —
-      see IS IT AN INTERNSHIP. Then read the title against TITLE RULES above.
-   d. Read the JD — check experience requirement and RED FLAGS. The pay floor
-      applies here exactly as it does on Wellfound.
-   e. If it passes all checks, use whatever apply control the listing offers:
-      - **"Apply now"** is Indeed's own hosted application: step through the
-        flow, confirm my contact details, upload my resume PDF, answer the
-        employer questions using the FORM FILLING RULES, then submit on the
-        review step and wait for the confirmation.
-      - **"Apply on company site"** leaves Indeed for the employer's site or
-        ATS. Follow it and finish the application there, per APPLYING ON THE
-        EMPLOYER'S OWN SITE, handling any sign-in step as its step 2 says. On
-        Indeed these are most of the good listings — never leave one just
-        because it is not an Indeed-hosted apply.
-      - If Indeed shows the job as already applied, treat it as already
-        handled and skip it.
-   f. Record the job through the API (see STEP 2 below) with
-      `"source": "Indeed"`, copying the posting's description text into
-      `description` — the cold DM and demo agents read that text, so a record
-      without it is a job they cannot write about.
-   g. Wait 20-30 seconds before the next application (avoid detection)
-4. When every result on the page is handled, click Indeed's "Next" arrow and
-   repeat step 3. Keep paging until there is no next page, then repeat for each
-   search query.
-5. Indeed shows a verification page when it suspects automation. If one
-   appears, treat it as a rate limit (CAPTCHA, OTP & BLOCKERS): rest Indeed for
-   at least 15 minutes, work the next allowed portal meanwhile, and note it
-   under Issues. Do not solve it and do not message me about it.
-
 ### 3. NAUKRI
 
 Naukri is India's largest job board, so expect the most results and the most
@@ -835,8 +836,8 @@ test and the title rules do the filtering, and they do it unchanged.
 
 1. Open `naukri.com` in my browser — I am already logged in.
 2. Type the first search query in the keyword box and `India` in the location
-   box. Then set **Experience = 0 years** (Naukri's fresher band) and
-   **Freshness = Last 1 day**. Naukri also has a **Work mode** and a
+   box. Then set **Experience = 0 years** (Naukri's fresher band) and **no
+   freshness filter**. Naukri also has a **Work mode** and a
    **Job type / Internship** filter — set Internship for the internship
    queries, and clear it for the AWS and fresher-or-under-a-year passes, the
    same way the other portals are worked.
@@ -902,11 +903,14 @@ question, use it verbatim rather than inferring one:
 
 - Submission authorization: Submit on all of the jobs
 - Total work experience (user-provided): 5 months
-- Python (years): 1
-- Docker (years): 1
-- Git (years): 1
+- Python: 5 months
+- Docker: 5 months
+- Git: 5 months
 - Any other supplied or resume-supported skill — MLOps, LLM, RAG, FastAPI,
-  PyTorch, LangChain and the rest (years): 1 year
+  PyTorch, LangChain and the rest: 5 months
+- **Every one of these is 5 months, the same as my total experience.** Where
+  a form demands a whole number of years, answer 0 — never round 5 months
+  up to 1.
 - Comfortable working onsite at any location (not work authorization): Yes
 - Notice period: 15
 - Current compensation: 120000
@@ -1118,26 +1122,26 @@ skip list.
 
 ## KEEP GOING UNTIL I SAY STOP
 
-### DAILY TARGET — 15 APPLICATIONS A DAY, THEN STOP
+### DAILY TARGET — 20 APPLICATIONS A DAY, THEN STOP
 
-**My target is 15 applications a day, across Wellfound and Indeed
+**My target is 20 applications a day, across Indeed, Wellfound and Naukri
 together.** Both count the same way, and it is the total that matters, not
 the split between them.
-Keep searching and applying until today's total reaches 15, then stop — do not
+Keep searching and applying until today's total reaches 20, then stop — do not
 start another application once it does.
 
 - **Only a confirmed submission counts** — a job the tracker answered with
   `applied: true`. Skips, duplicates, jobs left for me under "Needs an
   account" and forms that never confirmed do not count.
 - **Use the tracker's number, not your own tally.** Every `applied: true`
-  response carries `applied_today`; when it reaches 15, today's target is met.
+  response carries `applied_today`; when it reaches 20, today's target is met.
   If it is ever missing or `null`, count your own confirmed applications and
   add them to the `applied_today` you got in STEP 0.
 - **When the target is met,** finish recording that last job, then go straight
   and stop. Do not look for "one more", and do not write me a note first —
   the summary is the last thing you produce.
 - The day is my day in India: the count starts again from zero after midnight
-  IST, so a run started the next day has a fresh 15.
+  IST, so a run started the next day has a fresh 20.
 
 Until the target is met:
 
@@ -1163,7 +1167,7 @@ apply to,** stop searching and finish the run — another pass over the same
 empty results is not worth the time.
 
 **Your turn ends for three reasons only:**
-1. Today's 15 applications are recorded, or two full passes found nothing left
+1. Today's 20 applications are recorded, or two full passes found nothing left
    to apply to.
 2. I told you to stop.
 3. The app forces it — a time, tool-use or context limit you cannot control.
@@ -1211,7 +1215,7 @@ about how many to send, never about sending them faster.
 
 ## SUMMARY — WHEN I STOP YOU
 
-The run ends when today's 15 applications are recorded, or when two full
+The run ends when today's 20 applications are recorded, or when two full
 passes find nothing left to apply to. Produce this summary
 **only** when your turn ends for one of the reasons in KEEP GOING UNTIL I SAY
 STOP. Never produce it, or any part of it, as a
@@ -1270,7 +1274,7 @@ When I stop you, present:
 ## START
 
 Begin now. Load the skip list (STEP 0), read my resume, then proceed through
-Wellfound, then Indeed. **Set each portal's job-type filter to Internship
+Indeed, then Wellfound, then Naukri. **Set each portal's job-type filter to Internship
 first.** Check the skip list on both, and record every posting you
 apply to or skip on both.
 
@@ -1282,7 +1286,7 @@ without
 asking me first, and when you reach the last allowed portal go back to the
 first and start the next pass. A full-time role is a skip however well it
 matches — see IS IT AN INTERNSHIP.
-Keep going until today's target of 15 applications is met, then stop. The
+Keep going until today's target of 20 applications is met, then stop. The
 cold DMs and follow-ups are a separate prompt — do not start them here.
 **Send me nothing until then** — no progress updates, no questions, no
 per-portal notes. Everything goes in the summary.
