@@ -432,8 +432,7 @@ class DesktopPromptTests(unittest.TestCase):
     def test_prompt_covers_every_portal_dedup_tracker_and_no_caps(self):
         for portal in self.PORTALS:
             self.assertIn(portal, self.prompt)
-        for required in ("STEP 0 — READ TODAY'S COUNT",
-                         "**Ignore `urls`.**",
+        for required in ("STEP 0 — LOAD THE SKIP LIST", "skip list",
                          "STEP 2 — RECORD EVERY JOB THROUGH THE API",
                          "RULES THAT APPLY TO EVERY PORTAL",
                          "KEEP GOING UNTIL I SAY STOP",
@@ -529,16 +528,13 @@ class DesktopPromptTests(unittest.TestCase):
         self.assertIn("use a CAPTCHA-solving service", self.prompt)
 
     def test_dedup_and_recording_are_required_on_each_portal(self):
-        """Every portal section must carry both the duplicate check -- now the
-        portal's own "Applied" state, not a pre-fetched skip list -- and the
-        record step."""
+        """Every portal section must carry both the skip check and the record step."""
         sections = re.split(r"^### \d+\. ", self.prompt, flags=re.MULTILINE)[1:]
         self.assertEqual(len(sections), len(self.PORTALS))
         for section in sections:
             name = section.split("\n", 1)[0]
             with self.subTest(portal=name):
-                self.assertIn("shows the listing as already applied, it is handled",
-                              section)
+                self.assertIn("skip list", section)
                 self.assertIn("STEP 2", section)
 
     def test_recording_is_portal_agnostic_and_lists_every_source(self):
@@ -786,7 +782,7 @@ class DesktopPromptTests(unittest.TestCase):
                          # Same screening bar as Wellfound.
                          "TITLE RULES", "RED FLAGS",
                          "pay floor\n      applies here exactly as it does on the other two",
-                         "If Indeed shows the listing as already applied, it is handled",
+                         "Check the posting URL against the skip list",
                          # Recorded like any other application now.
                          '`"source": "Indeed"`',
                          "copying the posting's description text into",
@@ -1050,27 +1046,13 @@ class DesktopPromptTests(unittest.TestCase):
         self.assertIn("Do not send `skipped` for a job you did not judge", step2)
         self.assertIn("hit an OTP prompt, could not load the page", step2)
 
-    def test_step0_fetches_the_count_and_never_pre_filters_against_urls(self):
-        """The skip list is still recorded -- the tracker, the dashboard, the DM
-        queue and the follow-up schedule all come off it -- but it is no longer
-        consulted before applying. The portals' own "Applied" badges carry the
-        duplicates, so STEP 0 reads the count and nothing else."""
-        step0 = self.prompt.split("STEP 0 — READ TODAY'S COUNT", 1)[1].split("## WHAT TO SEARCH", 1)[0]
-        self.assertIn("**What this call is for: `applied_today`.**", step0)
-        self.assertIn("**Ignore `urls`.**", step0)
-        self.assertIn("Do not pre-filter results against this list", step0)
-        self.assertIn("**the portals themselves tell you what you have\nalready applied to**", step0)
-        self.assertIn("**The portal's own \"Applied\" state is the check.**", step0)
-        # The one gap the badge cannot cover is stated, not glossed over.
-        self.assertIn("employer's own site or ATS", step0)
-        self.assertIn("across runs, a rare duplicate here is accepted", step0)
+    def test_prompt_states_unhandled_database_jobs_are_still_appliable(self):
+        """The skip list is applied-or-dismissed only. Rows the removed scraper
+        left behind were never applied to, so they must stay appliable."""
+        step0 = self.prompt.split("STEP 0 — LOAD THE SKIP LIST", 1)[1].split("## WHAT TO SEARCH", 1)[0]
+        self.assertIn("Never skip a job just because it was already in my database", step0)
+        self.assertIn("only an applied or", step0)
         self.assertNotIn("Today Todo", step0)
-        # Nothing anywhere may put the old pre-apply gate back.
-        for gone in ("LOAD THE SKIP" + " LIST", "against the skip list",
-                     "check the skip list", "skip list from STEP 0",
-                     "fetch the skip list", "in the skip list"):
-            with self.subTest(gone=gone):
-                self.assertNotIn(gone, self.prompt)
 
     def test_gen_ai_engineer_is_searched_first_under_every_spelling(self):
         search = self.prompt.split("## WHAT TO SEARCH", 1)[1].split("## TITLE RULES", 1)[0]
@@ -1151,10 +1133,8 @@ class DesktopPromptTests(unittest.TestCase):
         self.assertIn("**Set no date filter, on any portal.**", search)
         self.assertIn("a week or a month old\nis not a reason to skip it", search)
         self.assertIn("applying late beats not\napplying", search)
-        # Nothing pre-filters the lists now, so the cost of a pass is named
-        # and the portal badge is what carries the duplicates.
-        self.assertIn("Nothing pre-filters\nthem any more, so the cost of a later pass is real", search)
-        self.assertIn('let\nthe portal\'s "Applied" badge carry the duplicates', search)
+        # The skip list is what makes the longer lists affordable.
+        self.assertIn("the skip list from STEP 0 is what keeps the later passes cheap", search)
         self.assertIn("= **Entry Level**", search)
         self.assertNotIn("**LinkedIn**:", search)
         # No freshness cut may survive anywhere, under any wording.
@@ -1531,13 +1511,13 @@ class DesktopPromptTests(unittest.TestCase):
                          "after midnight\n  IST"):
             with self.subTest(required=required):
                 self.assertIn(required, keep_going)
-        step0 = self.prompt.split("STEP 0 — READ TODAY'S COUNT", 1)[1].split("## WHAT TO SEARCH", 1)[0]
+        step0 = self.prompt.split("STEP 0 — LOAD THE SKIP LIST", 1)[1].split("## WHAT TO SEARCH", 1)[0]
         self.assertIn('"applied_today": A, "daily_target": 20', step0)
         self.assertIn('"dms_today": D, "dm_target": 10', step0)
         # A met application target ends this run; the outreach prompt is a
         # separate paste, so nothing here hands off to it.
-        self.assertIn("today's\napplication target is met: do not search or apply.", step0)
-        self.assertIn("none of\nthis run's business", step0)
+        self.assertIn("today's application target is met: do\nnot search or apply.", step0)
+        self.assertIn("none of this run's business", step0)
         self.assertNotIn("There is no application cap", self.prompt)
 
     def test_the_prompt_target_matches_the_backend_constant(self):
@@ -1585,7 +1565,7 @@ class DesktopPromptTests(unittest.TestCase):
         keep_going = self.prompt.split("## KEEP GOING UNTIL I SAY STOP", 1)[1] \
                                 .split("## SAFETY RULES", 1)[0]
         self.assertIn("Say *continue* to resume.", keep_going)
-        self.assertIn("**When I say continue**, fetch today's count again (STEP 0)", keep_going)
+        self.assertIn("**When I say continue**, fetch the skip list again", keep_going)
         self.assertIn("re-ask for authorisation", keep_going)
 
     def test_prompt_never_leaves_a_form_open_waiting_for_an_answer(self):
