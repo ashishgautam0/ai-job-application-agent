@@ -56,7 +56,7 @@ const COPY: Record<DesktopPromptKind, {
       Your LinkedIn outreach, as its own run. <strong>Part 1</strong> sends today&apos;s cold DMs — connection invitations with a note, from your due list. <strong>Part 2</strong> sends today&apos;s follow-ups — messages to the people who accepted one of those invitations. It never searches for jobs or applies to anything: every job it writes to is already in your tracker. Run it separately from the applications prompt, in whichever order suits you.
     </>,
     footer: <>
-      Log into LinkedIn in your browser before starting. Only due jobs with a written Cold DM are messaged, and a follow-up is sent only after the invitation was accepted — an unaccepted one is left queued for a later run, costing that job nothing. Placeholders: {"{{page_url}}"}, {"{{cold_dms_url}}"}, {"{{cold_dm_record_url}}"}.
+      Log into LinkedIn in that Chrome profile before starting. Only due jobs with a written Cold DM are messaged, and a follow-up is sent only after the invitation was accepted — an unaccepted one is left queued for a later run, costing that job nothing. Placeholders: {"{{page_url}}"}, {"{{cold_dms_url}}"}, {"{{cold_dm_record_url}}"}.
     </>,
   },
 };
@@ -81,7 +81,7 @@ export function DesktopPrompt({ kind = "applications" }: { kind?: DesktopPromptK
       setLoadError(false);
     } catch (e) {
       setLoadError(true);
-      toast.error(e instanceof Error ? e.message : "Desktop prompt could not be generated");
+      toast.error(e instanceof Error ? e.message : "Prompt could not be generated");
     } finally {
       setBusy(false);
     }

@@ -1794,6 +1794,26 @@ class DesktopPromptTests(unittest.TestCase):
         # It is the tracker's tab, not another place to apply from.
         self.assertIn("nothing is applied to there", how)
 
+    def test_the_outreach_prompt_is_written_for_the_chrome_extension_too(self):
+        """Both prompts are pasted into Claude in Chrome now. The outreach one
+        still said Claude Desktop (Cowork) and Computer Use, and called its two
+        tracker endpoints from wherever the agent happened to be -- which on
+        LinkedIn's page is cross-origin to the app and refused."""
+        o = self.outreach
+        self.assertIn("— Claude in Chrome", o.splitlines()[0])
+        self.assertIn("Paste this entire prompt into Claude in Chrome, the browser extension", o)
+        self.assertIn("**This is a Chrome task.**", o)
+        self.assertIn("**Chrome may ask me to allow each site.**", o)
+        self.assertIn("do not try to\nwork around it", o)
+        how = o.split("## HOW TO CALL MY TRACKER", 1)[1].split("---", 1)[0]
+        self.assertIn("**Open one tab on my tracker and keep it for the whole run.**", how)
+        self.assertIn("same-origin there", how)
+        self.assertIn("**Read the JSON that comes back and act on it.**", how)
+        self.assertIn("**Go back to the LinkedIn tab afterwards**", how)
+        for gone in ("Claude Desktop", "Cowork", "Computer Use", "computer-use"):
+            with self.subTest(gone=gone):
+                self.assertNotIn(gone, o)
+
     def test_the_prompt_is_written_for_the_chrome_extension(self):
         """It was a Claude Desktop (Cowork) prompt driving Computer Use. Every
         instruction that assumed that surface had to move, or the agent would
