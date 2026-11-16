@@ -57,7 +57,7 @@ def init_db():
 # ===================== APPLICATION FUNCTIONS =====================
 
 # Applications per day the dashboard tracks and the desktop agent stops at.
-DAILY_APPLICATION_TARGET = 15
+DAILY_APPLICATION_TARGET = 20
 
 
 def count_applications_today():

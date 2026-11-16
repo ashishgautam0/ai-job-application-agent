@@ -436,7 +436,7 @@ class DesktopPromptTests(unittest.TestCase):
                          "STEP 2 — RECORD EVERY JOB THROUGH THE API",
                          "RULES THAT APPLY TO EVERY PORTAL",
                          "KEEP GOING UNTIL I SAY STOP",
-                         "### DAILY TARGET — 15 APPLICATIONS A DAY, THEN STOP"):
+                         "### DAILY TARGET — 20 APPLICATIONS A DAY, THEN STOP"):
             self.assertIn(required, self.prompt)
         # The one limit is the user's daily target. Nothing may reintroduce a
         # per-portal or per-session ceiling that quietly ends a run early.
@@ -635,7 +635,7 @@ class DesktopPromptTests(unittest.TestCase):
             with self.subTest(gone=gone):
                 self.assertNotIn(gone, self.prompt)
         # Wellfound's own meta-line rule has to match.
-        wellfound = self.prompt.split("### 1. WELLFOUND", 1)[1].split("### 2.", 1)[0]
+        wellfound = self.prompt.split("### 2. WELLFOUND", 1)[1].split("### 3.", 1)[0]
         self.assertIn("**Any figure past one year in that field is a skip", wellfound)
         self.assertIn('"1+", "2+", "3+", "5+", "0-2 years", "1-2 years"', wellfound)
         self.assertIn("an explicit 0-1 band, or no\n      figure at all", wellfound)
@@ -644,7 +644,7 @@ class DesktopPromptTests(unittest.TestCase):
     def test_wellfound_searches_the_country_not_the_home_city(self):
         """Noida is where the owner lives, not the search area; a city filter
         collapses Wellfound's results."""
-        section = self.prompt.split("### 1. WELLFOUND", 1)[1].split("### 2.", 1)[0]
+        section = self.prompt.split("### 2. WELLFOUND", 1)[1].split("### 3.", 1)[0]
         self.assertIn("Set **Location = India** — the country, not a\n   city.", section)
         self.assertIn("Do not type Noida or any other city here", section)
         self.assertIn("**Every shared rule governs Wellfound too**", section)
@@ -739,9 +739,10 @@ class DesktopPromptTests(unittest.TestCase):
             "- Total work experience (user-provided): 5 months",
             # Named per skill: forms ask "years of Python?" as its own field, and
             # a line covering skills in general left the agent inferring one.
-            "- Python (years): 1",
-            "- Docker (years): 1",
-            "- Git (years): 1",
+            "- Python: 5 months",
+            "- Docker: 5 months",
+            "- Git: 5 months",
+            "**Every one of these is 5 months, the same as my total experience.**",
             "- Comfortable working onsite at any location (not work authorization): Yes",
             "- Notice period: 15",
             "- Current compensation: 120000",
@@ -769,9 +770,9 @@ class DesktopPromptTests(unittest.TestCase):
         gone, so the section has to carry the browser apply flow — open, both
         apply controls, record, pace — or the run reaches Indeed and does
         nothing on it."""
-        indeed = self.prompt.split("### 2. INDEED", 1)[1].split("## FORM FILLING", 1)[0]
+        indeed = self.prompt.split("### 1. INDEED", 1)[1].split("\n### ", 1)[0]
         for required in ("Open `in.indeed.com` in my browser",
-                         "worked in the browser and applied to, exactly like Wellfound",
+                         "worked in the browser and applied to, like every portal here",
                          # Both apply routes. "Apply on company site" is most
                          # of the good Indeed listings, so it must not be the
                          # one that gets left.
@@ -780,7 +781,7 @@ class DesktopPromptTests(unittest.TestCase):
                          "never leave one just\n        because it is not an Indeed-hosted apply",
                          # Same screening bar as Wellfound.
                          "TITLE RULES", "RED FLAGS",
-                         "pay floor\n      applies here exactly as it does on Wellfound",
+                         "pay floor\n      applies here exactly as it does on the other two",
                          "Check the posting URL against the skip list",
                          # Recorded like any other application now.
                          '`"source": "Indeed"`',
@@ -839,7 +840,7 @@ class DesktopPromptTests(unittest.TestCase):
         self.assertNotIn("only once I have told you", step2)
         self.assertNotIn("`Indeed` is only ever used for", step2)
         target = self.prompt.split("### DAILY TARGET", 1)[1].split("###", 1)[0]
-        self.assertIn("across Wellfound and Indeed\ntogether.", target)
+        self.assertIn("across Indeed, Wellfound and Naukri\ntogether.", target)
         self.assertNotIn("Indeed is find-only", target)
         # The browser-only rule no longer has a connector carve-out to widen
         # it — Indeed is opened in the browser like every other job site.
@@ -852,12 +853,12 @@ class DesktopPromptTests(unittest.TestCase):
         """The order is just the order of the passes — no portal is the
         odd one out, so nothing may describe one as not applying."""
         order = self.prompt.split("Work them in this order:", 1)[1].split("###", 1)[0]
-        self.assertIn("Wellfound → Indeed → Naukri", order)
+        self.assertIn("Indeed → Wellfound → Naukri", order)
         self.assertNotIn("LinkedIn →", order)
         self.assertIn("All three are browser\nportals you apply on", order)
         self.assertNotIn("never competes with the applications for time", order)
         headings = re.findall(r"^### (\d)\. (\w+)", self.prompt, flags=re.MULTILINE)
-        self.assertEqual(headings, [("1", "WELLFOUND"), ("2", "INDEED"), ("3", "NAUKRI")])
+        self.assertEqual(headings, [("1", "INDEED"), ("2", "WELLFOUND"), ("3", "NAUKRI")])
 
     def test_applications_and_outreach_are_two_prompts_and_two_runs(self):
         """Applications and outreach are separate Settings cards and separate
@@ -871,9 +872,9 @@ class DesktopPromptTests(unittest.TestCase):
         self.assertNotIn("three phases", self.prompt)
         keep_going = self.prompt.split("## KEEP GOING UNTIL I SAY STOP", 1)[1] \
                                 .split("## SAFETY RULES", 1)[0]
-        self.assertIn("1. Today's 15 applications are recorded", keep_going)
+        self.assertIn("1. Today's 20 applications are recorded", keep_going)
         summary = self.prompt.split("## SUMMARY — WHEN I STOP YOU", 1)[1]
-        self.assertIn("The run ends when today's 15 applications are recorded", summary)
+        self.assertIn("The run ends when today's 20 applications are recorded", summary)
         # Neither prompt may carry the other's work.
         self.assertNotIn("## PART 1", self.prompt)
         self.assertNotIn("## PHASE 2", self.prompt)
@@ -915,7 +916,7 @@ class DesktopPromptTests(unittest.TestCase):
         listings carry the requirement in a meta line beside job type and
         salary, which the description below often never repeats, so an agent
         reading only the paragraphs never sees it."""
-        section = self.prompt.split("### 1. WELLFOUND", 1)[1].split("### 2.", 1)[0]
+        section = self.prompt.split("### 2. WELLFOUND", 1)[1].split("### 3.", 1)[0]
         for required in (
             "Read the experience requirement off the listing itself",
             "that line is the requirement even when the description",
@@ -934,23 +935,11 @@ class DesktopPromptTests(unittest.TestCase):
         """61 of 78 stored Wellfound jobs had no description at all, which is
         both how the experience bar went unchecked and why the cold DM and
         demo agents had nothing to write from."""
-        section = self.prompt.split("### 1. WELLFOUND", 1)[1].split("### 2.", 1)[0]
+        section = self.prompt.split("### 2. WELLFOUND", 1)[1].split("### 3.", 1)[0]
         self.assertIn("copy the listing's description text into\n      `description`", section)
         self.assertIn("including that meta line with the experience\n      requirement", section)
         # Empty stays allowed; a summary never is.
         self.assertIn("send it empty rather than\n      writing a summary", section)
-
-    def test_the_browser_portals_search_the_last_24_hours(self):
-        wellfound = self.prompt.split("### 1. WELLFOUND", 1)[1].split("### 2.", 1)[0]
-        self.assertIn("most\n   recent date filter available", wellfound)
-        self.assertNotIn("Past week", self.prompt)
-        # Indeed sets the same filter in the browser now. Its filter set is
-        # unreliable, so the section also has to say what to do when the
-        # control will not take, or stale jobs come back in through Indeed.
-        indeed = self.prompt.split("### 2. INDEED", 1)[1].split("## FORM FILLING", 1)[0]
-        self.assertIn("**Date posted = Last 24 hours**", indeed)
-        self.assertIn("read the posted date off\n   each listing", indeed)
-        self.assertIn("never widen the window to fill the list", indeed)
 
     def test_linkedin_is_not_a_job_portal(self):
         """LinkedIn stopped being a portal the run searches and applies on. It
@@ -1129,28 +1118,43 @@ class DesktopPromptTests(unittest.TestCase):
             with self.subTest(admitted=admitted):
                 self.assertNotIn(admitted, keep)
 
-    def test_searches_use_24_hours_and_page_past_the_first_page(self):
-        """The general filter line said "last 7 days" and overrode the
-        per-portal 24-hour filter; nothing told the agent to page past the
-        first results page."""
-        search = self.prompt.split("## WHAT TO SEARCH", 1)[1].split("## TITLE RULES", 1)[0]
-        self.assertNotIn("7 days", self.prompt)
-        # LinkedIn's filter row went with its portal section; Indeed's is the
-        # one stated in the shared search rules now.
-        self.assertIn("**Date posted = Last 24 hours**", search)
+    def test_no_portal_filters_by_date_and_every_one_pages_past_page_one(self):
+        """The date filter is gone. It was a 24-hour cut on all three portals,
+        and the reasoning for it -- few results, short lists, nobody else has
+        applied yet -- is exactly what made it costly: a posting a week old is
+        still open, and the run was throwing away everything it could have
+        applied to.
+
+        Removing it makes the result lists far longer, which puts the weight
+        on two things that must therefore stay: the paging rule, so the long
+        lists get worked rather than skimmed, and the STEP 0 skip list, which
+        is what stops a second pass re-reading what the first one handled."""
+        search = self.prompt.split("## WHAT TO SEARCH", 1)[1].split("## IS IT AN INTERNSHIP", 1)[0]
+        self.assertIn("**Set no date filter, on any portal.**", search)
+        self.assertIn("a week or a month old\nis not a reason to skip it", search)
+        self.assertIn("applying late beats not\napplying", search)
+        # The skip list is what makes the longer lists affordable.
+        self.assertIn("the skip list from STEP 0 is what keeps the later passes cheap", search)
         self.assertIn("= **Entry Level**", search)
         self.assertNotIn("**LinkedIn**:", search)
+        # No freshness cut may survive anywhere, under any wording.
+        for gone in ("24 hours", "24-hour", "7 days", "Past week", "Last 1 day",
+                     "recent date filter", "never widen the window"):
+            with self.subTest(gone=gone):
+                self.assertNotIn(gone, self.prompt)
+        # Each portal section says it for itself, not only in the shared rules.
+        for name, end in (("### 1. INDEED", "\n### "), ("### 2. WELLFOUND", "\n### "),
+                          ("### 3. NAUKRI", "## FORM FILLING")):
+            with self.subTest(portal=name):
+                self.assertIn("no date filter" if "NAUKRI" not in name else "no\n   freshness filter",
+                              self.prompt.split(name, 1)[1].split(end, 1)[0])
+        # Paging matters more than ever now the lists are long.
         self.assertIn("**Go through every results page, not just the first.**", search)
-        # Paging is a browser chore on every portal, Indeed included — its
-        # good listings sit on page 2 and beyond.
         self.assertIn('Indeed\'s "Next"\narrow', search)
-        self.assertNotIn("returns its results in one response", search)
-        # Both portal sections carry the paging step themselves, so neither
-        # stops at page 1 if the shared rule above is skimmed.
-        wellfound = self.prompt.split("### 1. WELLFOUND\n", 1)[1].split("\n### ", 1)[0]
+        wellfound = self.prompt.split("### 2. WELLFOUND\n", 1)[1].split("\n### ", 1)[0]
         self.assertIn("go to the next page of results", wellfound)
         self.assertIn("Keep paging until there is none", wellfound)
-        indeed = self.prompt.split("### 2. INDEED", 1)[1].split("## FORM FILLING", 1)[0]
+        indeed = self.prompt.split("### 1. INDEED", 1)[1].split("\n### ", 1)[0]
         self.assertIn('click Indeed\'s "Next" arrow', indeed)
         self.assertIn("Keep paging until there is no next page", indeed)
 
@@ -1292,7 +1296,7 @@ class DesktopPromptTests(unittest.TestCase):
                          "**unpaid is still a skip**",
                          "EXPERIENCE RULES (freshers and 0-1\n  years only)",
                          'A "Senior AWS ML Engineer" or one wanting 3+\n  years is a skip here',
-                         "count toward today's 15"):
+                         "count toward today's 20"):
             with self.subTest(required=required):
                 self.assertIn(required, search)
         # The two rules it bends have to point at it, or they read as a ban.
@@ -1321,6 +1325,10 @@ class DesktopPromptTests(unittest.TestCase):
         for required in ("It offers a **PPO**",
                          '"intern to full-time", "PPO on performance"',
                          "it is a job offer at the end of it.\n  Keep it.",
+                         # A PPO is evidence, never a requirement: an
+                         # internship that never mentions one is equally in.
+                         "**A PPO is a bonus, not a requirement**",
+                         "an internship that never\n  mentions a PPO is exactly as much in scope",
                          # The narrowed skip, and why it is not the PPO case.
                          "that merely begins with a probation or training\n  period",
                          "**This is not the PPO case.**",
@@ -1367,7 +1375,7 @@ class DesktopPromptTests(unittest.TestCase):
                          "labels the portal applies, not a figure the employer wrote",
                          # Pay floor is NOT waived here, unlike the AWS pass.
                          "**The ₹20,000 floor still applies here**, unlike the AWS pass.",
-                         "count toward today's 15"):
+                         "count toward today's 20"):
             with self.subTest(required=required):
                 self.assertIn(required, search)
         # The scope test has to list it as the second exception.
@@ -1400,8 +1408,8 @@ class DesktopPromptTests(unittest.TestCase):
         self.assertIn("Without the filter, do not run these", search)
         self.assertIn("**Job type = Internship**", search)
         # Both portals set the filter in their own steps, not just here.
-        wellfound = self.prompt.split("### 1. WELLFOUND", 1)[1].split("### 2.", 1)[0]
-        indeed = self.prompt.split("### 2. INDEED", 1)[1].split("## FORM FILLING", 1)[0]
+        wellfound = self.prompt.split("### 2. WELLFOUND", 1)[1].split("### 3.", 1)[0]
+        indeed = self.prompt.split("### 1. INDEED", 1)[1].split("\n### ", 1)[0]
         self.assertIn("**Set the job type to Internship**", wellfound)
         self.assertIn("**Is it an internship?**", wellfound)
         self.assertIn("**Job type = Internship** \u2014 that filter defines the run", indeed)
@@ -1493,7 +1501,7 @@ class DesktopPromptTests(unittest.TestCase):
         tracker so earlier runs that day count, then stop."""
         keep_going = self.prompt.split("## KEEP GOING UNTIL I SAY STOP", 1)[1] \
                                 .split("## SAFETY RULES", 1)[0]
-        for required in ("**My target is 15 applications a day, across Wellfound and Indeed\ntogether.**",
+        for required in ("**My target is 20 applications a day, across Indeed, Wellfound and Naukri\ntogether.**",
                          # Neither portal is counted differently from the other.
                          "Both count the same way",
                          "do not\nstart another application once it does",
@@ -1504,7 +1512,7 @@ class DesktopPromptTests(unittest.TestCase):
             with self.subTest(required=required):
                 self.assertIn(required, keep_going)
         step0 = self.prompt.split("STEP 0 — LOAD THE SKIP LIST", 1)[1].split("## WHAT TO SEARCH", 1)[0]
-        self.assertIn('"applied_today": A, "daily_target": 15', step0)
+        self.assertIn('"applied_today": A, "daily_target": 20', step0)
         self.assertIn('"dms_today": D, "dm_target": 10', step0)
         # A met application target ends this run; the outreach prompt is a
         # separate paste, so nothing here hands off to it.
@@ -1515,8 +1523,8 @@ class DesktopPromptTests(unittest.TestCase):
     def test_the_prompt_target_matches_the_backend_constant(self):
         source = (ROOT / "modules" / "tracker.py").read_text()
         line = next(l for l in source.splitlines() if l.startswith("DAILY_APPLICATION_TARGET"))
-        self.assertEqual(line.split("=", 1)[1].strip(), "15")
-        self.assertIn("DAILY TARGET — 15 APPLICATIONS A DAY", self.prompt)
+        self.assertEqual(line.split("=", 1)[1].strip(), "20")
+        self.assertIn("DAILY TARGET — 20 APPLICATIONS A DAY", self.prompt)
 
     def test_todays_applications_are_counted_in_the_users_timezone(self):
         from datetime import datetime
