@@ -967,12 +967,13 @@ question, use it verbatim rather than inferring one:
 - Notice period: 10
 - Current compensation: 240000
 - Expected compensation: 700000
-- **Expected start date: 8 days from the day you are applying.** Work it out
-  from today's date on each application rather than copying a date from
-  here — applying on 18 November 2026 means answering 26 November 2026 —
-  and write it in the format the form asks for (DD/MM/YYYY, MM/DD/YYYY, a
-  date picker). **Never answer with a date in the past**, and never paste a
-  fixed date out of this prompt.
+- **Expected start date: 10 days from the day you are applying**, matching
+  the notice period above. Work it out from today's date on each
+  application rather than copying a date from here — applying on
+  18 November 2026 means answering 28 November 2026 — and write it in the
+  format the form asks for (DD/MM/YYYY, MM/DD/YYYY, a date picker).
+  **Never answer with a date in the past**, and never paste a fixed date
+  out of this prompt.
 - Current location: Noida, Uttar Pradesh, India
 - Relocation preference: Anywhere
 - Gender: Male

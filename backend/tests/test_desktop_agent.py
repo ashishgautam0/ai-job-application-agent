@@ -761,7 +761,7 @@ class DesktopPromptTests(unittest.TestCase):
             "- Current compensation: 240000",
             "- Expected compensation: 700000",
             # Computed per application, so no fixed date is pinned here.
-            "**Expected start date: 8 days from the day you are applying.**",
+            "**Expected start date: 10 days from the day you are applying**",
             "- Current location: Noida, Uttar Pradesh, India",
             "- Relocation preference: Anywhere",
             "- Gender: Male",
@@ -1844,12 +1844,17 @@ class DesktopPromptTests(unittest.TestCase):
 
     def test_the_expected_start_date_is_computed_not_a_fixed_date(self):
         """It was a fixed "20/10/2026", which went stale the moment that date
-        passed: every form after it got a start date in the past. It is 8 days
+        passed: every form after it got a start date in the past. It is 10 days
         from the day of the application now, worked out per application, so it
-        cannot rot again."""
+        cannot rot again -- and 10 matches the notice period, so a form asking
+        for both does not get two answers that contradict each other."""
         answers = self.prompt.split("### MY SAVED ANSWERS", 1)[1] \
                              .split("### THE THREE STANDARD COMPANY QUESTIONS", 1)[0]
-        self.assertIn("**Expected start date: 8 days from the day you are applying.**", answers)
+        self.assertIn("**Expected start date: 10 days from the day you are applying**", answers)
+        # It matches the notice period, so a form asking both does not get
+        # two answers that contradict each other.
+        self.assertIn("matching\n  the notice period above", answers)
+        self.assertIn("- Notice period: 10", answers)
         self.assertIn("rather than copying a date from\n  here", answers)
         self.assertIn("**Never answer with a date in the past**", answers)
         self.assertIn("never paste a\n  fixed date out of this prompt", answers)
