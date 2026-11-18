@@ -976,11 +976,17 @@ question, use it verbatim rather than inferring one:
 
 Education, for the education section of any form:
 
+- **Highest qualification: M.Tech in Artificial Intelligence, completed.** I
+  have graduated — I am not a student, not currently pursuing a degree and not
+  in my final year. Where a form asks for education status, course completion,
+  "are you pursuing", "year of passing" or "currently studying", the answer is
+  **completed / graduated, 2026**. Never answer that a degree is ongoing or
+  expected.
 - Bachelor start date: 2017
 - Bachelor end date: 2023
 - Bachelor GPA: 6.56
 - M.Tech start date: 2024
-- M.Tech end date: 2026
+- M.Tech end date: 2026 (completed)
 - M.Tech CGPA: 8.69
 
 Applying these answers:

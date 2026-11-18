@@ -1841,6 +1841,23 @@ class DesktopPromptTests(unittest.TestCase):
             with self.subTest(gone=gone):
                 self.assertNotIn(gone, self.prompt)
 
+    def test_the_degree_is_stated_as_completed_not_in_progress(self):
+        """The education block held dates and nothing else. A form asking "are
+        you currently pursuing a degree", "course completion status" or "year of
+        passing" had no saved answer, so the rule that skips a job rather than
+        guess would have skipped it -- and an agent that did guess from a
+        2024-2026 range could read it as still ongoing. The M.Tech is finished,
+        so the prompt says so rather than leaving it to be inferred."""
+        answers = self.prompt.split("### MY SAVED ANSWERS", 1)[1] \
+                             .split("### THE THREE STANDARD COMPANY QUESTIONS", 1)[0]
+        self.assertIn("**Highest qualification: M.Tech in Artificial Intelligence, completed.**",
+                      answers)
+        self.assertIn("I\n  have graduated", answers)
+        self.assertIn("not a student", answers)
+        self.assertIn("**completed / graduated, 2026**", answers)
+        self.assertIn("Never answer that a degree is ongoing or\n  expected.", answers)
+        self.assertIn("M.Tech end date: 2026 (completed)", answers)
+
     def test_the_outreach_prompt_is_written_for_the_chrome_extension_too(self):
         """Both prompts are pasted into Claude in Chrome now. The outreach one
         still said Claude Desktop (Cowork) and Computer Use, and called its two
