@@ -964,10 +964,15 @@ question, use it verbatim rather than inferring one:
   a form demands a whole number of years, answer 0 — never round 5 months
   up to 1.
 - Comfortable working onsite at any location (not work authorization): Yes
-- Notice period: 15
+- Notice period: 10
 - Current compensation: 240000
 - Expected compensation: 700000
-- Expected start date: 20/10/2026
+- **Expected start date: 8 days from the day you are applying.** Work it out
+  from today's date on each application rather than copying a date from
+  here — applying on 18 November 2026 means answering 26 November 2026 —
+  and write it in the format the form asks for (DD/MM/YYYY, MM/DD/YYYY, a
+  date picker). **Never answer with a date in the past**, and never paste a
+  fixed date out of this prompt.
 - Current location: Noida, Uttar Pradesh, India
 - Relocation preference: Anywhere
 - Gender: Male
@@ -985,8 +990,8 @@ Education, for the education section of any form:
 - Bachelor start date: 2017
 - Bachelor end date: 2023
 - Bachelor GPA: 6.56
-- M.Tech start date: 2024
-- M.Tech end date: 2026 (completed)
+- M.Tech start date: May 2024
+- M.Tech end date: May 2026 (completed)
 - M.Tech CGPA: 8.69
 
 Applying these answers:

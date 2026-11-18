@@ -757,10 +757,11 @@ class DesktopPromptTests(unittest.TestCase):
             "- Git: 5 months",
             "**Every one of these is 5 months, the same as my total experience.**",
             "- Comfortable working onsite at any location (not work authorization): Yes",
-            "- Notice period: 15",
+            "- Notice period: 10",
             "- Current compensation: 240000",
             "- Expected compensation: 700000",
-            "- Expected start date: 20/10/2026",
+            # Computed per application, so no fixed date is pinned here.
+            "**Expected start date: 8 days from the day you are applying.**",
             "- Current location: Noida, Uttar Pradesh, India",
             "- Relocation preference: Anywhere",
             "- Gender: Male",
@@ -770,12 +771,12 @@ class DesktopPromptTests(unittest.TestCase):
         # The degrees were buried in the relocation answer; forms ask for them
         # separately, so they get their own lines.
         for line in ("- Bachelor GPA: 6.56", "- M.Tech CGPA: 8.69",
-                     "- Bachelor start date: 2017", "- M.Tech end date: 2026"):
+                     "- Bachelor start date: 2017", "- M.Tech end date: May 2026"):
             with self.subTest(answer=line):
                 self.assertIn(line, answers)
         self.assertNotIn("AnywhereBachelor", self.prompt)
         result = self.render(resume={"filename": "r.pdf"})
-        self.assertIn("- Notice period: 15", result["content"])
+        self.assertIn("- Notice period: 10", result["content"])
         self.assertNotIn("{{", result["content"])
 
     def test_indeed_is_applied_to_in_the_browser_like_the_other_portals(self):
@@ -1841,6 +1842,22 @@ class DesktopPromptTests(unittest.TestCase):
             with self.subTest(gone=gone):
                 self.assertNotIn(gone, self.prompt)
 
+    def test_the_expected_start_date_is_computed_not_a_fixed_date(self):
+        """It was a fixed "20/10/2026", which went stale the moment that date
+        passed: every form after it got a start date in the past. It is 8 days
+        from the day of the application now, worked out per application, so it
+        cannot rot again."""
+        answers = self.prompt.split("### MY SAVED ANSWERS", 1)[1] \
+                             .split("### THE THREE STANDARD COMPANY QUESTIONS", 1)[0]
+        self.assertIn("**Expected start date: 8 days from the day you are applying.**", answers)
+        self.assertIn("rather than copying a date from\n  here", answers)
+        self.assertIn("**Never answer with a date in the past**", answers)
+        self.assertIn("never paste a\n  fixed date out of this prompt", answers)
+        # No hard-coded start date may come back, in any spelling.
+        for gone in ("20/10/2026", "Expected start date: 2"):
+            with self.subTest(gone=gone):
+                self.assertNotIn(gone, self.prompt)
+
     def test_the_degree_is_stated_as_completed_not_in_progress(self):
         """The education block held dates and nothing else. A form asking "are
         you currently pursuing a degree", "course completion status" or "year of
@@ -1856,7 +1873,8 @@ class DesktopPromptTests(unittest.TestCase):
         self.assertIn("not a student", answers)
         self.assertIn("**completed / graduated, 2026**", answers)
         self.assertIn("Never answer that a degree is ongoing or\n  expected.", answers)
-        self.assertIn("M.Tech end date: 2026 (completed)", answers)
+        self.assertIn("M.Tech start date: May 2024", answers)
+        self.assertIn("M.Tech end date: May 2026 (completed)", answers)
 
     def test_the_outreach_prompt_is_written_for_the_chrome_extension_too(self):
         """Both prompts are pasted into Claude in Chrome now. The outreach one

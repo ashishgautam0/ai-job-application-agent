@@ -180,7 +180,7 @@ class ResumeTests(unittest.IsolatedAsyncioTestCase):
             with self.subTest(answer=answer):
                 self.assertNotIn(answer, settings)
         prompt = (ROOT.parent / "prompts/job-agent-desktop.md").read_text()
-        self.assertIn("- Notice period: 15", prompt)
+        self.assertIn("- Notice period: 10", prompt)
         self.assertIn("- Expected compensation: 700000", prompt)
 
     def test_profile_cleanup_preserves_rows_referenced_by_audited_drafts(self):
