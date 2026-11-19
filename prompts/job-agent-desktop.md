@@ -339,32 +339,41 @@ next query.
 
 **Then run the AWS pass, with the job-type filter OFF — and this one takes
 full-time jobs too.** My resume carries two AWS certifications, so a role built
-on AWS machine learning is worth more to me than the pay on it: **AWS Certified
+on AWS — machine learning, cloud, DevOps or data engineering — is worth more to
+me than the pay on it: **AWS Certified
 Machine Learning Engineer – Associate (MLA-C01)** and **AWS Certified AI
 Practitioner (AIF-C01)**.
 
 Search **"AWS Machine Learning Engineer", "AWS AI Engineer", "SageMaker",
-"AWS Bedrock", "AWS GenAI", "MLOps AWS"**, and the Intern spelling of each.
+"AWS Bedrock", "AWS GenAI", "MLOps AWS", "AWS Cloud Engineer", "AWS DevOps",
+"AWS Data Engineer", "AWS Solutions Architect", "AWS Cloud Support"**, and the
+Intern spelling of each.
 
 **"AWS is specifically valuable" is a narrow test, and it has to stay narrow.**
 Almost every backend posting lists AWS somewhere, and counting those would
 quietly reopen the full-time job market this run deliberately closed. The
-posting qualifies only if **AWS machine learning is central to the role**, shown
-by at least one of:
+posting qualifies only if **AWS is central to the role** — ML or not — shown by
+at least one of:
 - It names **SageMaker** or **Bedrock**.
 - It asks for an **AWS certification**, in any wording.
-- The **title** is an AWS or cloud ML title: "AWS ML Engineer", "AWS AI
-  Engineer", "SageMaker Engineer", "AWS GenAI Engineer".
-- The work described is building or deploying ML on AWS — "train and deploy
-  models on SageMaker", "LLM serving on Bedrock", "ML pipelines on AWS".
+- The **title** is an AWS title: "AWS ML Engineer", "AWS AI Engineer",
+  "SageMaker Engineer", "AWS GenAI Engineer", "AWS Cloud Engineer", "AWS DevOps
+  Engineer", "AWS Data Engineer", "AWS Solutions Architect", "AWS Cloud Support
+  Engineer", "AWS Cloud Intern".
+- The work described is building or running something on AWS — "train and
+  deploy models on SageMaker", "LLM serving on Bedrock", "ML pipelines on AWS",
+  "cloud infrastructure on AWS", "data pipelines on AWS (Glue, Redshift)".
 
 **Not enough**, and each a skip: AWS listed among ten other tools in a stack
-dump; "cloud experience a plus"; AWS used only to host a web app with no ML; a
-DevOps or infrastructure role with no ML.
+dump; "cloud experience a plus"; AWS used only to host a web app when the job is
+something else.
 
 **What changes on this pass, and nothing else does:**
 - **Full-time jobs are in**, for these postings only. Record them with
   `"job_type": "Job"`.
+- **The ML and domain gates do not apply.** An AWS DevOps, cloud or data role
+  needs no AI/ML in its description: the "keep if JD involves AI/ML" qualifiers
+  in TITLE RULES and the DOMAIN KEYWORD GATE are met by AWS being central.
 - **The pay floor does not apply.** I will take less for one of these. But
   **unpaid is still a skip** — that is a red flag, not a pay figure, and no
   certification makes unpaid worth it.
@@ -583,7 +592,8 @@ INTERNSHIP above. Nothing here rescues a full-time job.
 - OCR, Document AI, Speech Recognition
 - Predictive Modeling, Multimodal, Optimization Algorithm
 
-**Cloud & infrastructure titles (keep if JD involves AI/ML):**
+**Cloud & infrastructure titles (keep if JD involves AI/ML, or if the posting
+passes the AWS pass):**
 - AWS Engineer, Cloud Engineer, Cloud AI/ML Engineer
 - SageMaker Engineer, AWS Solutions Architect
 - MLOps Engineer, AIOps, Platform Engineer
@@ -613,7 +623,8 @@ Engineer — are skips like any other full-time role.
 
 ### DOMAIN KEYWORD GATE
 
-A title must reference at least one AI/ML domain to qualify. These are
+A title must reference at least one AI/ML domain to qualify (a posting that
+passes the AWS pass is exempt). These are
 valid domain signals in the title or JD: ai, ml, artificial intelligence,
 machine learning, deep learning, nlp, natural language,
 computer vision, llm, gen ai, genai, generative ai, agentic, rag, langchain,
