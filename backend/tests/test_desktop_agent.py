@@ -1803,6 +1803,72 @@ class DesktopPromptTests(unittest.TestCase):
         self.assertIn("attach the resume saved on that portal's profile", answers)
         self.assertIn("Never type or paste a file path", answers)
 
+    def test_the_tracker_helpers_in_the_prompt_actually_run(self):
+        """The helpers are code the agent pastes into a tab, so a typo in the
+        prompt is a run that cannot load its skip list. Run them as written:
+        the list must stay out of what comes back, every form of a handled
+        job's URL must match, and a recorded job must stop being fresh."""
+        import json, shutil, subprocess, tempfile
+        if not shutil.which("node"):
+            self.skipTest("node is not installed")
+        how = self.prompt.split("## HOW TO CALL MY TRACKER", 1)[1].split("## STEP 0", 1)[0]
+        code = re.search(r"```js\n(.*?)```", how, re.S).group(1)
+        self.assertNotIn("{{", code.replace("{{seen_urls_url}}", "").replace("{{record_url}}", ""))
+        harness = """
+const seen = {urls: ["https://in.indeed.com/viewjob?jk=abc123",
+                     "https://www.linkedin.com/jobs/view/42/",
+                     "https://wellfound.com/jobs/7-genai-intern",
+                     "https://www.naukri.com/job-listings-ml-intern-99"],
+              count: 4, applied_today: 3, daily_target: 20};
+global.window = global;
+global.fetch = async (u, o) => ({json: async () => o
+  ? {saved: true, applied: true, duplicate: false, applied_today: 4}
+  : JSON.parse(JSON.stringify(seen))});
+%s
+(async () => {
+  const counts = await loadSkip();
+  const page = ["https://in.indeed.com/jobs?q=ai&vjk=abc123",
+                "https://in.linkedin.com/jobs/view/ml-intern-at-acme-42?refId=x",
+                "https://www.linkedin.com/jobs/search/?currentJobId=42",
+                "https://wellfound.com/jobs/7-genai-intern?utm_source=a",
+                "https://www.naukri.com/job-listings-ml-intern-99?src=x",
+                "https://in.indeed.com/viewjob?jk=brandnew"];
+  const before = fresh(page);
+  const out = await rec([{url: "https://in.indeed.com/viewjob?jk=brandnew"}]);
+  console.log(JSON.stringify({counts, before, out, after: fresh(page)}));
+})();
+""" % code
+        with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False) as handle:
+            handle.write(harness)
+        done = subprocess.run(["node", handle.name], capture_output=True, text=True, timeout=30)
+        self.assertEqual(done.returncode, 0, done.stderr)
+        result = json.loads(done.stdout)
+        self.assertNotIn("urls", result["counts"])
+        self.assertEqual(result["counts"]["applied_today"], 3)
+        self.assertEqual(result["before"], ["https://in.indeed.com/viewjob?jk=brandnew"])
+        self.assertTrue(result["out"][0]["applied"])
+        self.assertEqual(result["after"], [])
+
+    def test_the_run_is_told_to_work_lean(self):
+        """Everything the extension reads stays in its context, and a run that
+        screenshots every page and opens every posting hits the app limit after
+        a handful of jobs. The prompt says how to spend context, and lets skips
+        be recorded a page at a time instead of one tab-switch each."""
+        lean = self.prompt.split("## WORK LEAN", 1)[1].split("## HOW TO CALL MY TRACKER", 1)[0]
+        for required in ("**Read pages as text, not pictures.**",
+                         "**Judge from the results card first.**",
+                         "**One results page at a time**",
+                         "**Do not carry job descriptions around.**",
+                         "**Two tabs**", "**Never re-read**"):
+            with self.subTest(required=required):
+                self.assertIn(required, lean)
+        step2 = self.prompt.split("STEP 2 — RECORD EVERY JOB", 1)[1].split("## KEEP GOING", 1)[0]
+        self.assertIn("**An application is recorded the moment it is confirmed**", step2)
+        self.assertIn("one `rec([...])` call per\nresults page", step2)
+        self.assertIn("never held past the page, a pause, or the end of a portal", step2)
+        # Interruption safety is unchanged for what matters most.
+        self.assertIn("Do not batch these calls to the end of the run", step2)
+
     def test_the_tracker_calls_are_made_from_the_trackers_own_tab(self):
         """A fetch from a job portal's page is cross-origin to the tracker and
         is refused, so the prompt has to say where to run the two calls. It also
@@ -1814,7 +1880,20 @@ class DesktopPromptTests(unittest.TestCase):
         self.assertIn("{{seen_urls_url}}", how)
         self.assertIn("{{record_url}}", how)
         self.assertIn('method: "POST"', how)
-        self.assertIn("**Read the JSON that comes back and act on it.**", how)
+        self.assertIn("**Read what each call returns and act on it.**", how)
+        # The skip list is over half a megabyte. Fetching it into the
+        # conversation would spend the context the whole run needs, so it is
+        # held in the tab and only counts and per-page answers come back.
+        self.assertIn("**The skip list never enters this conversation.**", how)
+        self.assertIn("window.__skip = new Set(d.urls.map(canon)); delete d.urls; return d;", how)
+        self.assertIn("window.fresh = urls => urls.filter(u => !window.__skip.has(canon(u)));", how)
+        self.assertIn("Never print `window.__skip`", how)
+        self.assertIn("**If the tab was reloaded**", how)
+        step0 = self.prompt.split("## STEP 0", 1)[1].split("## WHAT TO SEARCH", 1)[0]
+        self.assertIn("running `await loadSkip()` in the tracker tab", step0)
+        self.assertIn("pass the\n   posting URLs of the results page to `fresh([...])` in one call", step0)
+        # The response shape shown to the agent no longer carries the list.
+        self.assertNotIn('"urls": [...]', self.prompt)
         self.assertIn("A call whose response you did not read has not been made", how)
         self.assertIn("**Go back to the portal tab afterwards**", how)
         # It is the tracker's tab, not another place to apply from.

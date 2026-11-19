@@ -132,9 +132,8 @@ Naukri and LinkedIn:
    exactly like one you can finish on the portal — see APPLYING ON THE
    EMPLOYER'S OWN SITE.
 
-Start applying immediately — do not stop after describing a plan. And stay in
-scope: this task submits applications only. Do **not** send cold DMs or
-follow-ups from here; those have their own prompts in my Settings.
+Start applying immediately — do not stop after describing a plan. This task
+submits applications only: no cold DMs or follow-ups from here.
 
 ### DO NOT ASK ME BEFORE SUBMITTING
 
@@ -177,12 +176,31 @@ meaning, or a missing answer, it means: skip that job and carry on.
 
 **Never end your turn with a question, and never keep a form open for me.** A
 question sent mid-run stops everything until I happen to read it — often hours.
-I will answer the whole Issues list at once when I stop you, and add the
-answers to this prompt for next time.
+I will answer the whole Issues list at once when I stop you.
+
+## WORK LEAN — THE RUN LIVES OR DIES ON CONTEXT
+
+Everything you read stays in this conversation, and the conversation is finite:
+a run that reads carelessly hits the app's limit after a handful of jobs. So:
+
+- **Read pages as text, not pictures.** Use the page-text read for results
+  lists and job descriptions. Take a screenshot only when the text does not
+  show a control you have to click.
+- **Judge from the results card first.** Title, experience, pay and an
+  "Applied" badge are usually on the card: a posting that fails there is
+  skipped without being opened.
+- **One results page at a time**: collect its posting URLs, drop the handled
+  ones with one `fresh([...])` call (below), triage the rest from their cards,
+  and open only the survivors.
+- **Do not carry job descriptions around.** Read a JD, decide, and put its
+  text straight into the record call. Never quote or summarise a JD back.
+- **Two tabs**: my tracker and one portal tab. An employer's site opened in a
+  new tab is closed as soon as that application is finished or abandoned.
+- **Never re-read** my resume or this prompt mid-run.
 
 ## HOW TO CALL MY TRACKER (STEP 0 AND STEP 2)
 
-The two tracker calls are plain HTTP against my own app, and they are the only
+The tracker calls are plain HTTP against my own app, and they are the only
 requests this run makes to anything other than a page it opened. A script
 running on a job portal's page is not allowed to call my app, so make them
 from my app's own tab:
@@ -190,36 +208,49 @@ from my app's own tab:
 1. **Open one tab on my tracker and keep it for the whole run.** Take the
    scheme and host from the STEP 0 URL below and open that. Leave the tab
    open; every tracker call is made from it, and nothing is applied to there.
-2. **Make each call from that tab** with the page's own `fetch`. It is
-   same-origin there, and it needs no key or header beyond the content type:
+2. **Define these helpers in that tab, once**, using the page's own `fetch`. It
+   is same-origin there, and it needs no key or header beyond the content type:
 
    ```js
-   // STEP 0 — the skip list and today's counts
-   await (await fetch("{{seen_urls_url}}")).json()
-
-   // STEP 2 — one posting, applied or skipped
-   await (await fetch("{{record_url}}", {
-     method: "POST",
-     headers: { "Content-Type": "application/json" },
-     body: JSON.stringify({ /* the STEP 2 object, exactly as specified */ }),
-   })).json()
+   window.canon = u => { try { const x = new URL(u), h = x.hostname.replace(/^www\./, "").toLowerCase();
+     if (h.endsWith("indeed.com")) { const k = x.searchParams.get("jk") || x.searchParams.get("vjk"); if (k) return "indeed:" + k; }
+     if (h.endsWith("linkedin.com")) { const m = x.pathname.match(/\/jobs\/view\/(?:.*-)?(\d+)/), c = x.searchParams.get("currentJobId"); if (m || c) return "linkedin:" + (m ? m[1] : c); }
+     return h + x.pathname.replace(/\/+$/, ""); } catch { return String(u).trim(); } };
+   // STEP 0 — keeps the skip list in this tab, returns only the counts
+   window.loadSkip = async () => { const d = await (await fetch("{{seen_urls_url}}")).json();
+     window.__skip = new Set(d.urls.map(canon)); delete d.urls; return d; };
+   // which of these URLs are NOT handled yet
+   window.fresh = urls => urls.filter(u => !window.__skip.has(canon(u)));
+   // STEP 2 — one posting or many, applied or skipped
+   window.rec = async jobs => { const out = []; for (const j of jobs) {
+     const r = await (await fetch("{{record_url}}", { method: "POST",
+       headers: { "Content-Type": "application/json" }, body: JSON.stringify(j) })).json();
+     if (r.saved) window.__skip.add(canon(j.url)); out.push({ url: j.url, ...r }); } return out; };
    ```
-3. **Read the JSON that comes back and act on it.** STEP 0's URL list and
-   counts, and STEP 2's `saved` and `duplicate` flags, are what the rules
-   below turn on. A call whose response you did not read has not been made.
-4. **Go back to the portal tab afterwards** and carry on where you were.
+3. **The skip list never enters this conversation.** It is over 9,000 URLs —
+   more than half a megabyte — and reading it would use up the context the
+   whole run needs. `loadSkip()` keeps it in the tab and hands back the counts
+   alone. Never print `window.__skip` or the raw response of that request.
+4. **Read what each call returns and act on it.** `loadSkip()`'s counts,
+   `fresh()`'s list, and `rec()`'s `saved`, `applied` and `duplicate` flags are
+   what the rules below turn on. A call whose response you did not read has
+   not been made.
+5. **If the tab was reloaded** and the helpers are gone, define them and run
+   `loadSkip()` again before anything else.
+6. **Go back to the portal tab afterwards** and carry on where you were.
 
 ## STEP 0 — LOAD THE SKIP LIST (DO THIS FIRST)
 
-Before opening any portal, fetch the postings I have already dealt with:
+Before opening any portal, load the postings I have already dealt with by
+running `await loadSkip()` in the tracker tab. It makes this request:
 
 ```
 GET {{seen_urls_url}}
 ```
 
-The response is `{"urls": [...], "count": N, "applied_today": A, "daily_target": 20, "dms_today": D, "dm_target": 10}`.
-Keep that URL list for the whole run and treat it as the skip list. It contains
-every job I already applied to and every job already dismissed as a bad fit.
+and returns `{"count": N, "applied_today": A, "daily_target": 20, "dms_today": D, "dm_target": 10}`.
+The skip list itself stays in the tab for the whole run. It holds every job I
+already applied to and every job already dismissed as a bad fit.
 
 `applied_today` is how many applications my tracker already holds for today,
 earlier runs included. (`dms_today` counts the cold DMs the outreach prompt
@@ -238,17 +269,19 @@ dismissed URL on the list above is a skip.
 
 **Deduplication rules — this is what stops the same jobs reappearing:**
 
-1. Before opening any posting, compare its URL against the skip list. If it is
-   in the list, **skip it immediately** — do not open the JD or spend any time
-   on it. Count it as "already handled" in the summary only.
-2. Compare URLs after stripping tracking query parameters (anything after `?`
-   such as `?src=`, `?utm_source=`, `?refId=`, `?trackingId=`, `?vjk=`). Two
-   URLs whose paths match are the same job.
+1. Before opening any posting, check its URL against the skip list: pass the
+   posting URLs of the results page to `fresh([...])` in one call. A URL it
+   does not hand back is on the list — **skip it immediately**, without
+   opening the JD or spending any time on it. Count it as "already handled" in
+   the summary only.
+2. Pass URLs as the portal shows them. The helper strips tracking query
+   parameters (`?src=`, `?utm_source=`, `?refId=`, `?trackingId=`, `?vjk=`)
+   and matches a job under every form of its URL.
 3. Also skip a posting if the same **company + title** already appeared earlier
    in this run, even under a different URL — portals repost roles, and the same
-   role appears on several portals.
-4. After you record a job (STEP 2), add its URL **and** its company+title to
-   your in-memory skip list.
+   role appears on several portals. Keep that short list yourself.
+4. `rec()` adds each recorded URL to the skip list itself, so nothing is
+   handled twice in one run.
 
 If the request fails, retry it twice, waiting a few seconds between tries. If
 it still fails, **stop and tell me** — this is the second and last thing that
@@ -805,9 +838,6 @@ run can reach it once that portal is back.
 
 ### 2. WELLFOUND
 
-Wellfound (formerly AngelList Talent) lists startup roles, so expect smaller
-companies — which is also where a founder is often the one hiring.
-
 **Every shared rule governs Wellfound too**, with no loosening because the
 listings look informal: TITLE RULES, EXPERIENCE RULES (1 year is the ceiling),
 RED FLAGS and the pay floor all apply unchanged. A job that would be a skip on
@@ -869,9 +899,7 @@ Indeed is a skip here.
    f. Record the job through the API (see STEP 2 below) with
       `"source": "Wellfound"`, and **copy the listing's description text into
       `description`** — including that meta line with the experience requirement.
-      Most Wellfound records have arrived with it empty, which leaves nothing to
-      show the experience bar was ever read, and the cold DM and demo agents
-      nothing to write from. If the listing genuinely shows no description, send
+      If the listing genuinely shows no description, send
       it empty rather than writing a summary.
    g. Wait 20-30 seconds before the next application (avoid detection)
 4. When the page is done, go to the next page of results and repeat step 3.
@@ -1174,6 +1202,12 @@ Send it **immediately after each application is submitted**, and also for every
 job you evaluated and skipped. Do not batch these calls to the end of the run —
 an interrupted run must not lose what it already did.
 
+**An application is recorded the moment it is confirmed**, on its own:
+`await rec([{...}])`. **Skips may be sent together, one `rec([...])` call per
+results page** — never held past the page, a pause, or the end of a portal. A
+skip needs `title`, `company`, `url`, `source`, `status`, `job_type` and
+`notes`; leave its `description` out. The body of each call is this object:
+
 ```
 POST {{record_url}}
 Content-Type: application/json
@@ -1240,8 +1274,8 @@ The response is `{"saved": true, "applied": true, "dismissed": false, "duplicate
   the summary so I can add it by hand, and carry on applying — do not stop to
   tell me.
 
-After a successful record, add the URL and the company+title to your in-memory
-skip list.
+After a successful record, `rec()` has already added the URL to the skip list;
+add the company+title to your own short list.
 
 ## KEEP GOING UNTIL I SAY STOP
 
@@ -1303,11 +1337,8 @@ however promising it looks, and never follow a job-board link to a third site to
 browse it. Following an employer's own apply link from one of these portals is
 not "going beyond the list" — that is the normal apply path.
 
-### The pacing is not a cap — keep it
-
-The waits between applications stay, and so do the stop-this-portal rules
-below: a portal that decides I am a bot locks me out and nothing gets applied to
-at all. The daily target is about how many to send, never how fast.
+**The waits between applications stay.** The daily target is about how many to
+send, never how fast: a portal that decides I am a bot locks me out.
 
 ## SAFETY RULES
 
