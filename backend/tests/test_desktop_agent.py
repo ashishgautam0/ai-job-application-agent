@@ -325,19 +325,26 @@ class DesktopPromptTests(unittest.TestCase):
 
     def test_settings_can_no_longer_save_its_own_copy_of_the_prompt(self):
         """A saved copy froze the prompt: later improvements to the shipped file
-        never reached the agent. Settings no longer offers Save, and a write from
-        an older client must not resurrect the override."""
-        stored = {"scoring_weights": {"application_prompt": {"automation_rules": "Mine."}}}
-        with patch.object(profile_data, "get_profile", return_value=stored), patch.object(
-            profile_data, "upsert_profile", side_effect=lambda username, data: data
-        ) as save:
-            saved = profile_data.save_application_prompt_settings(
-                data={"desktop_prompt_template": "My desktop prompt"})
-        self.assertEqual(saved["desktop_prompt_template"], "")
-        written = save.call_args.args[1]["scoring_weights"]["application_prompt"]
-        self.assertEqual(written["desktop_prompt_template"], "")
-        # Unrelated settings are still persisted.
-        self.assertIn("Mine.", saved["automation_rules"])
+        never reached the agent. Settings stopped offering Save, and the
+        endpoints that stored and rendered those copies -- application-settings,
+        application-prompt and outreach-prompt -- had no caller left and are
+        gone. The shipped files, served by desktop-prompt, are the only source,
+        so nothing may bring a second one back."""
+        router = (ROOT / "app/routers/profile.py").read_text()
+        for gone in ("/application-settings", "/application-prompt", "/outreach-prompt",
+                     "save_application_prompt_settings", "get_application_prompt_settings",
+                     "_render_application_prompt", "_render_outreach_prompt"):
+            with self.subTest(gone=gone):
+                self.assertNotIn(gone, router)
+        self.assertIn('@router.get("/desktop-prompt")', router)
+        self.assertFalse(hasattr(profile_data, "save_application_prompt_settings"))
+        self.assertFalse(hasattr(profile_data, "get_application_prompt_settings"))
+        self.assertFalse((ROOT / "modules" / "outreach_prompts.py").exists())
+        api = (ROOT.parent / "frontend/src/lib/api.ts").read_text()
+        for gone in ("application-settings", "application-prompt", "outreach-prompt"):
+            with self.subTest(frontend=gone):
+                self.assertNotIn(gone, api)
+        self.assertIn("/api/profile/desktop-prompt", api)
 
     def render(self, resume=None, page_url="https://app.test/dashboard",
                kind="applications"):
@@ -2073,13 +2080,14 @@ global.fetch = async (u, o) => ({json: async () => o
     def test_prompt_fits_the_saved_field_limit(self):
         """Nothing expands into the prompt now that the answers are inline, so
         its own length is the whole measurement."""
-        limit = function(ROOT / "app/routers/profile.py", "_settings_field_limit", {})
-        ceiling = limit("desktop_prompt_template")
-        self.assertLess(len(self.prompt), ceiling,
-                        f"the default prompt is {len(self.prompt)} of {ceiling} — "
-                        "trim it rather than raising the ceiling; every line here "
-                        "is pasted into the agent's context on every run")
-
+        ceiling = profile_data.DESKTOP_PROMPT_MAX_CHARS
+        self.assertEqual(ceiling, 80_000)
+        for kind, prompt in (("applications", self.prompt), ("outreach", self.outreach)):
+            with self.subTest(kind=kind):
+                self.assertLess(len(prompt), ceiling,
+                                f"the {kind} prompt is {len(prompt)} of {ceiling} — "
+                                "trim it rather than raising the ceiling; every line here "
+                                "is pasted into the agent's context on every run")
 
 class JsonSafeRecordsTests(unittest.TestCase):
     """The tracker rendered empty because /api/applications returned a 500.
@@ -2355,26 +2363,10 @@ class ColdDmTests(unittest.TestCase):
         source = (ROOT / "modules" / "tracker.py").read_text()
         line = next(l for l in source.splitlines() if l.startswith("DAILY_FOLLOW_UP_TARGET"))
         self.assertEqual(line.split("=", 1)[1].strip(), "10")
-        rules = (ROOT / "modules" / "outreach_prompts.py").read_text()
-        flat = " ".join(rules.split())
-        self.assertIn("MY DAILY FOLLOW-UP TARGET: 10 follow-ups per Asia/Kolkata calendar day",
-                      flat)
-        self.assertIn("until 10 are sent and recorded, then STOP for the day", flat)
+        flat = " ".join(profile_data.default_desktop_prompt("outreach").split())
+        self.assertIn("**My target is 10 follow-ups a day.**", flat)
+        self.assertIn("**Stop at 10 sent** for the Asia/Kolkata day", flat)
         self.assertIn("Daily Target \u2014 Follow-ups", flat)
-
-    def test_the_follow_up_opens_the_recorded_profile_before_sending(self):
-        """A LinkedIn message only reaches someone who accepted the invitation,
-        so the rules order it: open the recorded URL, read the state, then send
-        or leave it queued."""
-        rules = " ".join((ROOT / "modules" / "outreach_prompts.py").read_text().split())
-        for required in ("open that exact URL first \u2014 not a search, not a guess",
-                         "only if it shows you are connected",
-                         "it stays in the due queue and a later run picks it up",
-                         "not accepted yet \u2014 left queued",
-                         "OPEN THE RECORDED PROFILE URL FIRST, before writing anything",
-                         "recorded URL means STOP on that job"):
-            with self.subTest(required=required):
-                self.assertIn(required, rules)
 
     def test_every_follow_up_draft_is_read_in_one_query(self):
         """The Dashboard asks about every due application at once. The rows are
@@ -2647,17 +2639,6 @@ class ColdDmPromptTests(unittest.TestCase):
         self.assertIn("must **currently** work at that exact company", self.phase2)
         self.assertIn("a guessed person is still never acceptable", self.phase2)
 
-    def test_the_settings_cold_dm_prompt_widens_the_same_way(self):
-        """Both prompts pick recipients; if only one widens they disagree."""
-        rules = (ROOT / "modules" / "outreach_prompts.py").read_text()
-        block = rules.split("LINKEDIN_CONNECTION_RULES", 1)[1].split('"""', 2)[1]
-        for required in ("the person who posted the job",
-                         "founder, co-founder, CTO or head of engineering",
-                         "Report blocked only when every step comes up empty",
-                         "never guess a person"):
-            with self.subTest(required=required):
-                self.assertIn(required, block)
-
     def test_the_job_poster_is_tried_before_any_people_search(self):
         """A DM went to a searched-up recruiter while the posting itself named
         the person who posted the role. The poster reads the replies to their
@@ -2680,18 +2661,6 @@ class ColdDmPromptTests(unittest.TestCase):
             with self.subTest(after=later):
                 self.assertLess(poster, step.index(later))
 
-    def test_the_settings_cold_dm_prompt_tries_the_poster_first_too(self):
-        """Both prompts pick recipients; if only one reorders they disagree."""
-        rules = (ROOT / "modules" / "outreach_prompts.py").read_text()
-        block = rules.split("LINKEDIN_CONNECTION_RULES", 1)[1].split('"""', 2)[1]
-        for required in ("open the job's own posting URL first",
-                         "the 'Meet the hiring team' block names them",
-                         "when the posting names nobody"):
-            with self.subTest(required=required):
-                self.assertIn(required, block)
-        poster = block.index("Meet the hiring team")
-        self.assertLess(poster, block.index("a recruiter, talent-acquisition or HR person"))
-
     def test_only_linkedin_has_a_job_poster_block(self):
         """The reorder claimed Indeed and Wellfound "sometimes name a poster
         the same way". They do not: both name the company, and a Wellfound
@@ -2712,14 +2681,6 @@ class ColdDmPromptTests(unittest.TestCase):
         # The searches must be reachable for a non-LinkedIn job.
         self.assertIn("**A non-LinkedIn job, or no poster named on the posting?**", step)
 
-        rules = (ROOT / "modules" / "outreach_prompts.py").read_text()
-        block = rules.split("LINKEDIN_CONNECTION_RULES", 1)[1].split('"""', 2)[1]
-        for required in ("This step is LinkedIn only",
-                         "Indeed and Wellfound listings name the company rather than a person",
-                         "never as a recipient in itself"):
-            with self.subTest(settings_rule=required):
-                self.assertIn(required, block)
-
     def test_the_name_placeholder_must_be_replaced_before_sending(self):
         """A note went to a founder reading "Hi, I recently applied..." — the
         personalisation was skipped and nothing flagged it, because that is a
@@ -2732,15 +2693,6 @@ class ColdDmPromptTests(unittest.TestCase):
                          "**after** substituting\n     the name"):
             with self.subTest(required=required):
                 self.assertIn(required, self.phase2)
-
-    def test_the_settings_cold_dm_prompt_checks_the_placeholder_too(self):
-        rules = (ROOT / "modules" / "outreach_prompts.py").read_text()
-        block = rules.split("LINKEDIN_CONNECTION_RULES", 1)[1].split('"""', 2)[1]
-        for required in ("replace that token with this recipient's actual first",
-                         "is unfinished and must not be sent",
-                         "counted after the name is substituted"):
-            with self.subTest(required=required):
-                self.assertIn(required, block)
 
     def test_phase_two_stops_when_linkedin_pushes_back(self):
         self.assertIn("**LinkedIn pushes back**", self.phase2)

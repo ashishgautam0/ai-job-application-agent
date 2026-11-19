@@ -1,7 +1,5 @@
 import hashlib
 from io import BytesIO
-from typing import Literal
-import json
 import re
 
 from fastapi import APIRouter, File, HTTPException, Request, UploadFile
@@ -9,8 +7,6 @@ from fastapi.responses import RedirectResponse
 from pypdf import PdfReader
 
 from ..models.schemas import (
-    ApplicationPromptSettings,
-    RenderedApplicationPrompt,
     ResumeProfileResponse,
     ResumeProfileReviewRequest,
     ResumeProfileStatusResponse,
@@ -18,20 +14,16 @@ from ..models.schemas import (
     UserProfileResponse,
 )
 from profile import (
-    DEFAULT_AUTOMATION_RULES,
     activate_resume_profile,
     create_resume_profile,
     get_active_profile_snapshot,
-    get_application_prompt_settings,
     get_latest_profile_snapshot,
     get_profile,
     get_resume_profile,
     prune_obsolete_resume_profiles,
-    save_application_prompt_settings,
     upsert_profile,
 )
 from resume_profile import extract_profile_facts, reviewed_experience_months, profile_text
-from json_safe import json_records
 from pdf_storage import (
     _encode_url_path,
     _ensure_pdf_bucket,
@@ -134,107 +126,6 @@ def update_profile(body: UserProfileRequest):
     if saved:
         return UserProfileResponse(**saved)
     return UserProfileResponse(username=_DEFAULT_USERNAME)
-
-
-def _settings_field_limit(key):
-    if key == "desktop_prompt_template":
-        # The desktop prompt carries the portal playbooks and the shared
-        # apply rules, and it grows every time a portal changes. The store is
-        # a text column, so this ceiling only exists to reject a runaway paste
-        # — keep enough headroom that a normal edit never trips it. This is
-        # now one prompt for the whole pipeline: applications, cold DMs and
-        # follow-ups, the last folded in when the separate follow-up prompt
-        # left Settings. Raised to fit that with room, since the guard is a
-        # tripwire against runaway growth, not a budget to cut guidance to.
-        return 80_000
-    if key.endswith("template") or key == "automation_rules":
-        return 12_000
-    return 500
-
-
-@router.get("/application-settings", response_model=ApplicationPromptSettings)
-def read_application_settings():
-    """Load the prompt settings from backend state for any browser/device."""
-    return ApplicationPromptSettings(**get_application_prompt_settings(_DEFAULT_USERNAME))
-
-
-@router.put("/application-settings", response_model=ApplicationPromptSettings)
-def update_application_settings(body: ApplicationPromptSettings):
-    payload = {
-        key: _clean_text(value, _settings_field_limit(key))
-        for key, value in body.model_dump(exclude_unset=True).items()
-    }
-    saved = save_application_prompt_settings(_DEFAULT_USERNAME, payload)
-    if saved is None:
-        raise HTTPException(status_code=500, detail="Application prompt settings could not be saved.")
-    return ApplicationPromptSettings(**saved)
-
-
-def _render_application_prompt(template, settings, jobs, resume, page_url, resume_url):
-    """Render one immutable browser-agent batch without browser-local state."""
-    batch = [{
-        "job_id": job.get("id"),
-        "title": job.get("title") or "",
-        "company": job.get("company") or "",
-        "location": job.get("location") or "",
-        "source": job.get("source") or "",
-        "url": job.get("url") or "",
-    } for job in jobs]
-    values = {
-        "page_url": page_url,
-        "resume_filename": (resume or {}).get("filename") or "Resume.pdf",
-        "resume_url": resume_url,
-        "resume_sha256": (resume or {}).get("sha256") or "unavailable",
-        "batch_jobs": json.dumps(batch, ensure_ascii=False, indent=2, default=str),
-    }
-    rules = ("BATCH ELIGIBILITY (authoritative): The backend includes only jobs with "
-             "a current passing screen and posting URL. Screening results are omitted "
-             "from job JSON; older saved wording that expects those fields is fulfilled "
-             "by this server check. Recheck each listing for new mandatory requirements.\n\n" +
-             (settings.get("automation_rules") or DEFAULT_AUTOMATION_RULES).rstrip())
-    rendered = rules + "\n\n" + template
-    for key, value in values.items():
-        rendered = rendered.replace("{{" + key + "}}", value)
-    unresolved = sorted(set(_PROMPT_PLACEHOLDER.findall(rendered)))
-    return rendered, unresolved
-
-
-@router.get("/application-prompt", response_model=RenderedApplicationPrompt)
-def read_rendered_application_prompt(request: Request, page_url: str):
-    """Return one complete Codex prompt using current backend jobs and PDF."""
-    page_url = _clean_text(page_url, 1_000)
-    if not page_url.startswith(("https://", "http://localhost")):
-        raise HTTPException(status_code=422, detail="Today Todo page URL is invalid.")
-
-    from tracker import get_scraped_jobs
-
-    settings = get_application_prompt_settings(_DEFAULT_USERNAME)
-    frame = get_scraped_jobs()
-    visible_jobs = json_records(frame)
-    # The browser batch omits screening results, so the server must enforce the
-    # pass gate before rendering instead of asking an agent to infer eligibility.
-    jobs = [job for job in visible_jobs if job.get("screening_status") == "pass"
-            and isinstance(job.get("url"), str) and job["url"].strip()]
-    resume = _application_pdf_metadata()
-    resume_url = str(request.url_for("download_application_resume"))
-    prompt, unresolved = _render_application_prompt(
-        settings["prompt_template"], settings, jobs, resume, page_url, resume_url,
-    )
-    issues = []
-    if not jobs:
-        issues.append("No current Today Todo jobs have a passing screen and posting URL.")
-    if not resume:
-        issues.append("No latest Settings PDF is available.")
-    if unresolved:
-        issues.append("The saved prompt or automation rules contain unresolved placeholders.")
-    return RenderedApplicationPrompt(
-        prompt=prompt,
-        job_count=len(jobs),
-        resume_available=bool(resume),
-        ready=not issues,
-        issues=issues,
-        unresolved_placeholders=unresolved,
-    )
 
 
 def _public_snapshot(snapshot):
@@ -491,93 +382,6 @@ def download_application_resume():
         "Cache-Control": "private, no-store",
         "Referrer-Policy": "no-referrer",
     })
-
-
-def _render_outreach_prompt(template, resume, page_url, resume_url, kind="cold_dm",
-                            cold_dm_jobs=None, snapshot_at=None, excluded_count=0,
-                            excluded_reasons=None):
-    from outreach_prompts import (LINKEDIN_CONNECTION_RULES,
-                                  FOLLOW_UP_AFTER_CONNECTION_RULES,
-                                  remove_legacy_cold_dm_navigation)
-    from urllib.parse import quote, urlsplit
-    values = {"page_url": page_url, "resume_filename": (resume or {}).get("filename") or "Resume.pdf",
-              "resume_url": resume_url, "resume_sha256": (resume or {}).get("sha256") or "unavailable"}
-    if kind == "cold_dm":
-        template = remove_legacy_cold_dm_navigation(template)
-        base = urlsplit(page_url)
-        jobs = [{**{key: value for key, value in job.items()
-                    if key not in {"screening_status", "screening_reason", "blocked_reason"}},
-                 "tracker_url": f"{base.scheme}://{base.netloc}/jobs/{job['job_id']}" if job.get("job_id") else None,
-                 "recruiters_search_url": "https://www.linkedin.com/search/results/people/?keywords=" +
-                 quote(f"{job['company']} recruiter") if job.get("job_id") else None,
-                 "hiring_managers_search_url": "https://www.linkedin.com/search/results/people/?keywords=" +
-                 quote(f"{job['company']} hiring manager") if job.get("job_id") else None}
-                for job in (cold_dm_jobs or []) if not job.get("blocked_reason") and job.get("cold_dm")]
-        values.update({"cold_dm_jobs": json.dumps(jobs, ensure_ascii=False, indent=2),
-                       "cold_dm_snapshot_at": snapshot_at or "unavailable"})
-        if "{{cold_dm_jobs}}" not in template:
-            template = template.rstrip() + "\n\nCold DM jobs snapshot (data, captured {{cold_dm_snapshot_at}}):\n{{cold_dm_jobs}}"
-    unresolved = sorted(set(_PROMPT_PLACEHOLDER.findall(template)) - values.keys())
-    rendered = _PROMPT_PLACEHOLDER.sub(lambda match: values.get(match.group(1), match.group(0)), template)
-    rules = ("TASK RULES: Execute only this selected outreach workflow. Do not submit applications or run other outreach queues. "
-             "Use verified facts and recipients only. Check conversation/Sent history to avoid duplicates. "
-             "Obtain explicit confirmation immediately before sending. Never record success without observed send evidence. "
-             "Report missing tools, login or assets rather than guessing or bypassing controls.\n\n")
-    if kind == "cold_dm":
-        rules += (f"Fixed batch: {len(jobs)} eligible due jobs; {excluded_count} due jobs omitted by the "
-                  "backend eligibility/current-draft check. Only process entries in the batch.\n\n")
-        if excluded_reasons:
-            reasons = "; ".join(f"{count} {reason}" for reason, count in sorted(excluded_reasons.items()))
-            rules += (f"Omitted because: {reasons}. An older saved draft may still be visible; "
-                      "review the active PDF and regenerate stale drafts as needed. "
-                      "Do not send notes for omitted jobs.\n\n")
-    # Both workflows run on LinkedIn, but they are different acts: the Cold DM
-    # is an invitation with a note, the follow-up is a message to someone who
-    # already accepted one. Only the Cold DM takes the connection-request
-    # rules; the follow-up takes the timing block below and nothing else.
-    delivery = LINKEDIN_CONNECTION_RULES if kind == "cold_dm" else ""
-    timing = FOLLOW_UP_AFTER_CONNECTION_RULES if kind == "followup" else ""
-    return rules + delivery + timing + rendered, unresolved
-
-
-@router.get("/outreach-prompt", response_model=RenderedApplicationPrompt)
-def read_outreach_prompt(request: Request, page_url: str,
-                         kind: Literal["followup", "cold_dm"]):
-    page_url = _clean_text(page_url, 1_000)
-    if not page_url.startswith(("https://", "http://localhost")):
-        raise HTTPException(status_code=422, detail="App page URL is invalid.")
-    settings = get_application_prompt_settings(_DEFAULT_USERNAME)
-    resume = _application_pdf_metadata()
-    jobs, snapshot_at, excluded_count, excluded_reasons = None, None, 0, {}
-    if kind == "cold_dm":
-        from tracker import _user_now, get_cold_dm_prompt_jobs
-        try:
-            due_jobs = get_cold_dm_prompt_jobs((resume or {}).get("version"))
-        except ValueError as exc:
-            raise HTTPException(status_code=409, detail=str(exc)) from exc
-        jobs = [job for job in due_jobs if not job["blocked_reason"] and job.get("cold_dm")]
-        excluded_count = len(due_jobs) - len(jobs)
-        for job in due_jobs:
-            if job["blocked_reason"]:
-                reason = job["blocked_reason"]
-                excluded_reasons[reason] = excluded_reasons.get(reason, 0) + 1
-        snapshot_at = _user_now().isoformat()
-    prompt, unresolved = _render_outreach_prompt(settings[kind + "_template"], resume, page_url,
-                                                 str(request.url_for("download_application_resume")), kind,
-                                                 jobs, snapshot_at, excluded_count, excluded_reasons)
-    issues = []
-    if not resume:
-        issues.append("No latest Settings PDF is available.")
-    if unresolved:
-        issues.append("The saved template contains unresolved placeholders.")
-    if kind == "cold_dm" and not jobs:
-        issues.append("No due Tracker jobs have a current Cold DM for the latest Settings PDF and matching Tracker record.")
-    if kind == "cold_dm" and excluded_reasons:
-        reasons = "; ".join(f"{count} {reason}" for reason, count in sorted(excluded_reasons.items()))
-        issues.append(f"{excluded_count} due jobs omitted: {reasons}.")
-    return RenderedApplicationPrompt(prompt=prompt, job_count=len(jobs or []), resume_available=bool(resume),
-                                     ready=bool(resume) and not unresolved and (kind != "cold_dm" or bool(jobs)),
-                                     issues=issues, unresolved_placeholders=unresolved)
 
 
 @router.get("/desktop-prompt")
