@@ -481,13 +481,14 @@ class DesktopPromptTests(unittest.TestCase):
                          "STEP 2 — RECORD EVERY JOB THROUGH THE API",
                          "RULES THAT APPLY TO EVERY PORTAL",
                          "KEEP GOING UNTIL I SAY STOP",
-                         "### DAILY TARGET — 20 APPLICATIONS A DAY, THEN STOP"):
+                         "### NO DAILY CAP — FINISH EVERY SEARCH"):
             self.assertIn(required, self.prompt)
-        # The one limit is the user's daily target. Nothing may reintroduce a
-        # per-portal or per-session ceiling that quietly ends a run early.
+        # There is no limit at all on how many are sent. Nothing may reintroduce
+        # a daily, per-portal or per-session ceiling that ends a run early.
         for banned in ("Maximum 2 hours", "Maximum 10 applications per portal",
                        "stop after 10 applications", "SESSION LIMITS",
-                       "10-application cap"):
+                       "10-application cap", "DAILY TARGET",
+                       "today's 20", "20 applications a day"):
             self.assertNotIn(banned, self.prompt)
 
     def test_prompt_submits_without_asking_but_still_guards_the_account(self):
@@ -906,9 +907,9 @@ class DesktopPromptTests(unittest.TestCase):
         self.assertIn("A job found on LinkedIn is recorded as\n  `LinkedIn`", step2)
         self.assertNotIn("only once I have told you", step2)
         self.assertNotIn("`Indeed` is only ever used for", step2)
-        target = self.prompt.split("### DAILY TARGET", 1)[1].split("###", 1)[0]
-        self.assertIn("across Indeed, Wellfound, Naukri and\nLinkedIn together.", target)
-        self.assertNotIn("Indeed is find-only", target)
+        finish = self.prompt.split("### NO DAILY CAP", 1)[1].split("**Do not send me", 1)[0]
+        self.assertIn("on Indeed, Wellfound, Naukri and LinkedIn", finish)
+        self.assertNotIn("Indeed is find-only", finish)
         # The browser-only rule no longer has a connector carve-out to widen
         # it — Indeed is opened in the browser like every other job site.
         blockers = self.prompt.split("## CAPTCHA, OTP & BLOCKERS", 1)[1].split("## STEP 2", 1)[0]
@@ -965,9 +966,9 @@ class DesktopPromptTests(unittest.TestCase):
         self.assertNotIn("three phases", self.prompt)
         keep_going = self.prompt.split("## KEEP GOING UNTIL I SAY STOP", 1)[1] \
                                 .split("## SAFETY RULES", 1)[0]
-        self.assertIn("1. Today's 20 applications are recorded", keep_going)
+        self.assertIn("1. Every search in WHAT TO SEARCH has been run to its last results page on\n   all four portals.", keep_going)
         summary = self.prompt.split("## SUMMARY — WHEN I STOP YOU", 1)[1]
-        self.assertIn("The run ends when today's 20 applications are recorded", summary)
+        self.assertIn("The run ends when every search in WHAT TO SEARCH has been run", summary)
         # Neither prompt may carry the other's work.
         self.assertNotIn("## PART 1", self.prompt)
         self.assertNotIn("## PHASE 2", self.prompt)
@@ -1402,8 +1403,7 @@ class DesktopPromptTests(unittest.TestCase):
                          "**The pay floor does not apply.**",
                          "**unpaid is still a skip**",
                          "EXPERIENCE RULES (freshers and 0-1\n  years only)",
-                         'A "Senior AWS ML Engineer" or one wanting 3+\n  years is a skip here',
-                         "count toward today's 20"):
+                         'A "Senior AWS ML Engineer" or one wanting 3+\n  years is a skip here'):
             with self.subTest(required=required):
                 self.assertIn(required, search)
         # The two rules it bends have to point at it, or they read as a ban.
@@ -1496,8 +1496,7 @@ class DesktopPromptTests(unittest.TestCase):
                          '"junior"', '"early career"',
                          "labels the portal applies, not a figure the employer wrote",
                          # Pay floor is NOT waived here, unlike the AWS pass.
-                         "**The ₹20,000 floor still applies here**, unlike the AWS pass.",
-                         "count toward today's 20"):
+                         "**The ₹20,000 floor still applies here**, unlike the AWS pass."):
             with self.subTest(required=required):
                 self.assertIn(required, search)
         # The scope test has to list it as the second exception.
@@ -1630,35 +1629,31 @@ class DesktopPromptTests(unittest.TestCase):
         # now exactly on it.
         self.assertNotIn("Pay below floor: \u20b920,000/month stipend", self.prompt)
 
-    def test_the_run_stops_at_the_daily_target(self):
-        """10 applications a day across the three portals, counted by the
-        tracker so earlier runs that day count, then stop."""
+    def test_the_run_has_no_daily_cap_and_ends_when_every_search_is_done(self):
+        """There was a 20-a-day target. It went when the keyword pass arrived:
+        the run now ends when every search has been run on every portal, and a
+        number of applications is never a reason to stop."""
         keep_going = self.prompt.split("## KEEP GOING UNTIL I SAY STOP", 1)[1] \
                                 .split("## SAFETY RULES", 1)[0]
-        for required in ("**My target is 20 applications a day, across Indeed, Wellfound, Naukri and\nLinkedIn together.**",
-                         # One total across the three portals, not a split.
-                         "It is the total that matters, not the split between them",
-                         "do not\nstart another application once it does",
-                         "**Only a confirmed submission counts**",
-                         "**Use the tracker's number, not your own tally.**",
-                         "and stop. Do not look for \"one more\"",
-                         "after midnight\n  IST"):
+        for required in ("**There is no limit on how many applications you send in a day.**",
+                         "**Finished means every search in WHAT TO SEARCH has been run on every portal**",
+                         "roughly 240 in all",
+                         "each one worked to its last results page",
+                         "do not go round again",
+                         "**Keep a tally of searches done per portal**",
+                         "A number of applications is never a reason to stop.",
+                         "never let one portal end the run",
+                         # No cap on how many is not no limit on how fast.
+                         "**The waits between applications stay.**"):
             with self.subTest(required=required):
                 self.assertIn(required, keep_going)
         step0 = self.prompt.split("STEP 0 — LOAD THE SKIP LIST", 1)[1].split("## WHAT TO SEARCH", 1)[0]
+        # The tracker still reports the counts; they no longer stop anything.
         self.assertIn('"applied_today": A, "daily_target": 20', step0)
-        self.assertIn('"dms_today": D, "dm_target": 10', step0)
-        # A met application target ends this run; the outreach prompt is a
-        # separate paste, so nothing here hands off to it.
-        self.assertIn("today's application target is met: do\nnot search or apply.", step0)
+        self.assertIn("**Neither `applied_today` nor `daily_target` limits this run.**", step0)
+        self.assertNotIn("target is met", self.prompt)
+        self.assertNotIn("target is already met", self.prompt)
         self.assertIn("none of this run's business", step0)
-        self.assertNotIn("There is no application cap", self.prompt)
-
-    def test_the_prompt_target_matches_the_backend_constant(self):
-        source = (ROOT / "modules" / "tracker.py").read_text()
-        line = next(l for l in source.splitlines() if l.startswith("DAILY_APPLICATION_TARGET"))
-        self.assertEqual(line.split("=", 1)[1].strip(), "20")
-        self.assertIn("DAILY TARGET — 20 APPLICATIONS A DAY", self.prompt)
 
     def test_todays_applications_are_counted_in_the_users_timezone(self):
         from datetime import datetime

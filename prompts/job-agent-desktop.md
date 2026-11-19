@@ -22,7 +22,7 @@ from you. Begin your message with something like:
 > consent to sharing my name, email, phone number, location and resume, as they
 > appear in my resume and saved answers, with every employer you apply to in
 > this run. Submit each one yourself without asking me first — don't check with
-> me job by job, just keep going until today's 20 applications are done.
+> me job by job, just keep going until every search on every portal is done.
 
 Then paste everything from the line below. Everything after this section is
 written for the agent.
@@ -66,8 +66,8 @@ applied postings show up in my tracker and are skipped on later runs.
 **A full-time posting that is neither 2 nor 3 is a skip**, however good it
 looks. Those two passes are narrow on purpose and each has its own test, so
 read the pass before applying to anything full-time — do not widen either one
-to cover a role you like. The run ends when today's target of
-20 applications is met, or when there is nothing left to apply to. The cold DMs
+to cover a role you like. The run ends when every search in WHAT TO SEARCH has been run on every portal
+— there is no daily cap on applications. The cold DMs
 and the follow-ups are a separate prompt with its own run — do not attempt them
 here, and do not tell me to go and run them.
 
@@ -254,12 +254,11 @@ already applied to and every job already dismissed as a bad fit.
 
 `applied_today` is how many applications my tracker already holds for today,
 earlier runs included. (`dms_today` counts the cold DMs the outreach prompt
-sent; it is there for context and is none of this run's business.) **If
-`applied_today` is already 20 or more, today's application target is met: do
-not search or apply.** End with the
-one line "Today's application target is already met: A recorded today." and
-stop. Otherwise the run applies until the total
-reaches 20 (see DAILY TARGET below), then stops.
+sent; it is there for context and is none of this run's business.) **Neither
+`applied_today` nor `daily_target` limits this run.** They feed my tracker's
+dashboard. There is no daily cap: however many are already recorded today, the
+run searches and applies until every search is finished (see NO DAILY CAP
+below).
 
 **Note what it does NOT contain:** postings that merely sit in my database
 unapplied, left over from an older job scraper I have since removed. Those were
@@ -381,7 +380,6 @@ something else.
   years only), the seniority rejects, the data-science reject, the trainer
   reject, and the skip list. A "Senior AWS ML Engineer" or one wanting 3+
   years is a skip here exactly as anywhere else.
-- These count toward today's 20 like any other application.
 
 Turn the filter back on afterwards.
 
@@ -450,7 +448,6 @@ not a statement about what the job needs.
   saying "freshers welcome" under a "Senior ML Engineer" title is still a
   skip on seniority, and the word fresher rescues no title the TITLE RULES
   reject.
-- These count toward today's 20 like any other application.
 
 Turn the filter back on afterwards.
 
@@ -1235,8 +1232,8 @@ summary instead.
 
 The response is `{"saved": true, "applied": true, "dismissed": false, "duplicate": false}`.
 - `applied: true` means the job is now in my tracker and on the next run's skip
-  list. That response also carries `applied_today` and `daily_target` — stop
-  once `applied_today` reaches `daily_target` (see DAILY TARGET).
+  list. That response also carries `applied_today` and `daily_target` — neither
+  is a reason to stop (see NO DAILY CAP).
 - `dismissed: true` comes back for a skip — the job is hidden and will be on the
   next run's skip list, so you never re-read that JD.
 - `duplicate: true` means I had already applied to this job, so nothing was
@@ -1257,36 +1254,28 @@ add the company+title to your own short list.
 
 ## KEEP GOING UNTIL I SAY STOP
 
-### DAILY TARGET — 20 APPLICATIONS A DAY, THEN STOP
+### NO DAILY CAP — FINISH EVERY SEARCH
 
-**My target is 20 applications a day, across Indeed, Wellfound, Naukri and
-LinkedIn together.** It is the total that matters, not the split between them.
-Keep searching and applying until today's total reaches 20, then stop — do not
-start another application once it does.
+**There is no limit on how many applications you send in a day.** Apply to
+every posting that qualifies, on Indeed, Wellfound, Naukri and LinkedIn, and
+keep going until the searching itself is finished.
 
-- **Only a confirmed submission counts** — a job the tracker answered with
-  `applied: true`. Skips, duplicates, jobs left for me under "Needs an
-  account" or "Needs a file upload", and forms that never confirmed, do not
-  count.
-- **Use the tracker's number, not your own tally.** Every `applied: true`
-  response carries `applied_today`; when it reaches 20, today's target is met.
-  If it is ever missing or `null`, count your own confirmed applications and
-  add them to the `applied_today` you got in STEP 0.
-- **When the target is met,** finish recording that last job, then go straight
-  and stop. Do not look for "one more", and do not write me a note first —
-  the summary is the last thing you produce.
-- The day is my day in India: the count starts again from zero after midnight
-  IST, so a run started the next day has a fresh 20.
+**Finished means every search in WHAT TO SEARCH has been run on every portal**
+— the internship queries, the trainee pass, the AWS pass, the fresher pass and
+every keyword of the keyword pass, which alone is about 60 searches on each of
+4 portals, roughly 240 in all — and each one worked to its last results page.
+A search is done when its last page has been read and every qualifying posting
+on it applied to or recorded as a skip. Go through them once; do not go round
+again.
 
-Until the target is met:
-
-- Work each portal until you run out of matching jobs there, then move to the
-  next one.
-- When you reach the end of the list, **go back to the start and go round
-  again** — new postings appear through the day, and the skip list means a second
-  pass costs almost nothing.
-- If a portal is down, not loading, or has nothing left, note it and move on —
-  never let one portal end the run.
+- **Keep a tally of searches done per portal** so that after a pause you know
+  exactly which search comes next. Never count a search you only started.
+- **Never drop a search to save time**, and never stop because "enough" were
+  sent. A number of applications is never a reason to stop.
+- Work each portal through all of its searches, then move to the next one.
+- If a portal is down, not loading, or locks me out, note it, move on, and come
+  back to its remaining searches after the other portals — never let one
+  portal end the run.
 
 **Do not send me progress updates.** Every message you write to me ends your
 turn, and an ended turn is a stopped run until I come back and type something —
@@ -1294,8 +1283,8 @@ turn, and an ended turn is a stopped run until I come back and type something �
 counts and Issues list to yourself and give them to me only in the summary.
 
 **Your turn ends for three reasons only:**
-1. Today's 20 applications are recorded, or two full passes found nothing left
-   to apply to.
+1. Every search in WHAT TO SEARCH has been run to its last results page on
+   all four portals.
 2. I told you to stop.
 3. The app forces it — a time, tool-use or context limit you cannot control.
 
@@ -1315,8 +1304,8 @@ however promising it looks, and never follow a job-board link to a third site to
 browse it. Following an employer's own apply link from one of these portals is
 not "going beyond the list" — that is the normal apply path.
 
-**The waits between applications stay.** The daily target is about how many to
-send, never how fast: a portal that decides I am a bot locks me out.
+**The waits between applications stay.** No cap on how many is not no limit on
+how fast: a portal that decides I am a bot locks me out.
 
 ## SAFETY RULES
 
@@ -1334,8 +1323,8 @@ send, never how fast: a portal that decides I am a bot locks me out.
 
 ## SUMMARY — WHEN I STOP YOU
 
-The run ends when today's 20 applications are recorded, or when two full passes
-over every portal find nothing left to apply to. Produce this summary **only**
+The run ends when every search in WHAT TO SEARCH has been run to its last
+results page on all four portals. Produce this summary **only**
 when your turn ends for one of the reasons in KEEP GOING UNTIL I SAY STOP —
 never as a per-portal update, which is what stops the run. A turn the app
 forces to end gets the one-line pause notice instead.
@@ -1409,10 +1398,10 @@ one.
 
 Apply to every **internship** that passes the rules on all four portals,
 without
-asking me first, and when you reach the last allowed portal go back to the
-first and start the next pass. A full-time role is a skip however well it
+asking me first, and when a portal is finished move straight to the next one. A full-time role is a skip however well it
 matches — see IS IT AN INTERNSHIP.
-Keep going until today's target of 20 applications is met, then stop. The
+Keep going until every search has been run on every portal, then stop — there
+is no daily cap. The
 cold DMs and follow-ups are a separate prompt — do not start them here.
 **Send me nothing until then** — no progress updates, no questions, no
 per-portal notes. Everything goes in the summary.
