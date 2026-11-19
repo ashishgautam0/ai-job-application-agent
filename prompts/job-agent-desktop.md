@@ -454,6 +454,35 @@ not a statement about what the job needs.
 
 Turn the filter back on afterwards.
 
+**Then run the keyword pass, with the job-type filter OFF and the portal's
+lowest experience band set.** Run **every** keyword below as its own search on
+**every** portal — Indeed, Wellfound, Naukri and LinkedIn — skipping none. A
+keyword only finds postings; it qualifies nothing. Each result must still be
+one of the three kinds in scope — an internship, a posting that passes the AWS
+pass, or one that passes the fresher-or-under-a-year stated-text test — and
+every rule applies unchanged. Most results will be ones the skip list already
+holds, which is what keeps this pass cheap.
+
+- **Titles:** "Machine Learning Engineer", "ML Engineer", "AI/ML Engineer",
+  "AIML Engineer", "Generative AI Engineer", "GenAI Engineer", "Generative AI
+  Developer", "AI Developer", "LLM Developer", "Applied AI Engineer", "Applied
+  Scientist", "NLP Engineer", "AI Research Engineer", "AI Agent Engineer",
+  "Agentic AI Engineer", "Prompt Engineer", "AI Backend Engineer", "Python AI
+  Developer", "AI Intern", "ML Intern", "AI Engineer Intern", "Machine Learning
+  Intern", "AI Trainee", "Associate AI Engineer", "Junior AI Engineer"
+- **Voice AI:** "Voice AI", "Speech AI", "Speech Engineer", "Conversational
+  AI", "Speech to Text", "ASR", "TTS", "Voice Agent"
+- **Agents and RAG:** "RAG", "LangChain", "LangGraph", "LlamaIndex", "AI
+  Agents", "Multi-Agent", "Agentic AI", "MCP", "Vector Database", "LLM
+  Evaluation"
+- **Fine-tuning:** "Fine-Tuning", "LoRA", "PEFT", "PyTorch", "LLM Fine-Tuning"
+- **AWS:** "AWS Bedrock", "Amazon Bedrock", "SageMaker", "AWS Machine
+  Learning", "AWS GenAI"
+- **Backend:** "FastAPI", "Python Backend AI"
+
+A short keyword such as "ASR", "TTS", "MCP" or "RAG" returns unrelated jobs on
+some portals; when it does, add "AI" to it ("ASR AI") rather than dropping it.
+
 **Never run a data-science search on any portal.** Do not type "Data
 Scientist", "Data Science", "Data Analyst" or "Data Science Intern" anywhere,
 and do not follow a portal's suggested, related or "people also searched" query

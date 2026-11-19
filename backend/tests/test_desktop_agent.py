@@ -323,6 +323,24 @@ class DesktopPromptTests(unittest.TestCase):
         section holds only what is particular to it and points here."""
         return self.prompt.split("### THE SAME STEPS ON EVERY PORTAL", 1)[1].split("### 1.", 1)[0]
 
+    def test_the_keyword_pass_searches_every_keyword_on_every_portal(self):
+        prompt = self.prompt
+        self.assertIn("Run **every** keyword below as its own search on **every** portal", prompt)
+        self.assertIn("A keyword only finds postings; it qualifies nothing.", prompt)
+        for keyword in (
+            '"Machine Learning Engineer"', '"AIML Engineer"', '"Generative AI Developer"',
+            '"LLM Developer"', '"Applied AI Engineer"', '"AI Agent Engineer"',
+            '"Agentic AI Engineer"', '"Prompt Engineer"', '"AI Backend Engineer"',
+            '"Python AI Developer"', '"Associate AI Engineer"', '"Junior AI Engineer"',
+            '"Voice AI"', '"Speech AI"', '"Speech Engineer"', '"Conversational AI"',
+            '"Speech to Text"', '"ASR"', '"TTS"', '"Voice Agent"',
+            '"RAG"', '"LangChain"', '"LangGraph"', '"LlamaIndex"', '"Multi-Agent"',
+            '"MCP"', '"Vector Database"', '"LLM Evaluation"',
+            '"Fine-Tuning"', '"LoRA"', '"PEFT"', '"PyTorch"', '"LLM Fine-Tuning"',
+            '"Amazon Bedrock"', '"AWS GenAI"', '"FastAPI"', '"Python Backend AI"',
+        ):
+            self.assertIn(keyword, prompt)
+
     def test_settings_can_no_longer_save_its_own_copy_of_the_prompt(self):
         """A saved copy froze the prompt: later improvements to the shipped file
         never reached the agent. Settings stopped offering Save, and the
