@@ -1842,6 +1842,21 @@ class DesktopPromptTests(unittest.TestCase):
             with self.subTest(gone=gone):
                 self.assertNotIn(gone, self.prompt)
 
+    def test_shift_and_timezone_overlap_questions_are_answered_yes(self):
+        """Night shifts, rotating shifts and "can you work UK hours" are routine
+        screener questions here, and none of them had a saved answer -- so the
+        rule that skips a job rather than guess would have skipped every job
+        that asked. The answer is yes, for any country's overlap."""
+        answers = self.prompt.split("### MY SAVED ANSWERS", 1)[1] \
+                             .split("### THE THREE STANDARD COMPANY QUESTIONS", 1)[0]
+        self.assertIn("**Willing to work night shifts and rotating shifts: Yes.**", answers)
+        self.assertIn("another country's working day: Yes,\n  any country.**", answers)
+        # The wordings a screener actually uses, so none of them is missed.
+        for wording in ('"UK shift"', '"US shift"', '"EST/PST overlap"',
+                        '"flexible with timings"', '"24x7 rotational"'):
+            with self.subTest(wording=wording):
+                self.assertIn(wording, answers)
+
     def test_the_expected_start_date_is_computed_not_a_fixed_date(self):
         """It was a fixed "20/10/2026", which went stale the moment that date
         passed: every form after it got a start date in the past. It is 10 days
