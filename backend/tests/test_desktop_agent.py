@@ -316,6 +316,13 @@ class DesktopPromptTests(unittest.TestCase):
         self.prompt = profile_data.default_desktop_prompt()
         self.outreach = profile_data.default_desktop_prompt("outreach")
 
+    POINTER = "Worked by THE SAME STEPS ON EVERY PORTAL."
+
+    def shared_steps(self):
+        """The procedure every portal is worked by, written once. Each portal
+        section holds only what is particular to it and points here."""
+        return self.prompt.split("### THE SAME STEPS ON EVERY PORTAL", 1)[1].split("### 1.", 1)[0]
+
     def test_settings_can_no_longer_save_its_own_copy_of_the_prompt(self):
         """A saved copy froze the prompt: later improvements to the shipped file
         never reached the agent. Settings no longer offers Save, and a write from
@@ -512,7 +519,10 @@ class DesktopPromptTests(unittest.TestCase):
         for body in sections:
             name = body.split("\n", 1)[0]
             with self.subTest(portal=name):
-                self.assertIn("EMPLOYER'S OWN SITE", body)
+                self.assertIn(self.POINTER, body)
+        shared = self.shared_steps()
+        self.assertIn("APPLYING ON THE EMPLOYER'S OWN\n      SITE", shared)
+        self.assertIn("never leave a\n      posting just because it applies off the portal", shared)
 
         # An off-site apply route is never a valid `skipped` reason.
         rules = self.prompt.split("## RULES THAT APPLY TO EVERY PORTAL", 1)[1] \
@@ -541,14 +551,22 @@ class DesktopPromptTests(unittest.TestCase):
         self.assertIn("use a CAPTCHA-solving service", self.prompt)
 
     def test_dedup_and_recording_are_required_on_each_portal(self):
-        """Every portal section must carry both the skip check and the record step."""
+        """The skip check and the record step are in the shared steps, and every
+        portal section points at them -- a portal that did not would be worked
+        without either."""
+        shared = self.shared_steps()
+        self.assertIn("check the posting URLs\n   against the skip list with one `fresh([...])` call (STEP 0)", shared)
+        self.assertIn("**Record it** through the API (STEP 2)", shared)
+        self.assertIn("**Every step\nhere applies on all four portals, in this order, whether or not a portal's own\nsection repeats it**", shared)
+        self.assertIn("a short section is not a shorter procedure", shared)
         sections = re.split(r"^### \d+\. ", self.prompt, flags=re.MULTILINE)[1:]
         self.assertEqual(len(sections), len(self.PORTALS))
         for section in sections:
             name = section.split("\n", 1)[0]
             with self.subTest(portal=name):
-                self.assertIn("skip list", section)
-                self.assertIn("STEP 2", section)
+                self.assertIn(self.POINTER, section)
+                # ...and each still names its own source for the record.
+                self.assertIn('"source": "', section)
 
     def test_recording_is_portal_agnostic_and_lists_every_source(self):
         step2 = self.prompt.split("STEP 2 — RECORD EVERY JOB", 1)[1].split("## KEEP GOING", 1)[0]
@@ -658,7 +676,7 @@ class DesktopPromptTests(unittest.TestCase):
         """Noida is where the owner lives, not the search area; a city filter
         collapses Wellfound's results."""
         section = self.prompt.split("### 2. WELLFOUND", 1)[1].split("### 3.", 1)[0]
-        self.assertIn("Set **Location = India** — the country, not a\n   city.", section)
+        self.assertIn("Set **Location = India** — the country, not a city.", section)
         self.assertIn("Do not type Noida or any other city here", section)
         self.assertIn("**Every shared rule governs Wellfound too**", section)
 
@@ -785,27 +803,31 @@ class DesktopPromptTests(unittest.TestCase):
         apply controls, record, pace — or the run reaches Indeed and does
         nothing on it."""
         indeed = self.prompt.split("### 1. INDEED", 1)[1].split("\n### ", 1)[0]
-        for required in ("Open `https://in.indeed.com/` in a tab",
+        for required in ("**Open** `https://in.indeed.com/` in a tab",
                          "worked in Chrome and applied to, like every portal here",
                          # Both apply routes. "Apply on company site" is most
                          # of the good Indeed listings, so it must not be the
                          # one that gets left.
                          '**"Apply now"**', '**"Apply on company site"**',
-                         "EMPLOYER'S OWN SITE",
-                         "never leave one just\n        because it is not an Indeed-hosted apply",
-                         # Same screening bar as Wellfound.
-                         "TITLE RULES", "RED FLAGS",
-                         "pay floor\n      applies here exactly as it does on the other three",
-                         "Check the posting URL against the skip list",
+                         "never leave one\n  just because it is not an Indeed-hosted apply",
                          # Recorded like any other application now.
                          '`"source": "Indeed"`',
-                         "copying the posting's description text into",
-                         "Wait 20-30 seconds before the next application",
-                         'click Indeed\'s "Next" arrow',
-                         # Indeed's bot-check is a rest, not a run-ender.
-                         "rest Indeed for\n   at least 15 minutes"):
+                         'Indeed\'s "Next" arrow',
+                         self.POINTER):
             with self.subTest(required=required):
                 self.assertIn(required, indeed)
+        # The screening bar, the record and the pacing are the shared steps',
+        # the same for Indeed as for every other portal.
+        shared = self.shared_steps()
+        for required in ("TITLE RULES", "RED FLAGS", "EXPERIENCE RULES",
+                         "The pay floor\n      applies on every portal alike",
+                         "copying the posting's\n      description text into `description`",
+                         "**Wait 20-30 seconds before the next application**",
+                         # A bot-check is a rest, not a run-ender.
+                         "rest that portal for at\n   least 15 minutes",
+                         "Do not solve it and do not message me about it"):
+            with self.subTest(required=required):
+                self.assertIn(required, shared)
         # Nothing may survive that tells the agent to hand Indeed back to the
         # user or to read it through the connector.
         for banned in ("search_jobs", "get_job_details", "get_company_data",
@@ -1195,21 +1217,19 @@ class DesktopPromptTests(unittest.TestCase):
                      "recent date filter", "never widen the window"):
             with self.subTest(gone=gone):
                 self.assertNotIn(gone, self.prompt)
-        # Each portal section says it for itself, not only in the shared rules.
-        for name, end in (("### 1. INDEED", "\n### "), ("### 2. WELLFOUND", "\n### "),
-                          ("### 3. NAUKRI", "## FORM FILLING")):
-            with self.subTest(portal=name):
-                self.assertIn("no date filter" if "NAUKRI" not in name else "no\n   freshness filter",
-                              self.prompt.split(name, 1)[1].split(end, 1)[0])
+        # The steps every portal is worked by say it, and Naukri -- whose
+        # filter has its own name -- says it again under that name.
+        shared = self.shared_steps()
+        self.assertIn("**no date filter**", shared)
+        naukri = self.prompt.split("### 3. NAUKRI", 1)[1].split("\n### ", 1)[0]
+        self.assertIn("**no freshness\n  filter**", naukri)
         # Paging matters more than ever now the lists are long.
         self.assertIn("**Go through every results page, not just the first.**", search)
         self.assertIn('Indeed\'s "Next"\narrow', search)
-        wellfound = self.prompt.split("### 2. WELLFOUND\n", 1)[1].split("\n### ", 1)[0]
-        self.assertIn("go to the next page of results", wellfound)
-        self.assertIn("Keep paging until there is none", wellfound)
+        self.assertIn("**Page on.**", shared)
+        self.assertIn("Keep paging until there is no next page", shared)
         indeed = self.prompt.split("### 1. INDEED", 1)[1].split("\n### ", 1)[0]
-        self.assertIn('click Indeed\'s "Next" arrow', indeed)
-        self.assertIn("Keep paging until there is no next page", indeed)
+        self.assertIn('Indeed\'s "Next" arrow', indeed)
 
     def test_sign_in_is_never_a_silent_skip_and_its_terms_are_accepted(self):
         """"Login required: stop that job" dropped jobs silently. A sign-in
@@ -1487,9 +1507,10 @@ class DesktopPromptTests(unittest.TestCase):
         wellfound = self.prompt.split("### 2. WELLFOUND", 1)[1].split("### 3.", 1)[0]
         indeed = self.prompt.split("### 1. INDEED", 1)[1].split("\n### ", 1)[0]
         self.assertIn("**Set the job type to Internship**", wellfound)
-        self.assertIn("**Is it an internship?**", wellfound)
-        self.assertIn("**Job type = Internship** \u2014 that filter defines the run", indeed)
-        self.assertIn("**Is it an internship?**", indeed)
+        self.assertIn("**Job type = Internship** first \u2014 that filter defines the run", indeed)
+        # The scope test itself is a shared step, asked on every portal.
+        self.assertIn("**Is it an internship, or does it clear one of the two full-time\n      exceptions?**",
+                      self.shared_steps())
         # The old full-time queries are gone from the list.
         for gone in ('1. "Gen AI Engineer", then',
                      '"Applied Scientist" or "Research Engineer"',
