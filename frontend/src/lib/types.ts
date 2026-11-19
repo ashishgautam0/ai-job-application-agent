@@ -304,16 +304,8 @@ export interface ApplicationResumeStatus {
   profile_status?: ResumeProfile["status"];
 }
 
-export interface ApplicationPromptSettings {
-  followup_template: string;
-  cold_dm_template: string;
-  prompt_template: string;
-  automation_rules: string;
-  desktop_prompt_template: string;
-}
-
 // Two prompts, two runs: applications searches and applies, outreach sends the
-// cold DMs and follow-ups. Each is pasted into Claude Desktop on its own.
+// cold DMs and follow-ups. Each is pasted into Claude in Chrome on its own.
 export type DesktopPromptKind = "applications" | "outreach";
 
 export interface DesktopPromptResponse {
@@ -321,15 +313,6 @@ export interface DesktopPromptResponse {
   template: string;
   kind?: DesktopPromptKind;
   customized: boolean;
-  issues: string[];
-  unresolved_placeholders: string[];
-}
-
-export interface RenderedApplicationPrompt {
-  prompt: string;
-  job_count: number;
-  resume_available: boolean;
-  ready: boolean;
   issues: string[];
   unresolved_placeholders: string[];
 }

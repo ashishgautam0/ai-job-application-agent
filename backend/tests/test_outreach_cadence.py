@@ -147,18 +147,10 @@ class OutreachCadenceTests(unittest.TestCase):
         self.assertEqual(second["status"], "Ghosted")
 
     def test_the_linkedin_follow_up_needs_an_accepted_connection(self):
-        rules = (ROOT / "modules/outreach_prompts.py").read_text()
-        for required in (
-            "day 1 the job enters the Tracker",
-            "Day 8 is the first outreach",
-            "Day 16 is the single follow-up round",
-            "THE FOLLOW-UP IS A LINKEDIN MESSAGE AND IT IS CONDITIONAL",
-            "once the invitation has been ACCEPTED",
-            # Nothing to fall back on: no acceptance means no round.
-            "There is no fallback channel",
-        ):
-            with self.subTest(required=required):
-                self.assertIn(required, rules)
+        # The shipped outreach prompt is the one place these rules live now.
+        outreach = " ".join((ROOT.parent / "prompts/job-agent-outreach.md").read_text().split())
+        self.assertIn("There is no fallback channel", outreach)
+        self.assertIn("who already accepted a Cold DM invitation", outreach)
         # Collapsed: these phrases wrap across lines, and a rewrap is not a
         # behaviour change.
         agent = " ".join((ROOT.parent / ".claude/agents/followup.md").read_text().split())
@@ -190,13 +182,11 @@ class OutreachCadenceTests(unittest.TestCase):
         self.assertIn("[7, 15]", cadence)
         # Collapsed: these blocks wrap across lines, and a rewrap is not a
         # behaviour change.
-        rules = " ".join((ROOT / "modules/outreach_prompts.py").read_text().split())
+        rules = " ".join((ROOT.parent / "prompts/job-agent-outreach.md").read_text().split())
         for stale in ("three rounds", "rounds total", "up to three"):
             with self.subTest(stale=stale):
                 self.assertNotIn(stale, rules)
-        # The surrounding guard must survive the deletion.
-        self.assertIn("An overdue next date never permits another send in this run", rules)
-        self.assertIn("Day 16 is the single follow-up round, and the last", rules)
+        self.assertIn("At most one follow-up per record", rules)
 
 
     def test_dashboard_lists_a_cold_dm_only_once_its_note_is_ready(self):

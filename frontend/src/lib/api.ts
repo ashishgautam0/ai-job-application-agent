@@ -23,8 +23,6 @@ import type {
   ResumeProfileReview,
   ResumeProfileStatus,
   ApplicationResumeStatus,
-  ApplicationPromptSettings,
-  RenderedApplicationPrompt,
   DesktopPromptResponse,
   DesktopPromptKind,
 } from "./types";
@@ -246,35 +244,8 @@ export async function getApplicationResumeStatus(): Promise<ApplicationResumeSta
   return apiFetch<ApplicationResumeStatus>("/api/profile/resume/application");
 }
 
-export async function getApplicationPromptSettings(): Promise<ApplicationPromptSettings> {
-  return apiFetch<ApplicationPromptSettings>("/api/profile/application-settings");
-}
-
-export async function updateApplicationPromptSettings(
-  data: Partial<ApplicationPromptSettings>,
-): Promise<ApplicationPromptSettings> {
-  return apiFetch<ApplicationPromptSettings>("/api/profile/application-settings", {
-    method: "PUT",
-    body: JSON.stringify(data),
-  });
-}
-
-export async function getRenderedApplicationPrompt(
-  pageUrl: string,
-): Promise<RenderedApplicationPrompt> {
-  return apiFetch<RenderedApplicationPrompt>(
-    `/api/profile/application-prompt?page_url=${encodeURIComponent(pageUrl)}`,
-  );
-}
-
 export function getApplicationResumePdfUrl(): string {
   return `${API_URL}/api/profile/resume/pdf`;
-}
-
-export async function getRenderedOutreachPrompt(pageUrl: string, kind: "followup" | "cold_dm"): Promise<RenderedApplicationPrompt> {
-  return apiFetch<RenderedApplicationPrompt>(
-    `/api/profile/outreach-prompt?page_url=${encodeURIComponent(pageUrl)}&kind=${kind}`,
-  );
 }
 
 export async function getDesktopPrompt(

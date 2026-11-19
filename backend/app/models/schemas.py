@@ -47,26 +47,6 @@ class UserProfileResponse(BaseModel):
     updated_at: Optional[str] = None
 
 
-class ApplicationPromptSettings(BaseModel):
-    """The prompt templates stored with the backend profile."""
-    model_config = ConfigDict(extra="forbid")
-    prompt_template: str = Field(default="", max_length=12_000)
-    automation_rules: str = Field(default="", max_length=12_000)
-    desktop_prompt_template: str = Field(default="", max_length=40_000)
-    followup_template: str = Field(default="", max_length=12_000)
-    cold_dm_template: str = Field(default="", max_length=12_000)
-
-
-class RenderedApplicationPrompt(BaseModel):
-    """A fixed, ready-to-paste browser-agent batch assembled by the backend."""
-    prompt: str
-    job_count: int
-    resume_available: bool
-    ready: bool
-    issues: list[str] = Field(default_factory=list)
-    unresolved_placeholders: list[str] = Field(default_factory=list)
-
-
 class ReviewedExperienceEntry(BaseModel):
     id: str = ""
     label: str = ""
