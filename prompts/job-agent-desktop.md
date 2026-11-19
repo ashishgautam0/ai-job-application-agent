@@ -780,8 +780,6 @@ that one application, not the run.
 Work them in this order: Indeed → Wellfound → Naukri → LinkedIn. All four are
 browser portals you apply on, worked the same way and by the same rules; the
 order is just the order of the passes.
-On every portal, check each posting's URL against the skip list from
-STEP 0 before opening it, and record every posting you handle.
 
 **Only these four portals.** Indeed, Wellfound, Naukri and LinkedIn, and no
 others: do not search Instahyre, Cutshort, Foundit, Shine or any other job
@@ -791,177 +789,144 @@ note or a message from this run. An employer's own
 site or ATS is still fine; that is where many applications finish. But if a posting sends you to *another job board* to apply, leave it
 unrecorded and note it under Issues; do not record it as skipped, so a later
 run can reach it once that portal is back.
+
+### THE SAME STEPS ON EVERY PORTAL
+
+Each portal's section below gives only what is particular to it: where to open
+it, its filters, its URL form, its apply buttons and its quirks. **Every step
+here applies on all four portals, in this order, whether or not a portal's own
+section repeats it** — a short section is not a shorter procedure.
+
+1. **Open the portal and search.** Run the queries from WHAT TO SEARCH with
+   `India` as the location and the portal's filters set as its section says,
+   and **no date filter**. Use the filters the portal offers and do not hunt
+   for ones that are not there.
+2. **On each results page, before opening anything**, check the posting URLs
+   against the skip list with one `fresh([...])` call (STEP 0) — skip
+   immediately every one it does not hand back. A listing the portal itself
+   shows as already applied is handled too: skip it.
+3. **For each posting left:**
+   a. **Is it an internship, or does it clear one of the two full-time
+      exceptions?** Read the portal's own job-type field — see IS IT AN
+      INTERNSHIP. If neither, skip it and record it with `"job_type": "Job"`.
+   b. Read the title against TITLE RULES.
+   c. Read the JD — check EXPERIENCE RULES and RED FLAGS. The pay floor
+      applies on every portal alike.
+   d. If it passes every check, apply with whatever control the listing
+      offers. The portal's own hosted apply: step through it, attach my saved
+      resume per MY PROFILE, answer with the FORM FILLING RULES, submit, and
+      wait for the confirmation. An apply that leaves for the employer's site
+      or ATS: follow it and finish there, per APPLYING ON THE EMPLOYER'S OWN
+      SITE, handling any sign-in step as its step 2 says — never leave a
+      posting just because it applies off the portal.
+   e. **Record it** through the API (STEP 2) with that portal's `source` and
+      the canonical URL form its section gives, copying the posting's
+      description text into `description` — the cold DM and demo agents read
+      that text, so a record without it is a job they cannot write about.
+   f. **Wait 20-30 seconds before the next application** (avoid detection).
+4. **Page on.** When every result on a page is handled, open the next page and
+   repeat steps 2-3. Keep paging until there is no next page, then run the
+   next query.
+5. **A verification or rate-limit page** means the portal suspects automation.
+   Treat it as a rate limit (CAPTCHA, OTP & BLOCKERS): rest that portal for at
+   least 15 minutes, work another allowed portal meanwhile, and note it under
+   Issues. Do not solve it and do not message me about it.
+
 ### 1. INDEED INDIA
 
-1. Open `https://in.indeed.com/` in a tab — I am already logged in. Indeed is
-   worked in Chrome and applied to, like every portal here: nothing
-   here is listed for me to do by hand.
-2. Type the first search query in the "What" box and `India` in the "Where" box.
-   Then set **Job type = Internship** — that filter defines the run and is the
-   first one to set. Then set **Experience level = Entry Level**, and set
-   **no date filter**: work the whole list however far back it goes.
-3. For each result:
-   a. Check the posting URL against the skip list — skip immediately if
-      present. Indeed result URLs carry a `?vjk=` job key; strip query
-      parameters before comparing, and record the canonical
-      `in.indeed.com/viewjob?jk=<id>` form.
-   b. Click the result to open the JD pane
-   c. **Is it an internship?** Indeed shows the job type on the listing. If it
-      is not an internship, skip it and record it with `"job_type": "Job"` —
-      see IS IT AN INTERNSHIP. Then read the title against TITLE RULES above.
-   d. Read the JD — check experience requirement and RED FLAGS. The pay floor
-      applies here exactly as it does on the other three.
-   e. If it passes all checks, use whatever apply control the listing offers:
-      - **"Apply now"** is Indeed's own hosted application: step through the
-        flow, confirm my contact details, attach my saved resume, answer the
-        employer questions using the FORM FILLING RULES, then submit on the
-        review step and wait for the confirmation.
-      - **"Apply on company site"** leaves Indeed for the employer's site or
-        ATS. Follow it and finish the application there, per APPLYING ON THE
-        EMPLOYER'S OWN SITE, handling any sign-in step as its step 2 says. On
-        Indeed these are most of the good listings — never leave one just
-        because it is not an Indeed-hosted apply.
-      - If Indeed shows the job as already applied, treat it as already
-        handled and skip it.
-   f. Record the job through the API (see STEP 2 below) with
-      `"source": "Indeed"`, copying the posting's description text into
-      `description` — the cold DM and demo agents read that text, so a record
-      without it is a job they cannot write about.
-   g. Wait 20-30 seconds before the next application (avoid detection)
-4. When every result on the page is handled, click Indeed's "Next" arrow and
-   repeat step 3. Keep paging until there is no next page, then repeat for each
-   search query.
-5. Indeed shows a verification page when it suspects automation. If one
-   appears, treat it as a rate limit (CAPTCHA, OTP & BLOCKERS): rest Indeed for
-   at least 15 minutes, work the next allowed portal meanwhile, and note it
-   under Issues. Do not solve it and do not message me about it.
+Worked by THE SAME STEPS ON EVERY PORTAL. Particular to Indeed:
+
+- **Open** `https://in.indeed.com/` in a tab — I am already logged in. Indeed is
+  worked in Chrome and applied to, like every portal here: nothing here is
+  listed for me to do by hand.
+- **Filters**: the query in the "What" box and `India` in the "Where" box. Set
+  **Job type = Internship** first — that filter defines the run — then
+  **Experience level = Entry Level**.
+- **URL**: result URLs carry a `?vjk=` job key; record the canonical
+  `in.indeed.com/viewjob?jk=<id>` form, with `"source": "Indeed"`.
+- **Apply**: **"Apply now"** is Indeed's own hosted application, submitted on
+  its review step. **"Apply on company site"** leaves Indeed for the employer's
+  site or ATS; on Indeed these are most of the good listings — never leave one
+  just because it is not an Indeed-hosted apply.
+- **Paging**: Indeed's "Next" arrow.
 
 ### 2. WELLFOUND
 
-**Every shared rule governs Wellfound too**, with no loosening because the
-listings look informal: TITLE RULES, EXPERIENCE RULES (1 year is the ceiling),
-RED FLAGS and the pay floor all apply unchanged. A job that would be a skip on
-Indeed is a skip here.
+Worked by THE SAME STEPS ON EVERY PORTAL. **Every shared rule governs Wellfound
+too**, with no loosening because the listings look informal: TITLE RULES,
+EXPERIENCE RULES (1 year is the ceiling), RED FLAGS and the pay floor all apply
+unchanged. A job that would be a skip on Indeed is a skip here. Particular to
+Wellfound:
 
-1. Open `https://wellfound.com/jobs` in a tab (I am already logged in)
-2. Enter the first search query. Set **Location = India** — the country, not a
-   city. Do not type Noida or any other city here: that is where I live, not the
-   search area, and a city narrows the results to almost nothing. Add Remote
-   alongside India where the filter allows both, and set **no date filter**.
-   **Set the job type to Internship** — whatever Wellfound offers for
-   internship or co-op. That filter defines the run: without it every full-time
-   startup role comes back and each one has to be rejected by hand.
-   **Then set the experience filter to its lowest band** — whatever Wellfound
-   offers for 0-1 years, entry level or new grad — so roles I am not eligible
-   for stay out of the results. Wellfound's filter set is its own: use whichever
-   of role, location, remote, job type and experience are shown and do not hunt
-   for ones that are not there, but if a job-type or experience filter exists,
-   it is set.
-3. For each result:
-   a0. **Is it an internship?** Check Wellfound's job-type row on the listing.
-      If it is not an internship, skip it and record it with
-      `"job_type": "Job"` — see IS IT AN INTERNSHIP.
-   a. Check the posting URL against the skip list — skip immediately if
-      present. Wellfound job URLs look like `wellfound.com/jobs/<id>-<slug>`;
-      strip query parameters and keep that canonical form when recording.
-   b. Open the listing
-   c. Read the title — check against TITLE RULES above
-   d. **Read the experience requirement off the listing itself, not just the
-      prose.** Wellfound puts it in the listing's own meta line — "Experience:
-      3+ years", "5+ years exp", or an experience row beside job type and
-      salary — and that line is the requirement even when the description never
-      repeats it. Reading only the paragraphs is how a 3+ years role gets
-      applied to.
+- **Open** `https://wellfound.com/jobs` in a tab (I am already logged in).
+- **Filters**: Set **Location = India** — the country, not a city. Do not type
+  Noida or any other city here: that is where I live, not the search area, and
+  a city narrows the results to almost nothing. Add Remote alongside India
+  where the filter allows both. **Set the job type to Internship** — whatever
+  Wellfound offers for internship or co-op; without it every full-time startup
+  role comes back and each has to be rejected by hand. **Then set the
+  experience filter to its lowest band** — whatever Wellfound offers for 0-1
+  years, entry level or new grad. Wellfound's filter set is its own, but if a
+  job-type or experience filter exists, it is set.
+- **URL**: `wellfound.com/jobs/<id>-<slug>`, with `"source": "Wellfound"`.
+- **Read the experience requirement off the listing itself, not just the
+  prose.** Wellfound puts it in the listing's own meta line — "Experience: 3+
+  years", "5+ years exp", or an experience row beside job type and salary — and
+  that line is the requirement even when the description never repeats it.
+  Reading only the paragraphs is how a 3+ years role gets applied to.
 
-      **Any figure past one year in that field is a skip, with no exceptions
-      here.** "1+", "2+", "3+", "5+", "0-2 years", "1-2 years": record it as
-      `skipped` with the reason ("Requires 1+ years"). A welcoming startup
-      listing, a founder-written post or a stack I happen to know does not lower
-      the ceiling; only the KEEP cases in EXPERIENCE RULES (an explicit 0-1
-      band, or no figure at all) survive it. "3+ years preferred" is a skip.
+  **Any figure past one year in that field is a skip, with no exceptions
+  here.** "1+", "2+", "3+", "5+", "0-2 years", "1-2 years": record it as
+  `skipped` with the reason ("Requires 1+ years"). A welcoming startup listing,
+  a founder-written post or a stack I happen to know does not lower the
+  ceiling; only the KEEP cases in EXPERIENCE RULES (an explicit 0-1 band, or no
+  figure at all) survive it. "3+ years preferred" is a skip.
+- **The pay floor applies here as much as anywhere**: startup listings often
+  quote equity alongside a low cash figure, and equity does not count toward
+  the floor.
+- **Apply**: a Wellfound-hosted apply opens a form in place. Wellfound often
+  asks a short free-text question, along the lines of why you are interested.
+  Answer it in two or three plain sentences built only from my resume and the
+  JD — one relevant thing I have actually built, and why it fits this role.
+  Never invent experience to fill it, and never leave it blank when it is
+  required.
+- **Description**: **copy the listing's description text into `description`**
+  — including that meta line with the experience requirement. If the listing
+  genuinely shows no description, send it empty rather than writing a summary.
+- **Incomplete profile**: Wellfound needs a complete profile before some
+  applications go through. If it blocks an apply on one, do not invent profile
+  details: leave that job unrecorded, note it under Issues, and move on.
 
-      Then check RED FLAGS. **The pay floor applies here as much as anywhere**:
-      startup listings often quote equity alongside a low cash figure, and
-      equity does not count toward the floor.
-   e. If it passes all checks, use whatever apply control the listing offers:
-      - A Wellfound-hosted apply opens a form in place. Complete it with the
-        FORM FILLING RULES and submit.
-      - Wellfound often asks a short free-text question, along the lines of why
-        you are interested. Answer it in two or three plain sentences built
-        only from my resume and the JD — one relevant thing I have actually
-        built, and why it fits this role. Never invent experience to fill it,
-        and never leave it blank when it is required.
-      - If it sends you to the company's own site, follow it and finish there,
-        per APPLYING ON THE EMPLOYER'S OWN SITE, handling any sign-in step as
-        its step 2 says.
-      - If Wellfound shows the job as already applied, treat it as already
-        handled and skip it.
-   f. Record the job through the API (see STEP 2 below) with
-      `"source": "Wellfound"`, and **copy the listing's description text into
-      `description`** — including that meta line with the experience requirement.
-      If the listing genuinely shows no description, send
-      it empty rather than writing a summary.
-   g. Wait 20-30 seconds before the next application (avoid detection)
-4. When the page is done, go to the next page of results and repeat step 3.
-   Keep paging until there is none, then repeat for each search query.
-5. Wellfound needs a complete profile before some applications go through. If it
-   blocks an apply on an incomplete profile, do not invent profile details:
-   leave that job unrecorded, note it under Issues, and move on.
-6. If Wellfound shows a verification or rate-limit page, treat it as any other
-   rate limit (CAPTCHA, OTP & BLOCKERS): rest Wellfound for at least 15 minutes,
-   work the next allowed portal meanwhile, and note it under Issues.
 ### 3. NAUKRI
 
-Naukri is India's largest job board, so expect the most results and the most
-noise: far more full-time postings than internships, many of them consultancies
-reposting other companies' roles. The scope test and the title rules do the
-filtering, unchanged.
-1. Open `https://www.naukri.com/` in a tab — I am already logged in.
-2. Type the first search query in the keyword box and `India` in the location
-   box. Then set **Experience = 0 years** (Naukri's fresher band) and **no
-   freshness filter**. Naukri also has a **Work mode** and a
-   **Job type / Internship** filter — set Internship for the internship
-   queries, and clear it for the AWS and fresher-or-under-a-year passes, the
-   same way the other portals are worked.
-3. For each result:
-   a. Check the posting URL against the skip list — skip immediately if
-      present. Naukri job URLs look like
-      `naukri.com/job-listings-<slug>-<id>`; strip query parameters and keep
-      that canonical form when recording.
-   b. Open the listing.
-   c. **Is it an internship, or does it clear one of the two full-time
-      exceptions?** Naukri states experience as its own field — "0-1 Yrs",
-      "2-5 Yrs" — right at the top of the listing, which makes this quick:
-      anything whose band reaches past a year is a skip unless the posting
-      says fresher. Then read the title against TITLE RULES above.
-   d. Read the JD — check the experience requirement and RED FLAGS. The pay
-      floor applies here exactly as it does on the other three.
-   e. **Beware the consultancy repost**: a listing whose employer is a staffing
-      or recruitment firm hiring "for our client" is already a skip under SAFETY
-      RULES, and Naukri's own "Consultant" badge is the easiest tell.
-   f. If it passes every check, use whatever apply control the listing offers:
-      - **"Apply"** is Naukri's own one-click application against my saved
-        profile: use it, and confirm the listing then shows as applied.
-      - **"Apply on company site"** leaves Naukri for the employer's site or
-        ATS. Follow it and finish there, per APPLYING ON THE EMPLOYER'S OWN
-        SITE, handling any sign-in step as its step 2 says.
-      - Naukri sometimes asks a few employer questions before submitting.
-        Answer them with the FORM FILLING RULES; skip the job rather than
-        guess at one my saved answers do not cover.
-      - If Naukri shows the job as already applied, treat it as already
-        handled and skip it.
-   g. Record the job through the API (see STEP 2 below) with
-      `"source": "Naukri"`, copying the posting's description text into
-      `description`.
-   h. Wait 20-30 seconds before the next application (avoid detection).
-4. When every result on the page is handled, go to the next page and repeat
-   step 3. Keep paging until there is none, then repeat for each query.
-5. Naukri shows a verification or rate-limit page when it suspects automation.
-   Treat it as any other rate limit (CAPTCHA, OTP & BLOCKERS): rest Naukri for at
-   least 15 minutes, work another allowed portal meanwhile, and note it under
-   Issues.
+Worked by THE SAME STEPS ON EVERY PORTAL. Naukri is India's largest job board,
+so expect the most results and the most noise: far more full-time postings than
+internships, many of them consultancies reposting other companies' roles. The
+scope test and the title rules do the filtering, unchanged. Particular to
+Naukri:
+
+- **Open** `https://www.naukri.com/` in a tab — I am already logged in.
+- **Filters**: the query in the keyword box and `India` in the location box.
+  Set **Experience = 0 years** (Naukri's fresher band) and **no freshness
+  filter**. Naukri also has a **Work mode** and a **Job type / Internship**
+  filter — set Internship for the internship queries, and clear it for the AWS
+  and fresher-or-under-a-year passes, the same way the other portals are worked.
+- **URL**: `naukri.com/job-listings-<slug>-<id>`, with `"source": "Naukri"`.
+- **Experience is its own field** — "0-1 Yrs", "2-5 Yrs" — right at the top of
+  the listing, which makes the scope test quick: anything whose band reaches
+  past a year is a skip unless the posting says fresher.
+- **Beware the consultancy repost**: a listing whose employer is a staffing or
+  recruitment firm hiring "for our client" is already a skip under SAFETY
+  RULES, and Naukri's own "Consultant" badge is the easiest tell.
+- **Apply**: **"Apply"** is Naukri's own one-click application against my saved
+  profile: use it, and confirm the listing then shows as applied. **"Apply on
+  company site"** leaves Naukri for the employer's site or ATS. Naukri
+  sometimes asks a few employer questions before submitting; skip the job
+  rather than guess at one my saved answers do not cover.
 
 ### 4. LINKEDIN
+
+Worked by THE SAME STEPS ON EVERY PORTAL.
 
 **This is the same account the outreach run uses, so a lockout here costs both
 runs.** Keep the 20-30 second wait between applications, and at the first
@@ -973,50 +938,23 @@ BLOCKERS applies here more than anywhere.
 from this run, even to a recruiter on a posting you just applied to: that is
 the outreach prompt's job and it tracks its own daily count.
 
-1. Open `https://www.linkedin.com/jobs/` in a tab — I am already logged in.
-2. Type the first search query and `India` in the location box. Set
-   **Experience level = Internship** for the internship queries and
-   **Entry level** for the fresher pass, and set **no date filter**.
-   LinkedIn's filter set varies by query: use whichever of job type,
-   experience level and remote it offers, and do not hunt for ones that are
-   not there.
-3. For each result:
-   a. Check the posting URL against the skip list — skip immediately if
-      present. LinkedIn job URLs look like `linkedin.com/jobs/view/<id>`;
-      strip query parameters (`?refId=`, `?trackingId=`, `?currentJobId=`)
-      and keep that canonical form when recording.
-   b. Open the listing.
-   c. **Is it an internship, or does it clear one of the two full-time
-      exceptions?** LinkedIn prints the employment type in the listing's own
-      detail row, which makes this quick. Then read the title against TITLE
-      RULES above.
-   d. Read the JD — check the experience requirement and RED FLAGS. The pay
-      floor applies here exactly as it does on the other three.
-   e. **Beware the staffing repost**, which LinkedIn carries a great many of:
-      a listing whose employer is a consultancy hiring "for our client" is
-      already a skip under SAFETY RULES.
-   f. If it passes every check, use whatever apply control the listing offers:
-      - **"Easy Apply"** is LinkedIn's own in-place application: step through
-        it, attach the resume saved on my LinkedIn profile per MY PROFILE,
-        answer the employer questions using the FORM FILLING RULES, and
-        submit on the review step.
-      - **"Apply"** leaves LinkedIn for the employer's site or ATS. Follow it
-        and finish there, per APPLYING ON THE EMPLOYER'S OWN SITE, handling
-        any sign-in step as its step 2 says. On LinkedIn these are a large
-        share of the good listings — never leave one just because it is not
-        an Easy Apply.
-      - If LinkedIn shows the job as already applied, treat it as already
-        handled and skip it.
-   g. Record the job through the API (see STEP 2 below) with
-      `"source": "LinkedIn"`, copying the posting's description text into
-      `description`.
-   h. Wait 20-30 seconds before the next application (avoid detection).
-4. When every result on the page is handled, go to the next page and repeat
-   step 3. Keep paging until there is none, then repeat for each query.
-5. LinkedIn shows a verification or rate-limit page when it suspects
-   automation. Treat it as any other rate limit (CAPTCHA, OTP & BLOCKERS):
-   rest LinkedIn for at least 15 minutes, work another allowed portal
-   meanwhile, and note it under Issues.
+Particular to LinkedIn:
+
+- **Open** `https://www.linkedin.com/jobs/` in a tab — I am already logged in.
+- **Filters**: the query and `India` in the location box. Set **Experience
+  level = Internship** for the internship queries and **Entry level** for the
+  fresher pass.
+- **URL**: `linkedin.com/jobs/view/<id>`, with `"source": "LinkedIn"`.
+- **Employment type** is printed in the listing's own detail row, which makes
+  the scope test quick.
+- **Beware the staffing repost**, which LinkedIn carries a great many of: a
+  listing whose employer is a consultancy hiring "for our client" is already a
+  skip under SAFETY RULES.
+- **Apply**: **"Easy Apply"** is LinkedIn's own in-place application, submitted
+  on its review step. **"Apply"** leaves LinkedIn for the employer's site or
+  ATS; on LinkedIn these are a large share of the good listings — never leave
+  one just because it is not an Easy Apply.
+
 ## FORM FILLING RULES
 
 When filling any application form:
