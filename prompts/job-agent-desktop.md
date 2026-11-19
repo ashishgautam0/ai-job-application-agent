@@ -964,6 +964,12 @@ question, use it verbatim rather than inferring one:
   a form demands a whole number of years, answer 0 — never round 5 months
   up to 1.
 - Comfortable working onsite at any location (not work authorization): Yes
+- **Willing to work night shifts and rotating shifts: Yes.**
+- **Willing to work hours that overlap another country's working day: Yes,
+  any country.** UK, US, EU, APAC or any other overlap is fine, and so is
+  the night or early-morning shift needed to get it. Answer Yes to any
+  wording of this — "UK shift", "US shift", "EST/PST overlap",
+  "flexible with timings", "24x7 rotational".
 - Notice period: 10
 - Current compensation: 240000
 - Expected compensation: 700000
