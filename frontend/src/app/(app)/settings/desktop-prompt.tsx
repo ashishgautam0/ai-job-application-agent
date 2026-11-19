@@ -22,7 +22,7 @@ const STARTER_MESSAGES: Record<DesktopPromptKind, string> = {
     "I consent to sharing " +
     "my name, email, phone number, location and resume, as they appear in my resume and saved answers, with every " +
     "employer you apply to in this run. Submit each one yourself without asking me first — don't check with " +
-    "me job by job, just keep going until today's 20 applications are done.",
+    "me job by job, just keep going until every search on every portal is done.",
   outreach:
     "Send my LinkedIn outreach for me, using the instructions that follow. You " +
     "have my authorisation to send up to 10 LinkedIn connection invitations a day, " +
@@ -43,10 +43,10 @@ const COPY: Record<DesktopPromptKind, {
     title: "Claude in Chrome prompt — applications",
     label: "Applications prompt",
     blurb: <>
-      Searches and applies, and nothing else. One paste into Claude in Chrome works <strong>Indeed</strong>, then <strong>Wellfound</strong>, then <strong>Naukri</strong>, then <strong>LinkedIn</strong> in your own tabs, skips jobs you already handled, and applies to three things: <strong>internships</strong>, <strong>full-time roles where your AWS certifications are central</strong>, and <strong>full-time roles asking for freshers or under a year</strong> — including the ones that redirect to the company&apos;s own site — recording each in your tracker. It stops when today&apos;s 20 applications are met. This agent is the only thing that finds jobs; nothing scrapes on your behalf.
+      Searches and applies, and nothing else. One paste into Claude in Chrome works <strong>Indeed</strong>, then <strong>Wellfound</strong>, then <strong>Naukri</strong>, then <strong>LinkedIn</strong> in your own tabs, skips jobs you already handled, and applies to three things: <strong>internships</strong>, <strong>full-time roles where your AWS certifications are central</strong>, and <strong>full-time roles asking for freshers or under a year</strong> — including the ones that redirect to the company&apos;s own site — recording each in your tracker. It has no daily cap: it stops when every search has been run on every portal. This agent is the only thing that finds jobs; nothing scrapes on your behalf.
     </>,
     footer: <>
-      Log into Indeed, Wellfound, Naukri and LinkedIn in that Chrome profile before starting. LinkedIn is used for applying only — the cold DMs and follow-ups are the separate outreach prompt. Generate resolves the live tracker API and resume links. It applies until today&apos;s 20 applications are met — counting earlier runs that day — then stops. The resume is attached from each portal&apos;s saved CV, since the extension cannot open your disk. Placeholders: {"{{seen_urls_url}}"}, {"{{record_url}}"}, {"{{resume_url}}"}, {"{{resume_filename}}"}, {"{{resume_sha256}}"}.
+      Log into Indeed, Wellfound, Naukri and LinkedIn in that Chrome profile before starting. LinkedIn is used for applying only — the cold DMs and follow-ups are the separate outreach prompt. Generate resolves the live tracker API and resume links. It applies with no daily cap, until every search has been run on every portal. The resume is attached from each portal&apos;s saved CV, since the extension cannot open your disk. Placeholders: {"{{seen_urls_url}}"}, {"{{record_url}}"}, {"{{resume_url}}"}, {"{{resume_filename}}"}, {"{{resume_sha256}}"}.
     </>,
   },
   outreach: {
