@@ -2543,6 +2543,27 @@ class ColdDmTests(unittest.TestCase):
         self.assertEqual(tracker.count("openJobPage(app)"), 2)
         self.assertIn("has no matching scraped-job detail page", tracker)
 
+    def test_the_tracker_search_filters_the_loaded_list_without_refetching(self):
+        """The search narrows what the two filters already loaded. Were it
+        wired into the fetch, every keystroke would hit the API and the list
+        would flicker; were the page number left alone, a search from page 3
+        would show an empty page 3 of its one result."""
+        tracker = (ROOT.parent / "frontend/src/app/(app)/tracker/page.tsx").read_text()
+        self.assertIn('aria-label="Search applications"', tracker)
+        self.assertIn("words.every((word) => text.includes(word))", tracker)
+        # The fetch depends on the two filters only; the page resets on all three.
+        self.assertIn("  }, [filterPlatform, filterStatus]);\n\n  useEffect(() => {\n    fetchApplications();", tracker)
+        self.assertIn("  }, [filterPlatform, filterStatus, search]);", tracker)
+        # Paging and the count both follow the searched list.
+        self.assertIn("Math.ceil(visibleApplications.length / APPS_PER_PAGE)", tracker)
+        self.assertIn("visibleApplications.slice(", tracker)
+        self.assertIn("${visibleApplications.length} of ${applications.length} applications", tracker)
+        # Job type stays out of the haystack, or "intern" matches every record.
+        haystack = tracker.split("function searchText", 1)[1].split("}", 1)[0]
+        self.assertNotIn("app.type", haystack)
+        for field in ("app.company", "app.role", "app.notes", "app.url"):
+            self.assertIn(field, haystack)
+
     def test_a_due_follow_up_card_opens_that_job_s_tracker_section(self):
         """Clicking the card should land on the record that holds this
         follow-up's draft and its recording form, not the top of the page —
