@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { getApplications } from "@/lib/api";
 import type { Application } from "@/lib/types";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -14,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ClipboardList, Loader2 } from "lucide-react";
+import { ClipboardList, Loader2, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -39,12 +40,24 @@ const STATUS_COLORS: Record<string, string> = {
   "Not Interested": "bg-orange-500/15 text-orange-400 border-orange-500/30",
 };
 
+// Everything a card shows, plus the notes, link and pay that it does not, so
+// "bedrock" or a pasted job URL finds the record too. The job type is left
+// out on purpose: nearly every record is an "Internship", so "intern" would
+// match all of them instead of the roles titled that way.
+function searchText(app: Application): string {
+  return [
+    app.company, app.role, app.platform, app.status,
+    app.notes, app.url, app.salary,
+  ].filter(Boolean).join(" ").toLowerCase();
+}
+
 export default function TrackerPage() {
   const [applications, setApplications] = useState<Application[]>([]);
   const [appPage, setAppPage] = useState(1);
   const [appsLoading, setAppsLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState("All");
   const [filterPlatform, setFilterPlatform] = useState("All");
+  const [search, setSearch] = useState("");
   const APPS_PER_PAGE = 10;
 
   const fetchApplications = useCallback(async () => {
@@ -67,11 +80,24 @@ export default function TrackerPage() {
 
   useEffect(() => {
     setAppPage(1);
-  }, [filterPlatform, filterStatus]);
+  }, [filterPlatform, filterStatus, search]);
 
-  const appTotalPages = Math.max(1, Math.ceil(applications.length / APPS_PER_PAGE));
+  // Every word must match somewhere in the record, in any order, so
+  // "google intern" finds "Google — AI Intern". The search runs over the list
+  // the two filters already loaded; it never refetches.
+  const visibleApplications = useMemo(() => {
+    const words = search.toLowerCase().split(/\s+/).filter(Boolean);
+    if (words.length === 0) return applications;
+    return applications.filter((app) => {
+      const text = searchText(app);
+      return words.every((word) => text.includes(word));
+    });
+  }, [applications, search]);
+  const searching = search.trim() !== "";
+
+  const appTotalPages = Math.max(1, Math.ceil(visibleApplications.length / APPS_PER_PAGE));
   const appSafePage = Math.min(appPage, appTotalPages);
-  const pagedApplications = applications.slice(
+  const pagedApplications = visibleApplications.slice(
     (appSafePage - 1) * APPS_PER_PAGE,
     appSafePage * APPS_PER_PAGE,
   );
@@ -107,6 +133,28 @@ export default function TrackerPage() {
       </div>
 
       <div className="flex flex-wrap items-end gap-3">
+        <div className="relative w-full sm:w-[280px]">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search company, role, notes…"
+            aria-label="Search applications"
+            className="pl-9 pr-9 [&::-webkit-search-cancel-button]:hidden"
+          />
+          {searching && (
+            <button
+              type="button"
+              onClick={() => setSearch("")}
+              aria-label="Clear search"
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+
         <Select value={filterStatus} onValueChange={setFilterStatus}>
           <SelectTrigger className="w-[150px]">
             <SelectValue placeholder="Status" />
@@ -132,7 +180,9 @@ export default function TrackerPage() {
         </Select>
 
         <span className="ml-auto text-sm text-muted-foreground">
-          {applications.length} application{applications.length !== 1 && "s"}
+          {searching
+            ? `${visibleApplications.length} of ${applications.length} applications`
+            : `${applications.length} application${applications.length !== 1 ? "s" : ""}`}
         </span>
       </div>
 
@@ -145,6 +195,19 @@ export default function TrackerPage() {
           <Card>
             <CardContent className="py-12 text-center text-muted-foreground">
               No applications found. Applications you apply to appear here.
+            </CardContent>
+          </Card>
+        ) : visibleApplications.length === 0 ? (
+          <Card>
+            <CardContent className="py-12 text-center text-muted-foreground">
+              Nothing matches “{search.trim()}”.{" "}
+              <button
+                type="button"
+                onClick={() => setSearch("")}
+                className="underline underline-offset-4 hover:text-foreground"
+              >
+                Clear search
+              </button>
             </CardContent>
           </Card>
         ) : (
