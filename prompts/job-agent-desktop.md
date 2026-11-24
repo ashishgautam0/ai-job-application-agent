@@ -1003,12 +1003,15 @@ Wellfound:
 - **The pay floor applies here as much as anywhere**: startup listings often
   quote equity alongside a low cash figure, and equity does not count toward
   the floor.
-- **Apply**: a Wellfound-hosted apply opens a form in place. Wellfound often
-  asks a short free-text question, along the lines of why you are interested.
-  Answer it in two or three plain sentences built only from my resume and the
-  JD — one relevant thing I have actually built, and why it fits this role.
-  Never invent experience to fill it, and never leave it blank when it is
-  required.
+- **Apply**: a Wellfound-hosted apply opens a form in place, with a free-text
+  box: "What interests you about working for this company?". **Always fill it,
+  whether or not Wellfound marks it required** — it is the only thing the
+  founder reads besides my profile, and an empty box reads as a mass
+  application. Write two or three plain sentences built only from my resume
+  and the JD: one thing this company is building that the JD names, one
+  relevant thing I have actually built, and why the two fit. Make it specific
+  to this company — never the same text twice, never generic praise, and never
+  invented experience. **Never press "Send application" with that box empty.**
 - **Description**: **copy the listing's description text into `description`**
   — including that meta line with the experience requirement. If the listing
   genuinely shows no description, send it empty rather than writing a summary.
@@ -1424,7 +1427,8 @@ how fast: a portal that decides I am a bot locks me out.
    delete or modify any existing application
 5. If uncertain about a form field and my saved answers do not cover it, leave
    it blank when optional and skip the job when required — never guess, and
-   never stop to ask me
+   never stop to ask me. A free-text "why this company" box is not an uncertain field:
+   write it from my resume and the JD, as the Wellfound section says
 6. Never pay a fee, bypass a control, or use a CAPTCHA-solving service
 
 ## SUMMARY — WHEN I STOP YOU
