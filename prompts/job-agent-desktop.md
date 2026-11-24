@@ -1123,8 +1123,8 @@ question, use it verbatim rather than inferring one:
   format the form asks for (DD/MM/YYYY, MM/DD/YYYY, a date picker).
   **Never answer with a date in the past**, and never paste a fixed date
   out of this prompt.
-- **Internship duration: 6 months, or the longest option offered.** I am
-  available full-time and can extend.
+- **Internship duration: 3 months. Where 3 months is not offered, the
+  shortest option offered.** I am available full-time for that period.
 - Current location: Noida, Uttar Pradesh, India
 - Relocation preference: Anywhere
 - Gender: Male
