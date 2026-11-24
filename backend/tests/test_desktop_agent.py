@@ -1683,7 +1683,8 @@ class DesktopPromptTests(unittest.TestCase):
         self.assertIn("**The PDF attached to this chat, where I attached one.**", profile)
         self.assertIn("never attach any other file", profile)
         self.assertIn("**For a run you will not be watching**", self.prompt)
-        self.assertIn("**Internship duration: 6 months, or the longest option offered.**", self.prompt)
+        self.assertIn("**Internship duration: 3 months. Where 3 months is not offered, the\n  shortest option offered.**", self.prompt)
+        self.assertNotIn("longest option offered", self.prompt)
         self.assertIn("work the whole list\n  instead", self.prompt)
         self.assertIn("**unless the posting\npasses the fresher-or-under-a-year stated-text test**", self.prompt)
 
