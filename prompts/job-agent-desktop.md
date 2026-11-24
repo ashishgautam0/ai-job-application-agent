@@ -27,8 +27,15 @@ from you. Begin your message with something like:
 Then paste everything from the line below. Everything after this section is
 written for the agent.
 
-**This is a Chrome task.** All three job portals — Indeed, Wellfound and
-Naukri — are worked in Chrome, in tabs the extension opens beside my own,
+**For a run you will not be watching**, do three things first. Attach your
+resume PDF to that same message, so forms that only take a file can be
+finished. When Chrome asks to allow Indeed, Wellfound, Naukri, LinkedIn and
+your tracker's site, pick the always-allow choice if it offers one — a
+permission prompt nobody answers stops the run. And leave that Chrome window
+open with the computer awake.
+
+**This is a Chrome task.** All four job portals — Indeed, Wellfound, Naukri
+and LinkedIn — are worked in Chrome, in tabs the extension opens beside my own,
 using the sign-ins that Chrome profile already holds. The only requests that
 are not a page I opened are the tracker API endpoints named in STEP 0 and
 STEP 2, and HOW TO CALL MY TRACKER below says how to make them from Chrome.
@@ -66,8 +73,8 @@ applied postings show up in my tracker and are skipped on later runs.
 **A full-time posting that is neither 2 nor 3 is a skip**, however good it
 looks. Those two passes are narrow on purpose and each has its own test, so
 read the pass before applying to anything full-time — do not widen either one
-to cover a role you like. The run ends when every search in WHAT TO SEARCH has been run on every portal
-— there is no daily cap on applications. The cold DMs
+to cover a role you like. The run ends when a whole round of every search on every portal sends no
+application — there is no daily cap on applications. The cold DMs
 and the follow-ups are a separate prompt with its own run — do not attempt them
 here, and do not tell me to go and run them.
 
@@ -95,13 +102,18 @@ is worse than not applying.
 the operating system rather than to the page, so the extension cannot work it.
 Attaching my resume therefore means one of these, never a file path:
 
+- **The PDF attached to this chat, where I attached one.** If my message
+  carries {{resume_filename}} and you have a tool that places a chat attachment
+  into a page's file field, use it on any form that asks for a file. Check the
+  filename first, and never attach any other file.
 - **Use the resume already saved on the portal.** Indeed, Wellfound and Naukri
   each hold my uploaded CV on my profile, and their apply flows offer it as a
   saved resume to attach with one click. That is the one to pick, every time.
 - **Same on an employer's own site** where the form offers "import from
   LinkedIn/Indeed", a saved-resume picker, or a paste-your-resume text box:
   use it, pasting the resume text where that is what is on offer.
-- **A form whose only resume field is a file picker** cannot be finished:
+- **A form whose only resume field is a file picker, when no PDF is attached
+  to this chat or placing it fails,** cannot be finished:
   fill in everything else, submit nothing, and list the job under "Needs a
   file upload — do these yourself" with the company, role and posting URL.
   Never submit an application with no resume on it, and never stop to ask me
@@ -189,6 +201,32 @@ a run that reads carelessly hits the app's limit after a handful of jobs. So:
 - **Judge from the results card first.** Title, experience, pay and an
   "Applied" badge are usually on the card: a posting that fails there is
   skipped without being opened.
+- **Read a results list with a page script, never by reading the page.** Run
+  this in the portal tab. It hands back one short line per posting — URL and
+  the card's first words — and nothing else on the page reaches this
+  conversation:
+
+  ```js
+  (() => { const seen = new Set(), rows = [], key = u =>
+      (u.match(/jobs\/view\/(?:.*-)?(\d+)/) || u.match(/[?&]jk=(\w+)/) || [0, u.split(/[?#]/)[0]])[1];
+    const add = (u, el) => { const k = key(u); if (seen.has(k)) return; seen.add(k);
+      rows.push(u.split("#")[0] + " | " + (el.innerText || "").replace(/\s+/g, " ").trim().slice(0, 140)); };
+    document.querySelectorAll("[data-occludable-job-id],[data-job-id]").forEach(e =>
+      add("https://www.linkedin.com/jobs/view/" + (e.dataset.occludableJobId || e.dataset.jobId), e));
+    document.querySelectorAll("a[data-jk]").forEach(a =>
+      add("https://in.indeed.com/viewjob?jk=" + a.dataset.jk, a.closest("li,td,article") || a));
+    document.querySelectorAll("a[href]").forEach(a => {
+      if (/[?&]jk=\w|wellfound\.com\/jobs\/\d+-|job-listings-|\/jobs\/view\/\d/.test(a.href))
+        add(a.href, a.closest("li,article,[class*=tuple],[class*=card]") || a); });
+    return rows; })()
+  ```
+
+  It only reads the page already on screen and sends no request, so the rule
+  against scripted portal requests is untouched. **LinkedIn draws its cards as
+  they scroll into view**: scroll the results list to its end before running
+  it, and the job IDs are all there without opening a single listing. If the
+  script hands back nothing on a page that plainly shows results, read that
+  page as text once and carry on.
 - **One results page at a time**: collect its posting URLs, drop the handled
   ones with one `fresh([...])` call (below), triage the rest from their cards,
   and open only the survivors.
@@ -218,7 +256,9 @@ from my app's own tab:
      return h + x.pathname.replace(/\/+$/, ""); } catch { return String(u).trim(); } };
    // STEP 0 — keeps the skip list in this tab, returns only the counts
    window.loadSkip = async () => { const d = await (await fetch("{{seen_urls_url}}")).json();
-     window.__skip = new Set(d.urls.map(canon)); delete d.urls; return d; };
+     window.__skip = new Set(d.urls.map(canon)); delete d.urls;
+     JSON.parse(localStorage.getItem("parked") || "[]").forEach(x => window.__skip.add(canon(x.url)));
+     return d; };
    // which of these URLs are NOT handled yet
    window.fresh = urls => urls.filter(u => !window.__skip.has(canon(u)));
    // STEP 2 — one posting or many, applied or skipped
@@ -226,6 +266,20 @@ from my app's own tab:
      const r = await (await fetch("{{record_url}}", { method: "POST",
        headers: { "Content-Type": "application/json" }, body: JSON.stringify(j) })).json();
      if (r.saved) window.__skip.add(canon(j.url)); out.push({ url: j.url, ...r }); } return out; };
+   // progress and hand-offs are kept in this tab's storage, not in the chat
+   const day = () => new Date(Date.now() + 19800000).toISOString().slice(0, 10);
+   const box = (k, v) => v === undefined ? JSON.parse(localStorage.getItem(k) || "[]")
+     : localStorage.setItem(k, JSON.stringify(v));
+   window.done = (portal, query, round = 1) => { const k = "done:" + day(), a = box(k);
+     a.push([round, portal, query]); box(k, a); return a.length; };
+   window.park = (url, company, role, why) => { const a = box("parked");
+     a.push({ d: day(), url, company, role, why }); box("parked", a);
+     if (window.__skip) window.__skip.add(canon(url)); return a.length; };
+   window.parked = () => box("parked").filter(x => x.d === day());
+   window.state = () => { const a = box("done:" + day()), per = {};
+     for (const [r, p] of a) per[p + " r" + r] = (per[p + " r" + r] || 0) + 1;
+     return { day: day(), searchesDone: per, last: a.slice(-3),
+       parkedToday: parked().length, skip: window.__skip ? window.__skip.size : 0 }; };
    ```
 3. **The skip list never enters this conversation.** It is over 9,000 URLs —
    more than half a megabyte — and reading it would use up the context the
@@ -238,6 +292,19 @@ from my app's own tab:
 5. **If the tab was reloaded** and the helpers are gone, define them and run
    `loadSkip()` again before anything else.
 6. **Go back to the portal tab afterwards** and carry on where you were.
+7. **Your place in the run is kept in that tab, not in this conversation.**
+   `done(portal, query, round)` marks a search finished. `state()` says how
+   many searches are done on each portal today and which three came last. Both
+   outlive a compacted conversation, a reloaded tab and a new chat.
+8. **A job left for me is parked, once.** Wherever this prompt says to leave a
+   job unrecorded for me to finish — a CAPTCHA, an account only I can create,
+   an OTP, a required question with no saved answer, a file field you could
+   not fill, an apply-by-email — also call
+   `park(url, company, role, "why, and the page to finish it on")`. A parked
+   job is skipped from then on, in this round and in later runs, so it is
+   never opened or reported twice. Do **not** park a job that merely failed to
+   load or showed no confirmation: that one stays unrecorded so the next round
+   retries it.
 
 ## STEP 0 — LOAD THE SKIP LIST (DO THIS FIRST)
 
@@ -257,8 +324,8 @@ earlier runs included. (`dms_today` counts the cold DMs the outreach prompt
 sent; it is there for context and is none of this run's business.) **Neither
 `applied_today` nor `daily_target` limits this run.** They feed my tracker's
 dashboard. There is no daily cap: however many are already recorded today, the
-run searches and applies until every search is finished (see NO DAILY CAP
-below).
+run searches and applies round after round until one finds nothing new (see
+NO DAILY CAP below).
 
 **Note what it does NOT contain:** postings that merely sit in my database
 unapplied, left over from an older job scraper I have since removed. Those were
@@ -488,12 +555,18 @@ data-science listing that still surfaces under one of them is a skip under TITLE
 RULES.
 
 **Indeed filters, on every search:** Where = India, Experience level = **Entry Level**,
-and no date filter; Job type = Internship on the internship queries only.
+sorted by date, and no date filter; Job type = Internship on the internship queries only.
 
-**Go through every results page, not just the first.** At the last job on a
-page, open the next page (Wellfound's own paging, Indeed's "Next" arrow) and
-keep going until there is no next page; only then move to the next query. Indeed
-buries many good listings on page 2 and beyond.
+**Sort every search newest-first** — Indeed's "date", Naukri's "Date",
+LinkedIn's "Most recent", Wellfound's most-recent order — so that what is new
+since the last run is at the top.
+
+**Page until the new postings run out, not just the first page.** A search is
+finished at its last results page, or after **two pages in a row on which
+`fresh()` handed back nothing**: sorted newest-first, everything beyond those
+is older still and already handled. Where a portal cannot sort a search by
+date, page it to the end. One handled page is not two, and a guess that a
+portal "looks covered" is not a page count.
 
 **Set no date filter, on any portal.** A posting being a week or a month old is
 not a reason to skip it: it is still open, and applying late beats not
@@ -645,7 +718,9 @@ passes the AWS pass):**
 **Research titles (keep only as an internship, AI/ML focused):** Research
 Intern, Applied Science Intern, AI/ML Research Intern. The full-time forms —
 Research Engineer, Research Scientist, Applied Scientist, Graduate Technical
-Engineer — are skips like any other full-time role.
+Engineer — are skips like any other full-time role, **unless the posting
+passes the fresher-or-under-a-year stated-text test**: a "Junior Research
+Engineer, up to 1 year" in AI/ML is applied to on the fresher pass.
 
 ### DOMAIN KEYWORD GATE
 
@@ -836,7 +911,7 @@ section repeats it** — a short section is not a shorter procedure.
 
 1. **Open the portal and search.** Run the queries from WHAT TO SEARCH with
    `India` as the location and the portal's filters set as its section says,
-   and **no date filter**. Use the filters the portal offers and do not hunt
+   **sorted newest-first**, and **no date filter**. Use the filters the portal offers and do not hunt
    for ones that are not there.
 2. **On each results page, before opening anything**, check the posting URLs
    against the skip list with one `fresh([...])` call (STEP 0) — skip
@@ -862,8 +937,9 @@ section repeats it** — a short section is not a shorter procedure.
       that text, so a record without it is a job they cannot write about.
    f. **Wait 20-30 seconds before the next application** (avoid detection).
 4. **Page on.** When every result on a page is handled, open the next page and
-   repeat steps 2-3. Keep paging until there is no next page, then run the
-   next query.
+   repeat steps 2-3. Keep paging until there is no next page, or until two
+   pages in a row held nothing fresh (WHAT TO SEARCH). Then mark the search
+   with `done(portal, query, round)` and run the next query.
 5. **A verification or rate-limit page** means the portal suspects automation.
    Treat it as a rate limit (CAPTCHA, OTP & BLOCKERS): rest that portal for at
    least 15 minutes, work another allowed portal meanwhile, and note it under
@@ -905,6 +981,12 @@ Wellfound:
   experience filter to its lowest band** — whatever Wellfound offers for 0-1
   years, entry level or new grad. Wellfound's filter set is its own, but if a
   job-type or experience filter exists, it is set.
+- **Wellfound's keyword box finds almost nothing, so work the whole list
+  instead.** Clear the keyword, keep India and the lowest experience band, sort
+  by most recent, and load the list to its end (scroll, or its "load more").
+  Read it with the WORK LEAN script and judge the titles from that. This one
+  pass stands for every Wellfound search in a round: mark it
+  `done("Wellfound", "whole list", round)`.
 - **URL**: `wellfound.com/jobs/<id>-<slug>`, with `"source": "Wellfound"`.
 - **Read the experience requirement off the listing itself, not just the
   prose.** Wellfound puts it in the listing's own meta line — "Experience: 3+
@@ -1041,6 +1123,8 @@ question, use it verbatim rather than inferring one:
   format the form asks for (DD/MM/YYYY, MM/DD/YYYY, a date picker).
   **Never answer with a date in the past**, and never paste a fixed date
   out of this prompt.
+- **Internship duration: 6 months, or the longest option offered.** I am
+  available full-time and can extend.
 - Current location: Noida, Uttar Pradesh, India
 - Relocation preference: Anywhere
 - Gender: Male
@@ -1258,43 +1342,65 @@ add the company+title to your own short list.
 
 **There is no limit on how many applications you send in a day.** Apply to
 every posting that qualifies, on Indeed, Wellfound, Naukri and LinkedIn, and
-keep going until the searching itself is finished.
+keep going until a whole round of searching finds nothing new to apply to.
 
-**Finished means every search in WHAT TO SEARCH has been run on every portal**
-— the internship queries, the trainee pass, the AWS pass, the fresher pass and
-every keyword of the keyword pass, which alone is about 60 searches on each of
-4 portals, roughly 240 in all — and each one worked to its last results page.
-A search is done when its last page has been read and every qualifying posting
-on it applied to or recorded as a skip. Go through them once; do not go round
-again.
+**I am not watching this run.** I start it and go and do other work, and the
+one message I read is the summary at the very end. A question waits
+unanswered, and "say continue" stops everything until I happen to look.
+Decide everything yourself from this prompt. Where it does not cover
+something, take the cautious choice for that one job — skip it or park it —
+and go on to the next.
 
-- **Keep a tally of searches done per portal** so that after a pause you know
-  exactly which search comes next. Never count a search you only started.
+**A round is every search in WHAT TO SEARCH on every portal** — the internship
+queries, the trainee pass, the AWS pass, the fresher pass and every keyword of
+the keyword pass, roughly 240 searches in all — each sorted newest-first and
+paged until its new postings run out (THE SAME STEPS, step 4).
+
+- **Mark each finished search** with `done(portal, query, round)` in the
+  tracker tab. Never mark a search you only started.
 - **Never drop a search to save time**, and never stop because "enough" were
   sent. A number of applications is never a reason to stop.
+- **Never decide a portal is "saturated" or "already covered".** That the
+  first pages of one search were all handled says nothing about the next
+  search. Only the paging rule ends a search, and only the end of the list
+  ends a round.
 - Work each portal through all of its searches, then move to the next one.
 - If a portal is down, not loading, or locks me out, note it, move on, and come
   back to its remaining searches after the other portals — never let one
   portal end the run.
 
+**When a round ends, start the next one straight away** if that round sent at
+least one application: new postings arrived while it ran, and with everything
+older already handled the next round is far shorter. **The run ends when a
+whole round sends no application.**
+
+**Context is never your reason to stop.** An earlier run ended its own turn
+ten times with "this conversation is close to its limit" and sat waiting for
+me each time. You cannot measure that limit, and when the conversation fills
+the app compacts it and carries on. Nothing is lost when it does, because your
+place is in the tracker tab. **Whenever you are unsure where you are** — after
+a compaction, a reload, or my "continue" — run `state()` there, run
+`loadSkip()` again if it reports `skip: 0`, and resume at the search after the
+last one marked. Never restart a round that `state()` shows is under way.
+
 **Do not send me progress updates.** Every message you write to me ends your
 turn, and an ended turn is a stopped run until I come back and type something —
-"Finished Wellfound, starting Indeed" is exactly how the run stops. Keep your
-counts and Issues list to yourself and give them to me only in the summary.
+"Finished Wellfound, starting Indeed" is exactly how the run stops. Never end
+a message with an offer to continue. Keep your counts and Issues list to
+yourself and give them to me only in the summary.
 
 **Your turn ends for three reasons only:**
-1. Every search in WHAT TO SEARCH has been run to its last results page on
-   all four portals.
+1. A whole round on all four portals sent no application.
 2. I told you to stop.
-3. The app forces it — a time, tool-use or context limit you cannot control.
+3. The app itself ends the turn. You never end it yourself in anticipation of
+   a time, tool-use or context limit.
 
-A finished portal, a skipped job, a question, a rate limit, a closed listing
-and a form with no confirmation are **never** reasons.
+A finished portal, a skipped job, a question, a rate limit, a closed listing,
+a long conversation and a form with no confirmation are **never** reasons.
 
 **If the app forces you to stop**, end with one line — "Paused by the app
 limit: N applied this session. Say *continue* to resume." —
-and nothing else. **When I say continue**, fetch the skip list again (STEP 0) —
-it tells you how many of today's applications are already in — pick up
+and nothing else. **When I say continue**, run `state()`, pick up
 where you left off, and keep going. Do not re-read my
 resume, re-verify the PDF, re-ask for authorisation or summarise what came
 before — my original request still stands.
@@ -1323,8 +1429,10 @@ how fast: a portal that decides I am a bot locks me out.
 
 ## SUMMARY — WHEN I STOP YOU
 
-The run ends when every search in WHAT TO SEARCH has been run to its last
-results page on all four portals. Produce this summary **only**
+The run ends when a whole round of every search on all four portals sends no
+application. Fill "Needs an account", "Needs a file upload" and "Issues" from
+`parked()` in the tracker tab, so each job left for me is listed once, with the
+page to finish it on. Produce this summary **only**
 when your turn ends for one of the reasons in KEEP GOING UNTIL I SAY STOP —
 never as a per-portal update, which is what stops the run. A turn the app
 forces to end gets the one-line pause notice instead.
@@ -1344,7 +1452,7 @@ When I stop you, present:
 - Of those applied: I internships (P of them with a PPO), A full-time AWS
   roles, F full-time fresher-or-under-a-year roles
 - Of those skipped: J were full-time roles that cleared neither pass
-- Passes completed over the portal list: N
+- Rounds completed over the portal list: N
 - Portals not reached this run: [none, or which ones]
 
 ### Applied Postings (all recorded in the tracker)
@@ -1356,12 +1464,9 @@ When I stop you, present:
 | 4 | Naukri | Delta | AI Engineer (fresher pass, full-time) | ₹4.2 LPA | Noida | [link] |
 | ... |
 
-### Skipped Postings (with reasons)
-| # | Portal | Company | Title | Reason |
-|---|--------|---------|-------|--------|
-| 1 | Wellfound | BigCorp | Senior AI Lead | Senior-level title |
-| 2 | Indeed | Acme AI | ML Engineer | Full-time role, clears neither pass |
-| ... |
+### Skipped Postings
+- Counts by reason only ("14 need 2+ years, 6 below the pay floor"). My tracker
+  holds every one of them with its reason — do not list them here.
 
 ### Needs an account — do these yourself
 | # | Company | Role | Posting URL | Sign-up page |
@@ -1388,20 +1493,19 @@ When I stop you, present:
 
 ## START
 
-Begin now. Load the skip list (STEP 0), read my resume, then proceed through
-Indeed, then Wellfound, then Naukri. **Set each portal's job-type filter to Internship
-first.** Check the skip list on both, and record every posting you
-apply to or skip on both.
+Begin now. Load the skip list (STEP 0), run `state()` to see whether a round
+is already under way today, read my resume, then proceed through Indeed, then
+Wellfound, then Naukri, then LinkedIn. Check the skip list on all four, and
+record every posting you apply to or skip on all four.
 
-If my message limited you to one of them ("only Indeed"), work only that
-one.
+If my message limited you to some of them ("only Indeed"), work only those.
 
-Apply to every **internship** that passes the rules on all four portals,
-without
-asking me first, and when a portal is finished move straight to the next one. A full-time role is a skip however well it
-matches — see IS IT AN INTERNSHIP.
-Keep going until every search has been run on every portal, then stop — there
-is no daily cap. The
+Apply to every posting that passes the rules — internships, the AWS pass and
+the fresher-or-under-a-year pass — without asking me first, and when a portal
+is finished move straight to the next one. Any other full-time role is a skip
+however well it matches — see IS IT AN INTERNSHIP.
+Keep going round after round until a whole round sends no application, then
+stop — there is no daily cap, and I am not watching. The
 cold DMs and follow-ups are a separate prompt — do not start them here.
 **Send me nothing until then** — no progress updates, no questions, no
 per-portal notes. Everything goes in the summary.
