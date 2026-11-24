@@ -2593,6 +2593,18 @@ class ColdDmTests(unittest.TestCase):
         self.assertEqual(tracker.count("openJobPage(app)"), 2)
         self.assertIn("has no matching scraped-job detail page", tracker)
 
+    def test_wellfounds_interest_box_is_always_filled(self):
+        """The box is optional on Wellfound, so "never leave it blank when it is
+        required" let the agent send applications with it empty."""
+        prompt = profile_data.default_desktop_prompt()
+        wellfound = prompt.split("### 2. WELLFOUND", 1)[1].split("\n### ", 1)[0]
+        self.assertIn("A free-text \"why this company\" box is not an uncertain field", prompt)
+        self.assertIn('"What interests you about working for this company?"', wellfound)
+        self.assertIn("**Always fill it,\n  whether or not Wellfound marks it required**", wellfound)
+        self.assertIn('**Never press "Send application" with that box empty.**', wellfound)
+        self.assertIn("never the same text twice", wellfound)
+        self.assertNotIn("never leave it blank when it is\n  required", wellfound)
+
     def test_the_tracker_search_filters_the_loaded_list_without_refetching(self):
         """The search narrows what the two filters already loaded. Were it
         wired into the fetch, every keystroke would hit the API and the list
