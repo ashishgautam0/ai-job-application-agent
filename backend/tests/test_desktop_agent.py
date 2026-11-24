@@ -966,9 +966,9 @@ class DesktopPromptTests(unittest.TestCase):
         self.assertNotIn("three phases", self.prompt)
         keep_going = self.prompt.split("## KEEP GOING UNTIL I SAY STOP", 1)[1] \
                                 .split("## SAFETY RULES", 1)[0]
-        self.assertIn("1. Every search in WHAT TO SEARCH has been run to its last results page on\n   all four portals.", keep_going)
+        self.assertIn("1. A whole round on all four portals sent no application.", keep_going)
         summary = self.prompt.split("## SUMMARY — WHEN I STOP YOU", 1)[1]
-        self.assertIn("The run ends when every search in WHAT TO SEARCH has been run", summary)
+        self.assertIn("The run ends when a whole round of every search on all four portals sends no\napplication.", summary)
         # Neither prompt may carry the other's work.
         self.assertNotIn("## PART 1", self.prompt)
         self.assertNotIn("## PHASE 2", self.prompt)
@@ -1250,8 +1250,12 @@ class DesktopPromptTests(unittest.TestCase):
         naukri = self.prompt.split("### 3. NAUKRI", 1)[1].split("\n### ", 1)[0]
         self.assertIn("**no freshness\n  filter**", naukri)
         # Paging matters more than ever now the lists are long.
-        self.assertIn("**Go through every results page, not just the first.**", search)
-        self.assertIn('Indeed\'s "Next"\narrow', search)
+        self.assertIn("**Page until the new postings run out, not just the first page.**", search)
+        # Newest-first is an order, not a cut: old postings are still reached,
+        # and a search only ends early once two whole pages held nothing new.
+        self.assertIn("**Sort every search newest-first**", search)
+        self.assertIn("**two pages in a row on which\n`fresh()` handed back nothing**", search)
+        self.assertIn("One handled page is not two", search)
         self.assertIn("**Page on.**", shared)
         self.assertIn("Keep paging until there is no next page", shared)
         indeed = self.prompt.split("### 1. INDEED", 1)[1].split("\n### ", 1)[0]
@@ -1629,20 +1633,28 @@ class DesktopPromptTests(unittest.TestCase):
         # now exactly on it.
         self.assertNotIn("Pay below floor: \u20b920,000/month stipend", self.prompt)
 
-    def test_the_run_has_no_daily_cap_and_ends_when_every_search_is_done(self):
-        """There was a 20-a-day target. It went when the keyword pass arrived:
-        the run now ends when every search has been run on every portal, and a
-        number of applications is never a reason to stop."""
+    def test_the_run_has_no_daily_cap_and_ends_when_a_round_finds_nothing(self):
+        """There was a 20-a-day target, then "finish every search once". A day
+        of unattended runs showed what actually stopped it: the agent ended its
+        own turn for context ten times, called portals saturated on a guess,
+        and kept its place only in the chat. The run is now rounds of every
+        search, newest-first, and it ends when a whole round sends nothing."""
         keep_going = self.prompt.split("## KEEP GOING UNTIL I SAY STOP", 1)[1] \
                                 .split("## SAFETY RULES", 1)[0]
         for required in ("**There is no limit on how many applications you send in a day.**",
-                         "**Finished means every search in WHAT TO SEARCH has been run on every portal**",
-                         "roughly 240 in all",
-                         "each one worked to its last results page",
-                         "do not go round again",
-                         "**Keep a tally of searches done per portal**",
+                         "**I am not watching this run.**",
+                         "**A round is every search in WHAT TO SEARCH on every portal**",
+                         "roughly 240 searches in all",
+                         "**Mark each finished search** with `done(portal, query, round)`",
                          "A number of applications is never a reason to stop.",
-                         "never let one portal end the run",
+                         "**Never decide a portal is \"saturated\" or \"already covered\".**",
+                         "never let one\n  portal end the run",
+                         "**When a round ends, start the next one straight away**",
+                         "**The run ends when a\nwhole round sends no application.**",
+                         "**Context is never your reason to stop.**",
+                         "run `state()` there",
+                         "Never end\na message with an offer to continue.",
+                         "You never end it yourself in anticipation",
                          # No cap on how many is not no limit on how fast.
                          "**The waits between applications stay.**"):
             with self.subTest(required=required):
@@ -1654,6 +1666,26 @@ class DesktopPromptTests(unittest.TestCase):
         self.assertNotIn("target is met", self.prompt)
         self.assertNotIn("target is already met", self.prompt)
         self.assertIn("none of this run's business", step0)
+
+    def test_an_unattended_run_reads_pages_by_script_and_parks_what_needs_the_user(self):
+        """Reading a results page as text is what filled the context, and on
+        LinkedIn the agent opened every card to learn its job id. A hand-off
+        that is only "left unrecorded" is re-opened and re-reported on every
+        later round."""
+        lean = self.prompt.split("## WORK LEAN", 1)[1].split("## HOW TO CALL MY TRACKER", 1)[0]
+        self.assertIn("**Read a results list with a page script, never by reading the page.**", lean)
+        self.assertIn("data-occludable-job-id", lean)
+        self.assertIn("sends no request", lean)
+        how = self.prompt.split("## HOW TO CALL MY TRACKER", 1)[1].split("## STEP 0", 1)[0]
+        self.assertIn("**A job left for me is parked, once.**", how)
+        self.assertIn("Do **not** park a job that merely failed to\n   load", how)
+        profile = self.prompt.split("## MY PROFILE", 1)[1].split("## RULES THAT APPLY", 1)[0]
+        self.assertIn("**The PDF attached to this chat, where I attached one.**", profile)
+        self.assertIn("never attach any other file", profile)
+        self.assertIn("**For a run you will not be watching**", self.prompt)
+        self.assertIn("**Internship duration: 6 months, or the longest option offered.**", self.prompt)
+        self.assertIn("work the whole list\n  instead", self.prompt)
+        self.assertIn("**unless the posting\npasses the fresher-or-under-a-year stated-text test**", self.prompt)
 
     def test_todays_applications_are_counted_in_the_users_timezone(self):
         from datetime import datetime
@@ -1694,7 +1726,7 @@ class DesktopPromptTests(unittest.TestCase):
         keep_going = self.prompt.split("## KEEP GOING UNTIL I SAY STOP", 1)[1] \
                                 .split("## SAFETY RULES", 1)[0]
         self.assertIn("Say *continue* to resume.", keep_going)
-        self.assertIn("**When I say continue**, fetch the skip list again", keep_going)
+        self.assertIn("**When I say continue**, run `state()`, pick up\nwhere you left off", keep_going)
         self.assertIn("re-ask for authorisation", keep_going)
 
     def test_prompt_never_leaves_a_form_open_waiting_for_an_answer(self):
@@ -1868,6 +1900,9 @@ const seen = {urls: ["https://in.indeed.com/viewjob?jk=abc123",
                      "https://www.naukri.com/job-listings-ml-intern-99"],
               count: 4, applied_today: 3, daily_target: 20};
 global.window = global;
+const store = {};
+global.localStorage = {getItem: k => k in store ? store[k] : null,
+                       setItem: (k, v) => { store[k] = String(v); }};
 global.fetch = async (u, o) => ({json: async () => o
   ? {saved: true, applied: true, duplicate: false, applied_today: 4}
   : JSON.parse(JSON.stringify(seen))});
@@ -1882,7 +1917,15 @@ global.fetch = async (u, o) => ({json: async () => o
                 "https://in.indeed.com/viewjob?jk=brandnew"];
   const before = fresh(page);
   const out = await rec([{url: "https://in.indeed.com/viewjob?jk=brandnew"}]);
-  console.log(JSON.stringify({counts, before, out, after: fresh(page)}));
+  const after = fresh(page);
+  // Progress and hand-offs live in the tab, so a compacted chat loses nothing.
+  done("Indeed", "Gen AI Intern"); done("Indeed", "AI Intern"); done("Naukri", "RAG", 2);
+  park("https://www.linkedin.com/jobs/view/77/", "iion", "AI Intern", "CAPTCHA");
+  const parkedNow = fresh(["https://in.linkedin.com/jobs/view/ai-intern-at-iion-77?refId=z"]);
+  await loadSkip();   // a reload must keep the parked job off the list
+  const parkedLater = fresh(["https://www.linkedin.com/jobs/view/77"]);
+  console.log(JSON.stringify({counts, before, out, after,
+                              state: state(), parked: parked(), parkedNow, parkedLater}));
 })();
 """ % code
         with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False) as handle:
@@ -1895,6 +1938,12 @@ global.fetch = async (u, o) => ({json: async () => o
         self.assertEqual(result["before"], ["https://in.indeed.com/viewjob?jk=brandnew"])
         self.assertTrue(result["out"][0]["applied"])
         self.assertEqual(result["after"], [])
+        self.assertEqual(result["state"]["searchesDone"],
+                         {"Indeed r1": 2, "Naukri r2": 1})
+        self.assertEqual(result["state"]["last"][-1], [2, "Naukri", "RAG"])
+        self.assertEqual(result["state"]["parkedToday"], 1)
+        self.assertEqual(result["parked"][0]["company"], "iion")
+        self.assertEqual((result["parkedNow"], result["parkedLater"]), ([], []))
 
     def test_the_run_is_told_to_work_lean(self):
         """Everything the extension reads stays in its context, and a run that
@@ -1932,7 +1981,7 @@ global.fetch = async (u, o) => ({json: async () => o
         # conversation would spend the context the whole run needs, so it is
         # held in the tab and only counts and per-page answers come back.
         self.assertIn("**The skip list never enters this conversation.**", how)
-        self.assertIn("window.__skip = new Set(d.urls.map(canon)); delete d.urls; return d;", how)
+        self.assertIn("window.__skip = new Set(d.urls.map(canon)); delete d.urls;", how)
         self.assertIn("window.fresh = urls => urls.filter(u => !window.__skip.has(canon(u)));", how)
         self.assertIn("Never print `window.__skip`", how)
         self.assertIn("**If the tab was reloaded**", how)
@@ -2100,7 +2149,7 @@ global.fetch = async (u, o) => ({json: async () => o
         """Nothing expands into the prompt now that the answers are inline, so
         its own length is the whole measurement."""
         ceiling = profile_data.DESKTOP_PROMPT_MAX_CHARS
-        self.assertEqual(ceiling, 80_000)
+        self.assertEqual(ceiling, 85_000)
         for kind, prompt in (("applications", self.prompt), ("outreach", self.outreach)):
             with self.subTest(kind=kind):
                 self.assertLess(len(prompt), ceiling,

@@ -59,8 +59,10 @@ def desktop_prompt_path(kind=DEFAULT_DESKTOP_PROMPT_KIND):
 
 
 # A tripwire against runaway growth, not a budget: every line of a shipped
-# prompt is pasted into the agent's context on every run.
-DESKTOP_PROMPT_MAX_CHARS = 80_000
+# prompt is pasted into the agent's context on every run. Raised from 80,000
+# for the unattended-run rules, which cost about 6,000 characters once and
+# save far more per results page by keeping page text out of the context.
+DESKTOP_PROMPT_MAX_CHARS = 85_000
 
 
 def default_desktop_prompt(kind=DEFAULT_DESKTOP_PROMPT_KIND):
